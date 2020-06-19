@@ -1,0 +1,14 @@
+numpy
+opencv-python
+cmake>=3.13
+matplotlib
+tqdm
+tb-nightly
+future
+enforce
+onnx==1.6.0
+nose2
+mypy
+autopep8
+pyyaml
+easydict

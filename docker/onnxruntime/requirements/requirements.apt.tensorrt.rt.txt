@@ -1,0 +1,12 @@
+wget
+libsm6 
+libxext6 
+libxrender-dev
+ffmpeg
+x264
+libx264-dev
+libpng-dev
+zlib1g-dev
+sudo
+git
+bash

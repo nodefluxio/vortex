@@ -1,0 +1,92 @@
+experiment_name: test_classification_pipelines
+logging: None
+dataset: {
+  train: {
+    dataset: ImageFolder,
+    args: {
+      root: tests/test_dataset/train
+    },
+  },
+  eval: {
+    dataset: ImageFolder,
+    args: {
+      root: tests/test_dataset/val
+    }
+  },
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 1,
+      batch_size: 2,
+      shuffle: True,
+    },
+  },
+}
+model: {
+  name: softmax,
+  network_args: {
+    backbone: efficientnet_lite0,
+    n_classes: 2,
+    pretrained_backbone: True,
+  },
+  preprocess_args: {
+    input_size: 224,
+    input_normalization: {
+      mean: [0.4914, 0.4822, 0.4465],
+      std: [0.2023, 0.1994, 0.2010]
+    }
+  },
+  loss_args: {
+    reduction: mean
+  },
+  postprocess_args: {}
+}
+trainer: {
+  optimizer: {
+    method: Adam,
+    args: {
+      lr: 0.001
+    }
+  },
+  validation: {
+    args: {},
+    val_epoch: 2,
+  },
+  device: 'cpu',
+  driver: {
+    module: DefaultTrainer,
+    args: {
+      accumulation_step : 1,
+    }
+  },
+  epoch: 5,
+  save_epoch: 1
+}
+output_directory: tests/output_test
+exporter : [
+  {
+    module : onnx,
+    args : {
+      opset_version : 11,
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 2,
+      opset_version : 11,
+      filename : test_classification_pipelines_bs2
+    },
+  },
+  {
+    module: torchscript,
+    args: {},
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch : 2,
+      filename : test_classification_pipelines_bs2
+    },
+  }
+]

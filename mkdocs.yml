@@ -1,0 +1,34 @@
+site_name: Vortex
+nav:
+    - Home : 'index.md'
+    - User Guides :
+        - 'Dataset Integration' : 'user-guides/dataset_integration.md'
+        - 'Experiment File Configuration' : 'user-guides/experiment_file_config.md'
+        - 'HypOpt File Configuration' : 'user-guides/hypopt_file_config.md'
+        - 'Pipelines' : 'user-guides/pipelines.md'
+    - Modules :
+        - 'Built-in Dataset' : 'modules/builtin_dataset.md'
+        - 'Logging Provider' : 'modules/logging_provider.md'
+        - 'Augmentations' : 'modules/augmentation.md'
+        - 'Data Loader' : 'modules/data_loader.md'
+        - 'Learning Rates Scheduler' : 'modules/scheduler.md'
+        - 'Training Driver' : 'modules/train_driver.md'
+        - 'Models Zoo' : 'modules/models_zoo.md'
+        - 'Backbones Network' : 'modules/backbones.md'
+        - 'Graph Exporter' : 'modules/exporter.md'
+    - API :
+        - 'vortex.core.pipelines' : 'api/vortex.core.pipelines.md'
+    - Repository : 'https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex'
+markdown_extensions:
+    - attr_list
+    - toc:
+        permalink: True
+theme:
+    name: mkdocs
+    highlightjs: true
+    hljs_style: ir-black
+    hljs_languages:
+        - python
+        - console
+        - yaml
+    navigation_depth: 3

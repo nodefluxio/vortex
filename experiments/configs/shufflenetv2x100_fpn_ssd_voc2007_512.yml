@@ -1,0 +1,147 @@
+experiment_name : shufflenetv2x100_fpn_ssd_voc2007_512
+logging : None
+model : {
+  name : FPNSSD,
+  preprocess_args : {
+    input_size : 512,
+    input_normalization : {
+      mean : [0.5, 0.5, 0.5],
+      std : [0.5, 0.5, 0.5],
+      scaler: 255,
+    }
+  },
+  network_args : {
+    backbone : shufflenetv2_x1.0,
+    n_classes : 20,
+    pyramid_channels : 256,
+    aspect_ratios : [1, 2., 3.],
+    pretrained_backbone : True,
+  },
+  loss_args : {
+    neg_pos : 3,
+    overlap_thresh : 0.5,
+  },
+  postprocess_args : {
+    nms : True,
+  }
+}
+trainer : {
+  optimizer : {
+    method : SGD,
+    args : {
+      lr: 0.001,
+      momentum : 0.9,
+      weight_decay : 0.0005,
+    }
+  },
+  scheduler : {
+    method : CosineLRScheduler,
+    args : {
+      t_initial : 200,
+      t_mul : 1.0,
+      lr_min : 0.00001,
+      warmup_lr_init: 0.00001,
+      warmup_t: 3,
+      cycle_limit : 1,
+      t_in_epochs : True,
+      decay_rate : 0.1,
+    }
+  },
+  ## optional field for validation step
+  validation : {
+    ## passed to validator class
+    args : {
+      score_threshold : 0.9,
+      iou_threshold : 0.2,
+    },
+    val_epoch : 5,
+  },
+  epoch : 200,
+  save_epoch : 5,
+  device : 'cuda:0',
+  driver : {
+    module : DefaultTrainer,
+    args : {
+      accumulation_step : 4,
+    },
+  }
+}
+dataset : {
+  train : {
+    dataset : VOC2007DetectionDataset,
+    args : {
+      image_set : train,
+      ## TODO : dont use list, support tuple
+    },
+    augmentations : [
+      {
+        module : albumentations,
+        args : {
+          transforms : [
+            {compose : OneOf, args : {
+              transforms : [{transform : RandomBrightnessContrast, args : {p : 0.5}},
+                            {transform : RandomSnow, args : {p : 0.5}}
+              ],
+              p : 0.5}},
+            {transform : HorizontalFlip, args : {p : 0.5}},
+            {transform : RandomScale, args : {scale_limit : 0.3, p : 0.5,}}
+          ],
+          bbox_params : {
+            min_visibility : 0.0,
+            min_area : 0.0
+          },
+          visual_debug : False
+        }
+      }
+    ]
+  },
+  eval : {
+    dataset : VOC2007DetectionDataset,
+    args : {
+      image_set : val
+    }
+  },
+  dataloader : {
+    dataloader : DataLoader,
+    args : {
+      num_workers : 0,
+      batch_size : 4,
+      shuffle : True,
+    },
+  },
+}
+output_directory : experiments/outputs
+seed : {
+  torch : 0,
+  cudnn : {
+    deterministic : True,
+    benchmark : False,
+  }
+}
+exporter : [
+  {
+    module : onnx,
+    args : {
+      opset_version : 11,
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch: 4,
+      opset_version : 11,
+      filename: shufflenetv2x100_fpn_ssd_voc2007_512_bs4
+    },
+  },
+  {
+    module: torchscript,
+    args: {}
+  },
+  {
+    module : torchscript,
+    args : {
+      n_batch: 4,
+      filename: shufflenetv2x100_fpn_ssd_voc2007_512_bs4
+    },
+  }
+]

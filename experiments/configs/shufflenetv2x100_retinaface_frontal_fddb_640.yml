@@ -1,0 +1,145 @@
+experiment_name : shufflenetv2x100_retinaface_frontal_fddb_640
+logging : {
+  module : 'comet_ml',
+  args : {
+    api_key : Y6t9DbgKj7n2xLpUcN19qoMO4,
+    project_name : frontal-fddb,
+    workspace : hyperion-rg
+  },
+  pytz_timezone : 'Asia/Jakarta'
+}
+model : {
+  name : RetinaFace,
+  preprocess_args : {
+    input_size : 640,
+    input_normalization : {
+      mean : [0.5, 0.5, 0.5],
+      std : [0.5, 0.5, 0.5],
+      scaler : 255,
+    }
+  },
+  network_args : {
+    backbone : shufflenetv2_x1.0,
+    pyramid_channels : 64,
+    aspect_ratios : [1, 2., 3.],
+    pretrained_backbone : True,
+  },
+  loss_args : {
+    neg_pos : 7,
+    overlap_thresh : 0.35,
+    cls : 2.0,
+    box : 1.0,
+    ldm : 1.0,
+  },
+  postprocess_args : {
+    nms : True,
+  }
+}
+trainer : {
+  optimizer : {
+    method : SGD,
+    args : {
+      lr: 0.01,
+      momentum : 0.9,
+      weight_decay : 0.0005,
+    }
+  },
+  scheduler : {
+    method : CosineLRScheduler,
+    args : {
+      t_initial : 100,
+      t_mul : 1.0,
+      lr_min : 0.00001,
+      warmup_lr_init: 0.00001,
+      warmup_t: 3,
+      cycle_limit : 1,
+      t_in_epochs : True,
+      decay_rate : 0.1,
+    }
+  },
+  ## optional field for validation step
+  validation : {
+    ## passed to validator class
+    args : {
+      score_threshold : 0.9,
+      iou_threshold : 0.2,
+    },
+    val_epoch : 5,
+  },
+  epoch : 100,
+  save_epoch : 5,
+  device : 'cuda:0',
+  driver : {
+    module : DefaultTrainer,
+    args : {
+      accumulation_step : 2,
+    },
+  }
+}
+dataset : {
+  train : {
+    dataset : FrontalFDDBDataset,
+    args : {
+      train : True,
+      ## TODO : dont use list, support tuple
+    },
+    # augments : [ BasicAugment, {} ]
+  },
+  eval : {
+    dataset : FrontalFDDBDataset,
+    args : {
+      train : False,
+    }
+  },
+  dataloader : {
+    dataloader : DataLoader,
+    args : {
+      num_workers : 0,
+      batch_size : 8,
+      shuffle : True,
+    },
+  },
+}
+output_directory : experiments/outputs
+seed : {
+  torch : 0,
+  cudnn : {
+    deterministic : True,
+    benchmark : False,
+  }
+}
+exporter : [
+  {
+    module : onnx,
+    args : {
+      opset_version : 11,
+    },
+  },
+  {
+    module: torchscript,
+    args: {},
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch: 4,
+      filename : shufflenetv2x100_retinaface_frontal_fddb_640_bs4
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 4,
+      opset_version : 11,
+      filename : shufflenetv2x100_retinaface_frontal_fddb_640_bs4
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 8,
+      opset_version : 11,
+      filename : shufflenetv2x100_retinaface_frontal_fddb_640_bs8
+    },
+  },
+]

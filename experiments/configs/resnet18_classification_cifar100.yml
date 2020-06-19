@@ -1,0 +1,105 @@
+experiment_name: resnet18_softmax_cifar100
+logging: None
+dataset: {
+  train: {
+    dataset: CIFAR100,
+    args: {
+      root: external/datasets,
+      train: True,
+      download: True
+    },
+    augmentations: [{
+      module: albumentations,
+      args: {
+        transforms: [
+          {
+            transform : RandomBrightnessContrast, 
+            args : {
+              p : 0.5, brightness_by_max: False,
+              brightness_limit: 0.1, contrast_limit: 0.1,
+            }
+          },
+          {transform: HueSaturationValue, args: {}},
+          {transform : HorizontalFlip, args : {p : 0.5}},
+        ]
+      }
+    }]
+  },
+  eval: {
+    dataset: CIFAR100,
+    args: {
+      root: external/datasets,
+      train: False,
+      download: True
+    }
+  },
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 0,
+      batch_size: 256,
+      shuffle: True,
+    },
+  },
+}
+model: {
+  name: softmax,
+  network_args: {
+    backbone: resnet18,
+    n_classes: 100,
+    pretrained_backbone: True,
+  },
+  preprocess_args: {
+    input_size: 32,
+    input_normalization: {
+      mean: [0.4914, 0.4822, 0.4465],
+      std: [0.2023, 0.1994, 0.2010],
+      scaler: 255,
+    }
+  },
+  loss_args: {
+    reduction: mean
+  },
+  postprocess_args: {}
+}
+trainer: {
+  optimizer: {
+    method: SGD,
+    args: {
+      lr: 0.0141,
+      momentum: 0.9,
+      weight_decay: 0.0005,
+    }
+  },
+  scheduler : {
+    method : CosineLRScheduler,
+    args : {
+      t_initial : 50,
+      t_mul : 1.0,
+      lr_min : 0.00001,
+      warmup_lr_init: 0.00001,
+      warmup_t: 2,
+      cycle_limit : 1,
+      t_in_epochs : True,
+      decay_rate : 0.1,
+    }
+  },
+  validation: {
+    args: {},
+    val_epoch: 4,
+  },
+  device: 'cuda:0',
+  driver: {
+    module: DefaultTrainer,
+    args: {}
+  },
+  epoch: 50,
+  save_epoch: 5
+}
+output_directory: experiments/outputs
+exporter : {
+  module : onnx,
+  args : {
+    opset_version : 11,
+  },
+}

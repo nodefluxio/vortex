@@ -1,0 +1,11 @@
+# network : YoloV3
+network_args : {
+  backbone : Darknet53,
+  img_size : 416
+}
+# loss : YoloLoss
+loss_args : {
+  weight_fg : 0.5,
+  weight_bg : 0.5,
+  ignore_thresh : 0.7
+}

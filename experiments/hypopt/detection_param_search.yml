@@ -1,0 +1,56 @@
+## study name is mandatory
+study_name : detection_param_search
+## parameters to optimize, mandatory
+parameters : [
+  trainer.validation.args.score_threshold : {
+    suggestion : suggest_discrete_uniform,
+    args : {
+      low : 0.05,
+      high : 0.95,
+      q : 0.025,
+    }
+  },
+  trainer.validation.args.iou_threshold : {
+    suggestion : suggest_discrete_uniform,
+    args : {
+      low : 0.05,
+      high : 0.5,
+      q : 0.05,
+    }
+  },
+]
+objective : {
+  module : ValidationObjective,
+  args : {
+    metric_name : mean_ap
+  }
+}
+## configuration for optuna study, mandatory field
+study : {
+  n_trials : 20,
+  direction : maximize,
+  ## optional
+  pruner : {
+    method : MedianPruner,
+    args : {},
+  },
+  sampler : {
+    method : TPESampler,
+    # method : CmaEsSampler,
+    args : {},
+  },
+  ## optional args will be forwarded to optuna
+  args : {
+    # storage : sqlite:///experiments/outputs/hypopt/darknet53_yolov3_voc2007_loss.db,
+    # load_if_exists : True,
+  }
+}
+## param to be added to config, mandatory but can be empty
+additional_config : {}
+## param to override but not to be optimized, this field is mandatory but can be empty
+override : {}
+## TODO : logging
+# logging : {
+#   project_name : voc2007-hypopt,
+#   workspace : hyperion-rg
+# }

@@ -1,0 +1,142 @@
+experiment_name: efficientnet_lite0_softmax_stl10_224
+logging: None
+dataset: {
+  train: {
+    dataset: STL10,
+    args: {
+      root: external/datasets,
+      split: train,
+      download: True
+    },
+  },
+  eval: {
+    dataset: STL10,
+    args: {
+      root: external/datasets,
+      split: test,
+      download: True
+    }
+  },
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 0,
+      batch_size: 64,
+      shuffle: True,
+    },
+  },
+}
+model: {
+  name: softmax,
+  network_args: {
+    backbone: efficientnet_lite0,
+    n_classes: 10,
+    pretrained_backbone: True,
+  },
+  preprocess_args: {
+    input_size: 224,
+    input_normalization: {
+      mean: [0.4914, 0.4822, 0.4465],
+      std: [0.2023, 0.1994, 0.2010],
+      scaler: 255,
+    }
+  },
+  loss_args: {
+    reduction: mean
+  },
+  postprocess_args: {}
+}
+trainer: {
+  optimizer: {
+    method: SGD,
+    args: {
+      lr: 0.0483,
+      momentum: 0.9,
+      weight_decay: 0.0005,
+    }
+  },
+  scheduler : {
+    method : CosineLRScheduler,
+    args : {
+      t_initial : 20,
+      t_mul : 1.0,
+      lr_min : 0.00001,
+      warmup_lr_init: 0.00001,
+      warmup_t: 3,
+      cycle_limit : 1,
+      t_in_epochs : True,
+      decay_rate : 0.1,
+    }
+  },
+  validation: {
+    args: {},
+    val_epoch: 4,
+  },
+  device: 'cuda:0',
+  driver: {
+    module: DefaultTrainer,
+    args: {
+      accumulation_step : 2,
+    }
+  },
+  epoch: 20,
+  save_epoch: 5
+}
+output_directory: experiments/outputs
+exporter : [
+  {
+    module : onnx,
+    args : {
+      opset_version : 11,
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 4,
+      opset_version : 11,
+      filename : efficientnet_lite0_softmax_stl10_224_bs4
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 8,
+      opset_version : 11,
+      filename : efficientnet_lite0_softmax_stl10_224_bs8
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 16,
+      opset_version : 11,
+      filename : efficientnet_lite0_softmax_stl10_224_bs16
+    },
+  },
+  {
+    module: torchscript,
+    args: {},
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch : 4,
+      filename : efficientnet_lite0_softmax_stl10_224_bs4
+    },
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch : 8,
+      filename : efficientnet_lite0_softmax_stl10_224_bs8
+    },
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch : 16,
+      filename : efficientnet_lite0_softmax_stl10_224_bs16
+    },
+  },
+]

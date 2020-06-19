@@ -1,0 +1,3 @@
+model_name,params,mac/flops
+FPNSSD_head,27.428788,20.571817204
+RetinaFace_head,0.156352,0.259823872

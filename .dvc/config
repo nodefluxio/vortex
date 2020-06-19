@@ -1,0 +1,2 @@
+['remote "gcs"']
+url = gs://ai-dataset/model_repository/vortex

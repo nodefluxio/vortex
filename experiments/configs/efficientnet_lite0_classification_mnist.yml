@@ -1,0 +1,97 @@
+experiment_name: efficientnet_lite0_softmax_mnist
+logging: None
+dataset: {
+  train: {
+    dataset: MNIST,
+    args: {
+      root: external/datasets,
+      train: True,
+      download: True
+    },
+  },
+  eval: {
+    dataset: MNIST,
+    args: {
+      root: external/datasets,
+      train: False,
+      download: True
+    }
+  },
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 4,
+      batch_size: 256,
+      shuffle: True,
+    },
+  },
+}
+model: {
+  name: softmax,
+  network_args: {
+    backbone: efficientnet_lite0,
+    n_classes: 10,
+    pretrained_backbone: True,
+  },
+  preprocess_args: {
+    input_size: 32,
+    input_normalization: {
+      mean: [0.4914, 0.4822, 0.4465],
+      std: [0.2023, 0.1994, 0.2010],
+      scaler: 255,
+    }
+  },
+  loss_args: {
+    reduction: mean
+  },
+  postprocess_args: {}
+}
+trainer: {
+  optimizer: {
+    method: Adam,
+    args: {
+      lr: 0.001
+    }
+  },
+  validation: {
+    args: {},
+    val_epoch: 5,
+  },
+  device: 'cuda:0',
+  driver: {
+    module: DefaultTrainer,
+    args: {
+      accumulation_step : 1,
+    }
+  },
+  epoch: 20,
+  save_epoch: 5
+}
+output_directory: experiments/outputs
+exporter : [
+  {
+    module : onnx,
+    args : {
+      opset_version : 11,
+    },
+  },
+  {
+    module : onnx,
+    args : {
+      n_batch : 4,
+      opset_version : 11,
+      filename : efficientnet_lite0_softmax_mnist_bs4
+    },
+  },
+  {
+    module: torchscript,
+    args: {},
+  },
+  {
+    module: torchscript,
+    args: {
+      n_batch : 4,
+      filename : efficientnet_lite0_softmax_mnist_bs4
+    },
+  }
+]
