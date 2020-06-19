@@ -1,6 +1,6 @@
 # Hyperparameter Optimization File Configuration
 
-An additional YAML configuration file is needed for hyperparameter optimization configuration. This hypopt configuration file will describe the parameters and objective to be optimized. Several examples of hypopt config file can be inspected on [this link](https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex/-/tree/development/experiments/hypopt) In this guide, we will describe the configurations needed for Optuna-based hyperparameter optimization
+An additional YAML configuration file is needed for hyperparameter optimization configuration. This hypopt configuration file will describe the parameters and objective to be optimized. Several examples of hypopt config file can be inspected on [this link](https://github.com/nodefluxio/vortex/tree/master/experiments/hypopt) In this guide, we will describe the configurations needed for Optuna-based hyperparameter optimization
 
 ---
 

@@ -18,7 +18,7 @@ nav:
         - 'Graph Exporter' : 'modules/exporter.md'
     - API :
         - 'vortex.core.pipelines' : 'api/vortex.core.pipelines.md'
-    - Repository : 'https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex'
+    - Repository : 'https://github.com/nodefluxio/vortex'
 markdown_extensions:
     - attr_list
     - toc:

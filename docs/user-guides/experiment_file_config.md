@@ -1,6 +1,6 @@
 # Experiment File Configuration
 
-A YAML experiment file is needed to navigate all of Vortex pipelines. This experiment file will contain and track all configurations during all pipelines and can be a single source of information on how a model is developed. Several examples of experiment file can be inspected on [this link](https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex/-/tree/development/experiments/configs). In this guide, we will cover all available sections that can be configured.
+A YAML experiment file is needed to navigate all of Vortex pipelines. This experiment file will contain and track all configurations during all pipelines and can be a single source of information on how a model is developed. Several examples of experiment file can be inspected on [this link](https://github.com/nodefluxio/vortex/tree/master/experiments/configs). In this guide, we will cover all available sections that can be configured.
 
 ![Configuration Components](../images/vortex_experiment_file.jpg)
 

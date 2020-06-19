@@ -10,9 +10,9 @@ This module will produce ONNX IR from a trained Vortex model. Further reading : 
 
 Currently, we provide export support for opset version 9,10, and 11. However it must be noted that not all models and backbones are supported to be converted to ONNX. The list of supported and not supported models and backbones can be found in the COMPATIBILITY REPORT on the repo :
 
-- [COMPATIBILITY REPORT Opset Version 9](https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex/-/blob/development/COMPATIBILITY_REPORT_opset9.md)
-- [COMPATIBILITY REPORT Opset Version 10](https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex/-/blob/development/COMPATIBILITY_REPORT_opset10.md)
-- [COMPATIBILITY REPORT Opset Version 11](https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex/-/blob/development/COMPATIBILITY_REPORT_opset11.md)
+- [COMPATIBILITY REPORT Opset Version 9](https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset9.md)
+- [COMPATIBILITY REPORT Opset Version 10](https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset10.md)
+- [COMPATIBILITY REPORT Opset Version 11](https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset11.md)
 
 E.g. :
 
