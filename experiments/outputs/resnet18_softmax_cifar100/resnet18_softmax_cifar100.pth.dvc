@@ -1,0 +1,7 @@
+md5: 897dcf530e2b32de69cc59b6fca2fcc7
+outs:
+- md5: bf4d9a7f27900ec9f9eba1e51c2601d1
+  path: resnet18_softmax_cifar100.pth
+  cache: true
+  metric: false
+  persist: false

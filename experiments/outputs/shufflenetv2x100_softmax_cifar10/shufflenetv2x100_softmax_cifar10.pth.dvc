@@ -1,0 +1,7 @@
+md5: 1e372a543e257fb8ef671ea0a0eccf47
+outs:
+- md5: 67a23e1041c75e92de0d3c6f391be44f
+  path: shufflenetv2x100_softmax_cifar10.pth
+  cache: true
+  metric: false
+  persist: false

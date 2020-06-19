@@ -1,0 +1,7 @@
+md5: c8c70eedaef7a8436a770eb74599e461
+outs:
+- md5: 079fd88b4f5322a4145d2a5cd0bf7573
+  path: efficientnet_b0_softmax_stl10.pth
+  cache: true
+  metric: false
+  persist: false

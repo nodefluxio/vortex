@@ -1,5 +1,11 @@
 ## Experiments
 
+To download the pretrained file, run the following command,
+
+```console
+dvc pull -r gcs
+```
+
 | Experiment File | Backbone | Head | Loss  | Train Dataset    | Optimizer & Scheduler | Pretrained  | Validation Result | Notes |   
 | --------------- | :------: | :--: | :---: | :--------------: | :-------------------: | :---------: | ----------------- | ----- |
 | [efficientnet_b0_classification_stl10_224.yml](efficientnet_b0_classification_stl10_224.yml) | `efficientnet_b0` | `softmax` |  `CE` | `STL10` | `SGD` & `CosineLR` | dvc | `accuracy: 0.962125` | 20 epoch, image res 224 |
@@ -28,8 +34,9 @@
 | [efficientnet_lite0_classification_cifar100_224.yml](efficientnet_lite0_classification_cifar100_224.yml) | `efficientnet_lite0` | `softmax` |  `CE` | `CIFAR100` | `SGD` & `CosineLR` | dvc | `accuracy: 0.8353` | 10 epoch, image res 224 |
 | [efficientnet_b0_classification_cifar100_224.yml](efficientnet_b0_classification_cifar100_224.yml) | `efficientnet_b0` | `softmax` |  `CE` | `CIFAR100` | `SGD` & `CosineLR` | dvc | `accuracy: 0.8698` | 10 epoch, image res 224 |
 
-## Example Results
+## Example Validation Results
 
-| [efficientnet_b0_classification_stl10_224.yml](efficientnet_b0_classification_stl10_224.yml) Confusion Matrix |
-| --------------- |
-| ![efficientnet_b0_softmax_stl10_224_cuda:0_BasePredictor[cuda:0].png](../outputs/efficientnet_b0_softmax_stl10_224/efficientnet_b0_softmax_stl10_224_cuda:0_BasePredictor[cuda:0].png) |
+[resnet18_softmax_cifar10](../outputs/resnet18_softmax_cifar10/reports/resnet18_softmax_cifar10_validation_cuda:0.md)
+
+
+

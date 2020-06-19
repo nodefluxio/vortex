@@ -33,12 +33,6 @@ pip3 install .[optuna_vis]
 
 ```
 
-### Dataset Visualization
-- check [examples/visualize_dataset.ipynb](examples/visualize_dataset.ipynb)
-### Test and Validate Pre-trained FPN-SSD Model
-- download model (via dvc)
-- see [examples/fpn_ssd_voc2007_test.ipynb](examples/fpn_ssd_voc2007_test.ipynb)
-
 ## Tested Experiments
 check [experiments/configs/README.md](experiments/configs/README.md)
 

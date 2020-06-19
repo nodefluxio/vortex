@@ -1,0 +1,7 @@
+md5: 0a55dca60fe9911ff8c1b1acdf82b91d
+outs:
+- persist: false
+  cache: true
+  metric: false
+  md5: 6f97ce3703843ff40dcca9427ef81e2c
+  path: shufflenetv2x100_retinaface_frontal_fddb_640.pth

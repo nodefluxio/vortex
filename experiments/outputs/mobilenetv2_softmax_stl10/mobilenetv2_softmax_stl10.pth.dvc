@@ -1,0 +1,7 @@
+md5: 5f5e90aa0b70dbf307fd1c50a8483d24
+outs:
+- md5: c5b5d90efa7022291ee35dae365e2f29
+  path: mobilenetv2_softmax_stl10.pth
+  cache: true
+  metric: false
+  persist: false

@@ -52,6 +52,13 @@ Currently we support deep learning model development on computer vision of the f
 
 ---
 
+Currently this installation guide cover the installation of the following components:
+
+- Vortex
+- Vortex Runtime :
+    - torchscript (backends : cpu,cuda )
+    - onnxruntime (backends : cpu )
+
 ### On Host
 
 Install package dependencies :
@@ -80,7 +87,7 @@ pip3 install -U pip
 Then, clone the repo and install the vortex package
 
 ```console
-git clone https://gitlab.com/nodefluxio/hyperion-rg/platform/vortex.git
+git clone https://github.com/nodefluxio/vortex.git
 cd vortex
 pip3 install '.'
 ```
@@ -129,7 +136,11 @@ UserWarning: finished scanning dataset, available dataset(s) :
 
 ### Using Docker
 
-TODO
+You can build the dockerfile,
+
+```console
+docker build -t vortex:dev -f dockerfile .
+```
 
 ---
 

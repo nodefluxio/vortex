@@ -1,0 +1,7 @@
+md5: ac67062e70148e2d37fcc94ad6c27e78
+outs:
+- md5: 0f096ebcb328ca8ac09b02022d24acc7
+  path: efficientnet_lite0_softmax_cifar100_224.pth
+  cache: true
+  metric: false
+  persist: false

@@ -15,8 +15,3 @@
 ### Experiments
 
 - [detection_param_search.yml](detection_param_search.yml) : find `score_threshold` and `iou_threshold` should work with any detection model
-
-### Example Results
-
-- detection param search:   
-  ![shufflenetv2x100_retinaface_frontal_fddb_640_detection_param_search_hypopt_contour.png](../outputs/hypopt/shufflenetv2x100_retinaface_frontal_fddb_640_detection_param_search_hypopt_contour.png)

@@ -1,0 +1,7 @@
+md5: 5290a09860fa97c6be58c5750c0b6e9c
+outs:
+- md5: 337e79eac35f06537cecc9aae5b45db4
+  path: shufflenetv2x100_softmax_stl10_224.pth
+  cache: true
+  metric: false
+  persist: false

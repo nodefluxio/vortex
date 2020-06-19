@@ -1,0 +1,7 @@
+md5: b0b57d1a382511f7b63d30f59de91bef
+outs:
+- md5: 68e71a599c679268e6c48b971a1e4934
+  path: mobilenetv2_softmax_cifar100_224.pth
+  cache: true
+  metric: false
+  persist: false
