@@ -3,6 +3,11 @@
 Nodeflux Object Detection Training Framework
 
 ## How TO
+
+## Full Documentations
+
+check [Vortex Documentation](nodefluxio.github.io/vortex)
+
 ### Run Unit Tests (with coverage)
 - run `pytest` with `htmlcov` report :
 ```
@@ -35,10 +40,6 @@ pip3 install .[optuna_vis]
 
 ## Tested Experiments
 check [experiments/configs/README.md](experiments/configs/README.md)
-
-## Full Documentations
-
-check [VORTEX Documentation](docs/index.md)
 
 ## Command-Line Tools
 

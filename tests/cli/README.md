@@ -1,4 +1,13 @@
 ## Command-Line Interface Tests
+
+### Install the Vortex Package
+
+From repository root directory
+
+```
+pip3.6 install .
+```
+
 ### [Installing Bash Automated Testing System](https://github.com/bats-core/bats-core/#npm)
 ```
 npm install -g bats
