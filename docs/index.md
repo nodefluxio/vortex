@@ -45,7 +45,7 @@ Currently we support deep learning model development on computer vision of the f
 - Integration with hyperparameter optimization library ( [Optuna](https://optuna.org/) )
 - Integration with 3rd party experiment logger ( [Comet.ml](https://www.comet.ml/site/) )
 - Graph export to [Torchscript](https://pytorch.org/docs/stable/jit.html) and [ONNX](https://onnx.ai/)
-
+- Visual report of model's performance and resource usage, see [this example](https://github.com/nodefluxio/vortex/blob/master/experiments/outputs/resnet18_softmax_cifar10/reports/resnet18_softmax_cifar10_validation_cuda:0.md)
 ---
 
 ## Installation
