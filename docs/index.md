@@ -156,7 +156,7 @@ Vortex utilizes a certain standard to allow seamless integration between pipelin
 
 2. Next, we need to build the **experiment file**, please follow the [experiment file configuration section](user-guides/experiment_file_config.md)
 
-3. At this point, you should've already prepared your **experiment file** and your **dataset**. You can now run the training pipeline. See [training pipeline section](pipelines.md#training-pipeline) for further instructions.
+3. At this point, you should've already prepared your **experiment file** and your **dataset**. You can now run the training pipeline. See [training pipeline section](user-guides/pipelines.md#training-pipeline) for further instructions.
 
 4. After receiving Vortex model from training pipeline, you can either do :
 
