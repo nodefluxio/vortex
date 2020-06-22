@@ -6,7 +6,7 @@ Nodeflux Object Detection Training Framework
 
 ## Full Documentations
 
-check [Vortex Documentation](nodefluxio.github.io/vortex)
+check [Vortex Documentation](https://nodefluxio.github.io/vortex/)
 
 ### Run Unit Tests (with coverage)
 - run `pytest` with `htmlcov` report :
