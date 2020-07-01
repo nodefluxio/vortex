@@ -135,6 +135,8 @@ def generate_reports(eval_results : dict, output_directory, experiment_name,data
     summary_reports = []
 
     for device, device_metrics in eval_results.items() :
+        device_metrics = {k: "{:.4f}".format(v) if isinstance(v, float) else str(v) 
+                          for k,v in device_metrics.items()}
         device_metric_report = '\n'.join(
             metric_report_template.format_map(dict(
                 metric_name=name, metric_value=value
