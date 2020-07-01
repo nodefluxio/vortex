@@ -142,7 +142,10 @@ class DatasetWrapper:
             raise RuntimeError('Expected augmentation output in PIL.Image.Image or numpy.ndarray format, got %s ' % type(image))
         if (np.all(image >= 0.) and np.all(image <= 1.)) or isinstance(image, torch.Tensor):
             pixel_min, pixel_max = np.min(image), np.max(image)
-            raise RuntimeError('Augmentation image output expect unnormalized pixel value (0-255), got min %2.2f and max %2.2f' % (pixel_min, pixel_max))
+            if pixel_min == 0. and pixel_max == 0.:
+                raise RuntimeError('Augmentation image output producing blank image ( all pixel value == 0 ), please check and visualize your augmentation process!!')
+            else:
+                raise RuntimeError('Augmentation image output expect unnormalized pixel value (0-255), got min %2.2f and max %2.2f' % (pixel_min, pixel_max))
         # Configured computer vision augment -- END
         # Standard computer vision augment -- START
         image, target = self.standard_augments(image, target)

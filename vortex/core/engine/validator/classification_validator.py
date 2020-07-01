@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 
 from itertools import cycle
 from typing import Union, List, Dict, Type, Any
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import average_precision_score, precision_recall_curve
+from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import precision_recall_fscore_support
 
 from vortex.predictor.base_module import BasePredictor
 
@@ -55,18 +59,29 @@ class ClassificationValidator(BaseValidator):
                 self.results['truths'][gt] = [gt]
                 self.results['predictions'][gt] = [result_class]
                 self.results['scores'][gt] = [result_confidence]
-    
-    def compute_metrics(self) :
+
+    def compute_metrics(self):
         n_data = len(self.dataset.dataset) if isinstance(self.dataset, torch.utils.data.DataLoader) \
             else len(self.dataset)
-        metrics = {
-            'accuracy' : self.correct / n_data,
-        }
-        return metrics
-    
-    def save_metrics(self, output_directory) :
-        from sklearn.metrics import confusion_matrix, average_precision_score, precision_recall_curve
+        metrics = {'accuracy': self.correct / n_data}
 
+        num_classes = len(self.results['truths'])
+        y_true, y_pred, score = [], [], []
+        for i in range(num_classes):
+            y_true.extend(self.results['truths'][i])
+            y_pred.extend(self.results['predictions'][i])
+            score.extend(self.results['scores'][i])
+
+        for avg in ('micro', 'macro', 'weighted'):
+            p, r, f1, _ = precision_recall_fscore_support(y_true, y_pred, average=avg)
+            metrics.update({
+                "precision ({})".format(avg): p,
+                "recall ({})".format(avg): r,
+                "f1_score ({})".format(avg): f1
+            })
+        return metrics
+
+    def save_metrics(self, output_directory) :
         results = pd.DataFrame(self.results)
         n_classes = len(results['truths'])
 
@@ -93,27 +108,29 @@ class ClassificationValidator(BaseValidator):
         ## scores : class_label -> score,
         ## each size is (n_classes, n_samples)
         average_precisions, precisions, recalls = [], [], []
-        for class_idx, (class_truths, class_predictions, class_scores) in enumerate(zip(truths, predictions, scores)) :
+        roc_aucs, fprs, tprs = [], [], []
+        for class_truths, class_predictions, class_scores in zip(truths, predictions, scores):
             n_samples = len(class_predictions)
             scores_mat = np.zeros((n_samples, n_classes))
             truths_mat = np.zeros_like(scores_mat)
-            ## one hot encoding, fill with scores
-            ## one hot encoding for label
-            ## TODO : don't use loop, more numpy-like syntax
-            for i, (class_pred, class_truth, score) in enumerate(zip(class_predictions, class_truths, class_scores)) :
-                scores_mat[i, class_pred] = score
-                truths_mat[i, class_truth] = 1
+            ## one hot encoding, fill with scores and label
+            scores_mat[np.arange(n_samples), class_predictions] = class_scores
+            truths_mat[np.arange(n_samples), class_truths] = 1
+
             average_precisions.append(
-                average_precision_score(
-                    truths_mat.flatten(),
-                    scores_mat.flatten(),
-            ))
+                average_precision_score(truths_mat.flatten(), scores_mat.flatten())
+            )
             precision, recall, _ = precision_recall_curve(
                 truths_mat.flatten(),
                 scores_mat.flatten(),
             )
             precisions.append(precision)
             recalls.append(recall)
+
+            roc_aucs.append(roc_auc_score(truths_mat.flatten(), scores_mat.flatten()))
+            fpr, tpr, _ = roc_curve(truths_mat.flatten(), scores_mat.flatten())
+            fprs.append(fpr)
+            tprs.append(tpr)
 
         assets = {}
 
@@ -142,7 +159,6 @@ class ClassificationValidator(BaseValidator):
         ax = plt.gca()
         plt.gcf().set_size_inches((6.4,4.8))
         lines, labels = [], []
-        columns = ['class_{} ({})'.format(i, ap) for i, ap in enumerate(average_precisions)]
         colors = cycle(['navy', 'turquoise', 'darkorange', 'cornflowerblue', 'teal'])
         for i, (precision, recall, ap, color) in enumerate(zip(precisions, recalls, average_precisions, colors)) :
             l, = ax.plot(recall, precision, color=color)
@@ -164,6 +180,34 @@ class ClassificationValidator(BaseValidator):
         plt.savefig(filename)
         assets.update({
             'Precision Recall' : filename,
+        })
+
+        ## plot roc auc curve
+        plt.clf()
+        plt.cla()
+        ax = plt.gca()
+        plt.gcf().set_size_inches((6.4,4.8))
+        lines, labels = [], []
+        for i, (fpr, tpr, auc, color) in enumerate(zip(fprs, tprs, roc_aucs, colors)) :
+            l, = ax.plot(fpr, tpr, color=color)
+            class_name = 'class_{}'.format(i) if self.class_names is None else self.class_names[i]
+            label = '{} (auc :{:.2f})'.format(class_name, auc)
+            lines.append(l)
+            labels.append(label)
+        plt.ylim([0.0, 1.05])
+        plt.xlim([0.0, 1.0])
+        plt.grid()
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver Operating Characteristic (ROC) Curve')
+        plt.legend(lines, labels, loc='center left',
+                    prop=dict(size=8), bbox_to_anchor=(1., 0.5))
+        plt.autoscale()
+        plt.tight_layout()
+        filename = self.output_directory / '{}_{}_roc_curve.png'.format(self.experiment_name, self.predictor_name)
+        plt.savefig(filename)
+        assets.update({
+            'ROC Curve' : filename,
         })
 
         return assets

@@ -362,17 +362,25 @@ class TrainObjective(BaseObjective):
         Args:
             metric_type (str, optional): type of metric to be optimized : 'val' or 'loss'. Defaults to 'loss'.
             metric_name (Union[str,None], optional): only used if metric_type is set to 'val'. 
-                                                     This argument denotes the name of the metric which want 
-                                                     to be optimized. The available setting for this argument 
-                                                     also related to the model's task. Defaults to None.
+                                                     This argument denotes the name of the metric which want to be optimized. 
+                                                     The available settings for this argument are also related to the model's task
 
-                                                     - Detection task :
+                                                     - Detection task (see [this link](https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52) for further reading) :
 
-                                                        - 'mean_ap' : using the mean-Average Precision metrics
+                                                         - `mean_ap` : using the mean-average precision metrics
 
-                                                    - Classification task :
+                                                     - Classification task (see [this link](https://scikit-learn.org/stable/modules/model_evaluation.html#precision-recall-f-measure-metrics) for further reading):
 
-                                                        - 'accuracy' : using the accuracy metrics
+                                                         - `accuracy` : using the accuracy metrics
+                                                         - `precision (micro)` : using the micro-average precision metrics
+                                                         - `precision (macro)` : using the macro-average precision metrics
+                                                         - `precision (weighted)` : using the weighted-average precision metrics
+                                                         - `recall (micro)` : using the micro-average recall metrics
+                                                         - `recall (macro)` : using the macro-average recall metrics
+                                                         - `recall (weighted)` : using the weighted-average recall metrics
+                                                         - `f1_score (micro)` : using the micro-average f1_score metrics
+                                                         - `f1_score (macro)` : using the macro-average f1_score metrics
+                                                         - `f1_score (weighted)` : using the weighted-average f1_score metrics
         """
         kwargs.pop('weights')
         super().__init__(*args, **kwargs)
@@ -417,17 +425,25 @@ class ValidationObjective(BaseObjective) :
         """Objective funtion for validation pipelines hypopt
 
         Args:
-            metric_name (str): denotes the name of the metric which want 
-                               to be optimized. The available setting for this argument 
-                               also related to the model's task. Defaults to None.
+            metric_name (str): denotes the name of the metric which want to be optimized. 
+                               The available settings for this argument are also related to the model's task
 
-                               - Detection task :
+                               - Detection task (see [this link](https://towardsdatascience.com/breaking-down-mean-average-precision-map-ae462f623a52) for further reading) :
 
-                                   - 'mean_ap' : using the mean-Average Precision metrics
+                                   - `mean_ap` : using the mean-average precision metrics
 
-                               - Classification task :
+                               - Classification task (see [this link](https://scikit-learn.org/stable/modules/model_evaluation.html#precision-recall-f-measure-metrics) for further reading):
 
-                                   - 'accuracy' : using the accuracy metrics
+                                   - `accuracy` : using the accuracy metrics
+                                   - `precision (micro)` : using the micro-average precision metrics
+                                   - `precision (macro)` : using the macro-average precision metrics
+                                   - `precision (weighted)` : using the weighted-average precision metrics
+                                   - `recall (micro)` : using the micro-average recall metrics
+                                   - `recall (macro)` : using the macro-average recall metrics
+                                   - `recall (weighted)` : using the weighted-average recall metrics
+                                   - `f1_score (micro)` : using the micro-average f1_score metrics
+                                   - `f1_score (macro)` : using the macro-average f1_score metrics
+                                   - `f1_score (weighted)` : using the weighted-average f1_score metrics
         """
         self.weights = kwargs['weights']
         kwargs.pop('weights')
