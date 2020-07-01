@@ -89,6 +89,7 @@ Then, clone the repo and install the vortex package
 ```console
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
+git checkout v0.1.0
 pip3 install '.'
 ```
 
