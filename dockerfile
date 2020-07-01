@@ -9,6 +9,7 @@ WORKDIR /app
 RUN git clone https://github.com/nodefluxio/vortex.git
 
 WORKDIR /app/vortex
+RUN git checkout v0.1.0
 
 ## install system requirements
 RUN apt update && xargs apt install -y < requirements.sys
