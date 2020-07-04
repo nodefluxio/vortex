@@ -1,5 +1,6 @@
 experiment_name: efficientnet_b0_softmax_cifar100_224
 logging: None
+checkpoint: None
 dataset: {
   train: {
     dataset: CIFAR100,

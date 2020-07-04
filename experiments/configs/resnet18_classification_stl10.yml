@@ -1,5 +1,6 @@
 experiment_name: resnet18_softmax_stl10
 logging: None
+checkpoint: None
 dataset: {
   train: {
     dataset: STL10,

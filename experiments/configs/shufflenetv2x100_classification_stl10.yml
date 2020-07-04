@@ -1,5 +1,6 @@
 experiment_name: shufflenetv2x100_softmax_stl10
 logging: None
+checkpoint: None
 dataset: {
   train: {
     dataset: STL10,
