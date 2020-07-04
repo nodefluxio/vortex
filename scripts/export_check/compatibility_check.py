@@ -264,9 +264,11 @@ def eval_check(runtime : str, model_name : str, model_arg : dict, export_arg : d
     pth_path = output_directory / '{}.pth'.format(experiment_name)
     if not (onnx_model_path.exists() and pth_path.exists()) :
         return EvalResult(Status.ERROR, msg='file not found, export might have failed')
-    model_components.network.load_state_dict(
-        torch.load(pth_path)
-    )
+
+    ckpt = torch.load(pth_path)
+    if 'state_dict' in ckpt:
+        ckpt = ckpt['state_dict']
+    model_components.network.load_state_dict(ckpt)
     if model_name in tmp_output_format :
         predictor_args['metainfo'] = tmp_output_format[model_name]
     predictor = create_predictor(
