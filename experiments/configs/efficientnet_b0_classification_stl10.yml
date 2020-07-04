@@ -1,5 +1,6 @@
 experiment_name: efficientnet_b0_softmax_stl10
 logging: None
+checkpoint: None
 dataset: {
   train: {
     dataset: STL10,

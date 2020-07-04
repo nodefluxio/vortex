@@ -317,6 +317,9 @@ def __get_config(experiment_type: str):
         exp_req = __hypopt_config()
     elif experiment_type == 'export':
         exp_req = __export_config()
+
+    if experiment_type in ('train', 'validate', 'hypopt'):
+        ckpt = ExperimentNode('checkpoint', parent=exp_req, required=False)
     return exp_req
 
 

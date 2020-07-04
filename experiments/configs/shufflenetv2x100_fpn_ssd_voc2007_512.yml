@@ -1,5 +1,6 @@
 experiment_name : shufflenetv2x100_fpn_ssd_voc2007_512
 logging : None
+checkpoint: None
 model : {
   name : FPNSSD,
   preprocess_args : {
