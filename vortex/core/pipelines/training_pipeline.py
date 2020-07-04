@@ -104,23 +104,27 @@ class TrainingPipeline(BasePipeline):
                     "of your config file pointing to model path used for resume.")
             checkpoint = torch.load(config.checkpoint)
             self.start_epoch = checkpoint['epoch']
-            
-            ## TODO: compare with config in checkpoint
+
             model_config = EasyDict(checkpoint['config'])
             if config.model.name != model_config.model.name:
                 raise RuntimeError("Model name configuration specified in config file ({}) is not "
                     "the same as saved in model checkpoint ({}).".format(config.model.name,
                     model_config.model.name))
-            if config.model.network_args.backbone != model_config.model.network_args.backbone:
-                raise RuntimeError("Backbone model configuration specified in config file ({}) "
-                    "is not the same as saved in model checkpoint ({}).".format(
-                    config.model.network_args.backbone, model_config.model.network_args.backbone))
+            if config.model.network_args != model_config.model.network_args:
+                raise RuntimeError("'network_args' configuration specified in config file ({}) is "
+                    "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
+                    model_config.model.network_args))
+            if config.dataset.train.dataset != model_config.dataset.train.dataset:
+                raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
+                    "in model checkpoint ({}).".format(config.dataset.train.dataset, 
+                    model_config.dataset.train.dataset))
+
             if ('n_classes' in config.model.network_args and 
                     (config.model.network_args.n_classes != model_config.model.network_args.n_classes)):
                 raise RuntimeError("Number of classes configuration specified in config file ({}) "
                     "is not the same as saved in model checkpoint ({}).".format(
                     config.model.network_args.n_classes, model_config.model.network_args.n_classes))
-        
+
         self.config = config
         self.hypopt = hypopt
 
