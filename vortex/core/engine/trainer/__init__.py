@@ -1,5 +1,5 @@
 from typing import Type, Union
-from copy import copy, deepcopy
+from copy import deepcopy
 from easydict import EasyDict
 
 from .default_trainer import DefaultTrainer
@@ -33,7 +33,7 @@ def create_trainer(trainer_config: Union[dict, EasyDict], **kwargs):
         scheduler = deepcopy(trainer_config.scheduler)
     else:
         scheduler = None
-    driver = trainer_config.driver
+    driver = deepcopy(trainer_config.driver)
     trainer = driver.module
     trainer_args = driver.args
     trainer_args.update(kwargs)
