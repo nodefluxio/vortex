@@ -274,13 +274,13 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         self.predictor = create_predictor(model_components)
         self.predictor.to(device)
 
-        # Initialize dataset to get class_names
         cls_names = None
         if 'class_names' in ckpt:
             cls_names = ckpt['class_names']
         else:
+            # Initialize dataset to get class_names
             warnings.warn("'class_names' is not available in your model checkpoint, please update "
-                "them using 'scripts/update_model.py' script.")
+                "them using 'scripts/update_model.py' script. \nCreating dataset to get 'class_names'")
             dataset = create_dataset(config.dataset, stage='train', 
                 preprocess_config=config.model.preprocess_args)
             if hasattr(dataset.dataset, 'class_names'):
