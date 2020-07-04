@@ -255,12 +255,6 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         # Configure experiment directory
         experiment_directory, _ = check_and_create_output_dir(config)
 
-        # Initialize dataset to get class_names
-        dataset = create_dataset(config.dataset, 
-                                stage='train', 
-                                preprocess_config=config.model.preprocess_args)
-        self.class_names = dataset.dataset.class_names if hasattr(dataset.dataset, 'class_names') else None
-
         # Set compute device
         if device is None:
             device = config.trainer.device
@@ -274,10 +268,27 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             if not filename.exists():
                 raise FileNotFoundError('Selected weights file {} is not found'.format(filename))
 
-        model_components = create_model(config.model,state_dict=str(filename),stage='validate')
+        model_components, ckpt = create_model(config.model, state_dict=str(filename), 
+                                        stage='validate', return_checkpoint=True)
         model_components.network = model_components.network.to(device)
         self.predictor = create_predictor(model_components)
         self.predictor.to(device)
+
+        # Initialize dataset to get class_names
+        cls_names = None
+        if 'class_names' in ckpt:
+            cls_names = ckpt['class_names']
+        else:
+            warnings.warn("'class_names' is not available in your model checkpoint, please update "
+                "them using 'scripts/update_model.py' script.")
+            dataset = create_dataset(config.dataset, stage='train', 
+                preprocess_config=config.model.preprocess_args)
+            if hasattr(dataset.dataset, 'class_names'):
+                cls_names = dataset.dataset.class_names
+            else:
+                warnings.warn("'class_names' is not available in dataset, setting "
+                    "'class_names' to None.")
+        self.class_names = cls_names
 
         # Configure input size for image
         self.input_size = config.model.preprocess_args.input_size
