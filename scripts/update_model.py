@@ -34,7 +34,7 @@ def update_checkpoints(config, model_paths, override=False):
         if not override:
             basename, ext = os.path.splitext(updated_fname)
             updated_fname = basename + '_updated' + ext
-        print("[{}/{}] updating {} to {}".format(idx, len(model_paths), 
+        print("[{}/{}] updating {} to {}".format(idx+1, len(model_paths), 
             model_path, os.path.join(fdir, updated_fname)))
 
         if not os.path.exists(model_path) and os.path.splitext(model_path)[-1] == '.pth':
@@ -42,16 +42,18 @@ def update_checkpoints(config, model_paths, override=False):
                 "and filename have extension of '.pth'".format(model_path))
         ckpt = torch.load(model_path)
         if all((k in ckpt) for k in ('epoch', 'state_dict', 'class_names', 'config')):
+            print("=> skipping {}, checkpoint already in new format")
             continue 
 
         epoch = config.trainer.epoch
         if 'epoch' in fname:
-            epoch = int(fname.replace('.pth', '').split('-')[-1])
+            epoch = fname.replace('.pth', '').split('-')[-1]
+            epoch = int(''.join(d for d in epoch if d.isdigit()))
         state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
         checkpoint.update({
             'epoch': epoch,
-            'stated_dict': state_dict
+            'state_dict': state_dict
         })
 
         torch.save(checkpoint, os.path.join(fdir, updated_fname))
