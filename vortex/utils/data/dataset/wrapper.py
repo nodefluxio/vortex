@@ -11,7 +11,7 @@ import numpy as np
 import albumentations.core.composition as albumentations_compose
 import albumentations.augmentations.transforms as albumentations_tf
 from vortex.networks.modules.preprocess.normalizer import to_tensor,normalize
-from PIL.Image import Image
+from PIL import Image
 
 import os
 import sys
