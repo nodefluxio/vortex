@@ -17,23 +17,6 @@
 *.data
 *.json
 
-*.cfg
-!cfg/yolov3*.cfg
-
-runs/*
-data/*
-!data/samples/zidane.jpg
-!data/samples/bus.jpg
-!data/coco.names
-!data/coco_paper.names
-!data/coco.data
-!data/coco_*.data
-!data/coco_*.txt
-!data/coco_*.txt
-!data/trainvalno5k.shapes
-!data/5k.shapes
-!data/5k.txt
-!data/*.sh
 
 pycocotools/*
 results*.txt
@@ -47,10 +30,8 @@ gcp_test*.sh
 # Neural Network weights -----------------------------------------------------------------------------------------------
 *.weights
 *.pt
+*.pth
 *.onnx
-*.mlmodel
-darknet53.conv.74
-yolov3-tiny.conv.15
 
 # GitHub Python GitIgnore ----------------------------------------------------------------------------------------------
 # Byte-compiled / optimized / DLL files
@@ -246,17 +227,8 @@ coco/
 ./data/
 images/*
 weights
-zky-*.pth
-yolo*.pth
-loss*.pth
-widerface.pth
-detect_test_face.txt
-detect_test_zky.txt
-backup-*
-external/nf-dali/
 *_hypopt.yml
-*.pth
-.onnx
+
 *.pdf
 tests/output_test
 tests/output_predict_test
@@ -264,6 +236,8 @@ tmp
 vis_result
 !docs/images/*
 config.yml
+
+!tests/images/cat.jpg
 
 experiments/outputs/*
 !experiments/outputs/efficientnet_b0_softmax_cifar10
