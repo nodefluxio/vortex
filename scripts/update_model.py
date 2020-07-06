@@ -10,7 +10,7 @@ from vortex.utils.parser import load_config, check_config
 from vortex.core import engine
 from vortex.core.factory import create_model, create_dataset
 
-def update_checkpoints(config, model_paths):
+def update_checkpoints(config, model_paths, override=False):
     assert isinstance(model_paths, list) and isinstance(model_paths[0], str)
     assert isinstance(config, (str, edict))
 
@@ -24,12 +24,19 @@ def update_checkpoints(config, model_paths):
 
     checkpoint = {
         "config": config,
-        "class_names": class_names,
+        "class_names": dataset.class_names,
         # since we dont know how it trained, just put an empty optimizer state
         "optimizer_state": trainer.optimizer.state_dict(), 
     }
-    for model_path in model_paths:
-        print("=> processing {}".format(model_path))
+    for idx, model_path in enumerate(model_paths):
+        fdir, fname = os.path.split(model_path)
+        updated_fname = fname
+        if not override:
+            basename, ext = os.path.splitext(updated_fname)
+            updated_fname = basename + '_updated' + ext
+        print("[{}/{}] updating {} to {}".format(idx, len(model_paths), 
+            model_path, os.path.join(fdir, updated_fname)))
+
         if not os.path.exists(model_path) and os.path.splitext(model_path)[-1] == '.pth':
             raise RuntimeError("Model path {} is invalid, make sure file is available "
                 "and filename have extension of '.pth'".format(model_path))
@@ -37,7 +44,6 @@ def update_checkpoints(config, model_paths):
         if all((k in ckpt) for k in ('epoch', 'state_dict', 'class_names', 'config')):
             continue 
 
-        fname = os.path.split(model_path)[-1]
         epoch = config.trainer.epoch
         if 'epoch' in fname:
             epoch = int(fname.replace('.pth', '').split('-')[-1])
@@ -47,15 +53,18 @@ def update_checkpoints(config, model_paths):
             'epoch': epoch,
             'stated_dict': state_dict
         })
-        torch.save(checkpoint, model_path)
+
+        torch.save(checkpoint, os.path.join(fdir, updated_fname))
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="update old model checkpoint to the new format")
     parser.add_argument('-c', '--config', required=True, type=str,
         help="configuration file path (.yml)")
     parser.add_argument('-w', '--weights', required=True, nargs='+',
-        help="model's weights path, support multiple files")
+        help="model's weights path, support multiple files and also wildcard with (*) char")
+    parser.add_argument('--override', action='store_true', 
+        help='override the original model by the updated instead of copy.')
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -70,4 +79,5 @@ if __name__ == "__main__":
         else:
             model_paths.extend(glob.glob(model_path))
 
-    update_checkpoints(config, model_paths)
+    model_paths = list(set(model_paths)) ## avoid multiple definition of the same file
+    update_checkpoints(config, model_paths, override=args.override)
