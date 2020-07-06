@@ -4,6 +4,7 @@ import logging
 import warnings
 import torch
 
+from copy import deepcopy
 from pathlib import Path
 from easydict import EasyDict
 from typing import Union,Callable,Type
@@ -95,6 +96,7 @@ def create_runtime_model(model_path : Union[str, Path],
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str):
+    dataset_config = deepcopy(dataset_config)
     if stage == 'train' :
         dataset = dataset_config.train.dataset
         try:
@@ -116,6 +118,9 @@ def create_dataloader(dataset_config : EasyDict,
                       preprocess_config : EasyDict, 
                       stage : str,
                       collate_fn : Union[Callable,str,None] = None ):
+
+    dataset_config = deepcopy(dataset_config)
+    preprocess_config = deepcopy(preprocess_config)
 
     dataset = create_dataset(dataset_config=dataset_config, stage='train', preprocess_config=preprocess_config)
     if isinstance(collate_fn,str):
