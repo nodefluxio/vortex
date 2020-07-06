@@ -10,13 +10,22 @@ import pytest
 import numpy as np
 import cv2
 import yaml
+import torch
 
-from vortex.core.pipelines import TrainingPipeline,PytorchValidationPipeline,PytorchPredictionPipeline,IRValidationPipeline,GraphExportPipeline,IRPredictionPipeline, HypOptPipeline
+from vortex.core.pipelines import (
+    TrainingPipeline,
+    PytorchValidationPipeline,
+    PytorchPredictionPipeline,
+    IRValidationPipeline,
+    GraphExportPipeline,
+    IRPredictionPipeline,
+    HypOptPipeline
+)
 from vortex.utils.parser.parser import load_config
 from vortex.utils.parser.loader import Loader
 
 
-config_path='tests/config/test_classification_pipelines.yml'
+config_path = 'tests/config/test_classification_pipelines.yml'
 hypopt_train_obj_path = 'tests/config/test_hypopt_train_objective.yml'
 onnx_model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx'
 pt_model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.pt'
@@ -76,6 +85,14 @@ def test_train_pipeline():
 
     # Check local_runs log is generated
     assert Path('experiments/local_runs.log').exists()
+
+    ## check saved model checkpoint
+    ckpt = torch.load(final_weight)
+    required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
+    assert all((k in ckpt) for k in required_ckpt)
+    assert ckpt['config'] == config
+    assert tuple(ckpt['class_names']) == ('cat', 'dog')
+
 
 def test_validation_pipeline():
 
