@@ -191,7 +191,8 @@ class TrainingPipeline(BasePipeline):
         if hasattr(config, 'seed') :
             _set_seed(config.seed)
 
-        print("\nexperiment directory:", self.run_directory)
+        if not self.hypopt:
+            print("\nexperiment directory:", self.run_directory)
 
     def run(self,
             save_model : bool = True) -> EasyDict:
