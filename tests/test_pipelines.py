@@ -114,7 +114,6 @@ def test_validation_pipeline():
 
 class TestPredictionPipeline():
 
-
     # Clear pre-existing output file
     if Path('tests/output_predict_test').exists():
         shutil.rmtree(Path('tests/output_predict_test'))
@@ -126,29 +125,36 @@ class TestPredictionPipeline():
                                         weights = None,
                                         device = 'cpu')
 
-        results = vortex_predictor.run(images = ['tests/images/cat.jpg'],
-                                   visualize = True,
-                                   dump_visual = True,
-                                   output_dir = 'tests/output_predict_test',
-                                   **kwargs)
+        def _test(predictor):
+            results = predictor.run(images = ['tests/images/cat.jpg'],
+                                    visualize = True,
+                                    dump_visual = True,
+                                    output_dir = 'tests/output_predict_test',
+                                    **kwargs)
+
+            # Prediction pipeline output must be EasyDict
+            assert isinstance(results,EasyDict)
+            assert 'prediction' in results.keys()
+            assert 'visualization' in results.keys()
+
+            # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
+            assert isinstance(results.prediction,list)
+            assert isinstance(results.visualization,list)
+
+            # Check list member type
+            assert isinstance(results.prediction[0],EasyDict)
+            assert isinstance(results.visualization[0],np.ndarray)
+
+            # If dump_visualization and images is provided as string, allow for dump visualized image
+            vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
+            assert vis_dump_path.exists()
         
-        # Prediction pipeline output must be EasyDict
-        assert isinstance(results,EasyDict)
-        assert 'prediction' in results.keys()
-        assert 'visualization' in results.keys()
+        ## normal predictor
+        _test(vortex_predictor)
 
-        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-        assert isinstance(results.prediction,list)
-        assert isinstance(results.visualization,list)
-
-        # Check list member type
-        assert isinstance(results.prediction[0],EasyDict)
-        assert isinstance(results.visualization[0],np.ndarray)
-
-        # If dump_visualization and images is provided as string, allow for dump visualized image
-
-        vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
-        assert vis_dump_path.exists()
+        ## no class names
+        vortex_predictor.class_names = None
+        _test(vortex_predictor)
 
     def test_input_from_numpy_with_vis(self):
         # Instantiate predictor
@@ -156,14 +162,13 @@ class TestPredictionPipeline():
         vortex_predictor = PytorchPredictionPipeline(config = config,
                                                      weights = None,
                                                      device = 'cpu')
-        
+
         # Read image
         image_data = cv2.imread('tests/images/cat.jpg')
-
         results = vortex_predictor.run(images = [image_data],
                                    visualize = True,
                                    **kwargs)
-        
+
         # Prediction pipeline output must be EasyDict
         assert isinstance(results,EasyDict)
         assert 'prediction' in results.keys()
@@ -183,14 +188,13 @@ class TestPredictionPipeline():
         vortex_predictor = PytorchPredictionPipeline(config = config,
                                         weights = None,
                                         device = 'cpu')
-        
+
         # Read image
         image_data = cv2.imread('tests/images/cat.jpg')
-
         results = vortex_predictor.run(images = [image_data],
                                    visualize = False,
                                    **kwargs)
-        
+
         # Prediction pipeline output must be EasyDict
         assert isinstance(results,EasyDict)
         assert 'prediction' in results.keys()
@@ -205,13 +209,19 @@ class TestPredictionPipeline():
 
 def test_export_pipeline():
     # Initialize graph exporter
-    graph_exporter=GraphExportPipeline(config=config,weights=None)
+    graph_exporter = GraphExportPipeline(config=config, weights=None)
 
     status = graph_exporter.run(example_input=None)
-    
     assert isinstance(status,EasyDict)
     assert 'export_status' in status.keys()
-    assert isinstance(status.export_status,bool)
+    assert isinstance(status.export_status, bool)
+
+    ## without class names
+    graph_exporter.class_names = None
+    status = graph_exporter.run(example_input=None)
+    assert isinstance(status,EasyDict)
+    assert 'export_status' in status.keys()
+    assert isinstance(status.export_status, bool)
 
 class TestIRValidationPipeline():
 
