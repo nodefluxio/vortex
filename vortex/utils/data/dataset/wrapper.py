@@ -46,13 +46,16 @@ class DatasetWrapper:
 
         self.stage = stage
         self.preprocess_args = preprocess_args
-        self.dataset = get_base_dataset(
-            dataset, dataset_args=dataset_args)
+        self.dataset = get_base_dataset(dataset, dataset_args=dataset_args)
         if not 'data_format' in self.dataset.__dict__.keys():
-            raise RuntimeError("expects dataset `%s` to have `data_format` field : dict<str,dict>, explaining data format (e.g. bounding_box, class_label, landmarks etc)" % dataset)
-        if not 'class_names' in self.dataset.__dict__.keys():
-            raise RuntimeError("expects dataset `%s` to have `class_names` field : list<str>, explaining class string names which also map to its index positioning in the list. E.g. self.class_names = ['cat','dog'] means class_label = 0 is 'cat' " % dataset)
-        self.class_names = self.dataset.class_names
+            raise RuntimeError("expects dataset `{}` to have `data_format` field : dict<str,dict> "
+                "explaining data format (e.g. bounding_box, class_label, landmarks etc)".format(dataset))
+        ## make class_names optional
+        # if not 'class_names' in self.dataset.__dict__.keys():
+        #     raise RuntimeError("expects dataset `{}` to have `class_names` field : list<str>, explaining "
+        #         "class string names which also map to its index positioning in the list. E.g. "
+        #         "self.class_names = ['cat','dog'] means class_label = 0 is 'cat' ".format(dataset))
+        self.class_names = None if not hasattr(self.dataset, 'class_names') else self.dataset.class_names
         self.data_format = EasyDict(self.dataset.data_format)
         # Data format standard check
         self.data_format = check_data_format_standard(self.data_format)
