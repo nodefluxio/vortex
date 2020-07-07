@@ -100,13 +100,16 @@ class BasePredictionPipeline(BasePipeline):
                                            iou_threshold=0.2)
             ```
         """
-        assert self.class_names , "'self.class_names' must be implemented in the sub class"
+        ## make class_names optional
+        ## assert self.class_names , "'self.class_names' must be implemented in the sub class"
         assert self.output_file_prefix , "'self.output_file_prefix' must be implemented in the sub class"
 
-        assert isinstance(images,list) or isinstance(images,np.ndarray), "'images' arguments must be provided with list or numpy ndarray, found {}".format(type(images))
+        assert isinstance(images,list) or isinstance(images,np.ndarray), "'images' arguments must be "\
+            "provided with list or numpy ndarray, found {}".format(type(images))
 
         if isinstance(images[0],np.ndarray) and dump_visual:
-            warnings.warn("Provided 'images' arguments type is np ndarray and 'dump_visual' is set to True, will not dump any image file due to lack of filename information")
+            warnings.warn("Provided 'images' arguments type is np ndarray and 'dump_visual' is set to "
+                "True, will not dump any image file due to lack of filename information")
 
         # Check image availability if image path is provided
         if isinstance(images[0],str) or isinstance(images[0],Path):
@@ -117,12 +120,13 @@ class BasePredictionPipeline(BasePipeline):
         elif isinstance(images[0],np.ndarray):
             batch_mat = images
             for image in batch_mat:
-                assert len(image.shape) == 3, "Provided 'images' list member in numpy ndarray must be of dim 3, [h , w , c]"
+                assert len(image.shape) == 3, "Provided 'images' list member in numpy ndarray must be "\
+                    "of dim 3, [h , w , c]"
         else:
-            raise TypeError("'images' arguments must be provided with list of image path or list of numpy ndarray, found {}".format(type(images[0])))
+            raise TypeError("'images' arguments must be provided with list of image path or list of "
+                "numpy ndarray, found {}".format(type(images[0])))
 
         # Resize input images
-        
         batch_vis = [mat.copy() for mat in batch_mat]
         batch_imgs = batch_mat
         results = self._run_inference(batch_imgs,**kwargs)
@@ -278,16 +282,28 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         if 'class_names' in ckpt:
             cls_names = ckpt['class_names']
         else:
-            # Initialize dataset to get class_names
-            warnings.warn("'class_names' is not available in your model checkpoint, please update "
-                "them using 'scripts/update_model.py' script. \nCreating dataset to get 'class_names'")
-            dataset = create_dataset(config.dataset, stage='train', 
-                preprocess_config=config.model.preprocess_args)
-            if hasattr(dataset.dataset, 'class_names'):
-                cls_names = dataset.dataset.class_names
+            from vortex.utils.data.dataset.dataset import all_datasets
+            dataset_available = False
+            for datasets in all_datasets.values():
+                if config.dataset.train.dataset in datasets:
+                    dataset_available = True
+                    break
+
+            if dataset_available:
+                # Initialize dataset to get class_names
+                warnings.warn("'class_names' is not available in your model checkpoint, please "
+                    "update your model using 'scripts/update_model.py' script. \nCreating dataset "
+                    "to get 'class_names'")
+                dataset = create_dataset(config.dataset, stage='train', 
+                    preprocess_config=config.model.preprocess_args)
+                if hasattr(dataset.dataset, 'class_names'):
+                    cls_names = dataset.dataset.class_names
+                else:
+                    warnings.warn("'class_names' is not available in dataset, setting "
+                        "'class_names' to None.")
             else:
-                warnings.warn("'class_names' is not available in dataset, setting "
-                    "'class_names' to None.")
+                warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
+                    config.dataset))
         self.class_names = cls_names
 
         # Configure input size for image

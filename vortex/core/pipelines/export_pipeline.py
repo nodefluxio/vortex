@@ -20,10 +20,10 @@ class GraphExportPipeline(BasePipeline):
 
         Args:
             config (EasyDict): dictionary parsed from Vortex experiment file
-            weights (Union[str,Path,None], optional): path to selected Vortex model's weight. If set to None, it will \
-                                                      assume that final model weights exist in **experiment directory**. \
-                                                      Defaults to None.
-        
+            weights (Union[str,Path], optional): path to selected Vortex model's weight. If set to None, it will \
+                                                 assume that final model weights exist in **experiment directory**. \
+                                                 Defaults to None.
+
         Example:
             ```python
             from vortex.utils.parser import load_config
@@ -35,7 +35,7 @@ class GraphExportPipeline(BasePipeline):
                                                  weights='experiments/outputs/example/example.pth')
             ```
         """
-        
+
          # Configure output directory
         self.experiment_directory, _ = check_and_create_output_dir(config)
         self.experiment_name = config.experiment_name
@@ -55,16 +55,33 @@ class GraphExportPipeline(BasePipeline):
         if 'class_names' in ckpt:
             cls_names = ckpt['class_names']
         else:
-            # Initialize dataset to get class_names
-            warnings.warn("'class_names' is not available in your model checkpoint, please update "
-                "them using 'scripts/update_model.py' script. \nCreating dataset to get 'class_names'")
-            dataset = create_dataset(config.dataset, stage='train', 
-                preprocess_config=config.model.preprocess_args)
-            if hasattr(dataset.dataset, 'class_names'):
-                cls_names = dataset.dataset.class_names
+            from vortex.utils.data.dataset.dataset import all_datasets
+            dataset_available = False
+            for datasets in all_datasets.values():
+                if config.dataset.train.dataset in datasets:
+                    dataset_available = True
+                    break
+
+            if dataset_available:
+                # Initialize dataset to get class_names
+                warnings.warn("'class_names' is not available in your model checkpoint, please "
+                    "update your model using 'scripts/update_model.py' script. \nCreating dataset "
+                    "to get 'class_names'")
+                dataset = create_dataset(config.dataset, stage='train', 
+                    preprocess_config=config.model.preprocess_args)
+                if hasattr(dataset.dataset, 'class_names'):
+                    cls_names = dataset.dataset.class_names
+                else:
+                    warnings.warn("'class_names' is not available in dataset, setting "
+                        "'class_names' to None.")
             else:
-                warnings.warn("'class_names' is not available in dataset, setting "
-                    "'class_names' to None.")
+                warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
+                    config.dataset))
+        if cls_names is None:
+            num_classes = 2     ## default is binary class
+            if 'n_classes' in config.model.network_args:
+                num_classes = config.model.network_args.n_classes
+            self.class_names = ["class_{}".format(i) for i in range(num_classes)]
         self.class_names = cls_names
 
         # Initialize export config
@@ -77,11 +94,12 @@ class GraphExportPipeline(BasePipeline):
         """Function to execute the graph export pipeline
 
         Args:
-            example_input (Union[str,Path,None], optional): path to example input image to help graph tracing. Defaults to None.
+            example_input (Union[str,Path], optional): path to example input image to help graph tracing. 
+                Defaults to None.
 
         Returns:
             EasyDict: dictionary containing status of the export process
-        
+
         Example:
             ```python
             example_input = 'image1.jpg'

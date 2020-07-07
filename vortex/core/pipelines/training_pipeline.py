@@ -193,6 +193,7 @@ class TrainingPipeline(BasePipeline):
 
         if not self.hypopt:
             print("\nexperiment directory:", self.run_directory)
+        self._has_cls_names = hasattr(self.dataloader.dataset, "class_names")
 
     def run(self,
             save_model : bool = True) -> EasyDict:
@@ -371,10 +372,8 @@ class TrainingPipeline(BasePipeline):
         }
         if metrics is not None:
             checkpoint["metrics"] = metrics
-        if hasattr(self.dataloader.dataset, "class_names"):
+        if self._has_cls_names and self.dataloader.dataset.class_names is not None:
             checkpoint["class_names"] = self.dataloader.dataset.class_names
-
-        ## TODO: add input_spec to checkpoint
 
         filedir = self.run_directory
         if filename is None:
