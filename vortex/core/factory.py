@@ -9,7 +9,7 @@ from torch.utils.data.dataloader import DataLoader
 
 
 from vortex.networks.models import create_model_components
-from vortex.utils.data.dataset.wrapper import DatasetWrapper
+from vortex.utils.data.dataset.wrapper.default_wrapper import DefaultDatasetWrapper
 from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
@@ -98,7 +98,7 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
-    return DatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+    return DefaultDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
                           augmentations=augmentations, dataset_args=dataset_args)
 
 def create_dataloader(dataset_config : EasyDict, 

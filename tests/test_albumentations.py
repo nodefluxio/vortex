@@ -3,7 +3,7 @@ from easydict import EasyDict
 import numpy as np
 
 from vortex.utils.data.augment import create_transform
-from vortex.utils.data.dataset.wrapper import check_data_format_standard
+from vortex.utils.data.dataset.wrapper.base_wrapper import check_data_format_standard
 
 class TestAugmentation():
     def test_albumentations(self):
