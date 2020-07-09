@@ -14,9 +14,9 @@ import PIL
 import warnings
 
 from ...augment import create_transform
-from .base_wrapper import BaseDatasetWrapper,check_and_fix_coordinates
+from .basic_wrapper import BasicDatasetWrapper
 
-class DefaultDatasetWrapper(BaseDatasetWrapper):
+class DefaultDatasetWrapper(BasicDatasetWrapper):
     """ Intermediate wrapper for external dataset.
 
     This module is used to build external dataset and act as a dataset iterator
@@ -71,11 +71,9 @@ class DefaultDatasetWrapper(BaseDatasetWrapper):
             'albumentations', **standard_tf_kwargs)
 
     def __getitem__(self, index: int):
-        image, target = self.dataset[index]
+        image, target = super().__getitem__(index)
         # Currently support decoding image file provided it's string path using OpenCV (BGR format), for future roadmap if using another decoder
         if isinstance(image, str):
-            if not Path(image).is_file():
-                raise RuntimeError("Image file at '%s' not found!! Please check!" % (image))
             image = cv2.imread(image)
 
         # If dataset is PIL Image, convert to numpy array, support for torchvision dataset
@@ -87,19 +85,6 @@ class DefaultDatasetWrapper(BaseDatasetWrapper):
             pass
         else:
             raise RuntimeError("Unknown return format of %s" % type(image))
-
-        # Support if provided target only an int, convert to np.array
-        # Classification case doesn't need any array slicing so constructed np array only array of 1 is enough
-        if isinstance(target, int):
-            target = np.array([target])
-
-            if self.dataset.data_format['class_label'] is not None:
-                warnings.warn("'int' type target should be paired with 'class_label' data_format with value None. Updating config..")
-                self.dataset.data_format['class_label']=None
-
-        # Target must be numpy array
-        if not isinstance(target, np.ndarray):
-            raise RuntimeError("Unknown target return of %s" % type(target))
 
         # Configured computer vision augment -- START
         if self.stage == 'train' and self.augments is not None:
@@ -140,3 +125,181 @@ class DefaultDatasetWrapper(BaseDatasetWrapper):
 
         data = image, target
         return data
+
+def check_and_fix_coordinates(image: np.ndarray, target: np.ndarray, data_format: EasyDict):
+    # Check bounding box coordinates
+    if 'bounding_box' in data_format:
+        box_indices, box_axis = data_format.bounding_box.indices, data_format.bounding_box.axis
+        # # VIZ DEBUG
+        # ori_vis_image = image.copy()
+        # h, w, c = ori_vis_image.shape
+        # allbboxes = np.take(
+        #     target, axis=box_axis, indices=box_indices)
+        # for bbox in allbboxes:
+        #     x = int(bbox[0]*w)
+        #     y = int(bbox[1]*h)
+        #     box_w = int(bbox[2]*w)
+        #     box_h = int(bbox[3]*h)
+        #     cv2.rectangle(ori_vis_image, (x, y),
+        #                   (x+box_w, y+box_h), (0, 0, 255), 2)
+        # cv2.imshow('ori', ori_vis_image)
+        # # VIZ DEBUG
+
+        # Slice all xy min coords
+        allbboxes_xy = np.take(target, axis=box_axis, indices=box_indices[0:2])
+        # Evaluate all xy min coords less than 0 (relative coords) and update value to 0
+        allbboxes_xy[np.where(allbboxes_xy < 0)] = 0
+        # Slice all wh and calculate xymax
+        allbboxes_wh = np.take(target, axis=box_axis, indices=box_indices[2:4])
+        allbboxes_xymax = allbboxes_xy+allbboxes_wh
+        # Evaluate all xy max coords more than 0.99 (relative coords) and update value to 0.99
+        # Why not 1? Risk of overflow even 1e-5 more than 1 cause albumentations error
+        allbboxes_xymax[np.where(allbboxes_xymax > 1)] = 1
+        # Get new wh after update
+        allbboxes_wh = allbboxes_xymax-allbboxes_xy
+
+        # Update target tensor
+        np.put_along_axis(target, values=allbboxes_xy, indices=np.array(box_indices[0:2])[np.newaxis, :], axis=box_axis)
+        np.put_along_axis(target, values=allbboxes_wh, indices=np.array(box_indices[2:4])[np.newaxis, :], axis=box_axis)
+        target = target.astype('float32')
+        # # VIZ DEBUG
+        # fixed_vis_image = image.copy()
+        # allbboxes = np.take(
+        #     target, axis=box_axis, indices=box_indices)
+        # for bbox in allbboxes:
+        #     x = int(bbox[0]*w)
+        #     y = int(bbox[1]*h)
+        #     box_w = int(bbox[2]*w)
+        #     box_h = int(bbox[3]*h)
+        #     cv2.rectangle(fixed_vis_image, (x, y),
+        #                   (x+box_w, y+box_h), (0, 0, 255), 2)
+        # cv2.imshow('fixed', fixed_vis_image)
+        # cv2.waitKey(0)
+        # # VIZ DEBUG
+
+    if 'landmarks' in data_format:
+        # Get image shape
+        img_h, img_w, c = image.shape
+        # Slice landmarks tensor
+        landmarks_indices, landmarks_axis = data_format.landmarks.indices, data_format.landmarks.axis
+        landmarks_tensor = np.take(target, axis=landmarks_axis,indices=landmarks_indices
+        )
+        # Prepare bounding_box_modification
+        if 'bounding_box' in data_format:
+            box_indices, box_axis = data_format.bounding_box.indices, data_format.bounding_box.axis
+            allbboxes = np.take(target, axis=box_axis, indices=box_indices)
+            # Convert xywh to abs coords
+            allbboxes[:, [box_indices[0], box_indices[2]]] *= img_w
+            allbboxes[:, [box_indices[1], box_indices[3]]] *= img_h
+
+        # Get x,y slice
+        n_pairs = len(landmarks_tensor[0]) // 2
+        landmarks_x = landmarks_tensor[:, 0:n_pairs*2:2]
+        landmarks_y = landmarks_tensor[:, 1:n_pairs*2:2]
+
+        # Convert to absolute value
+        abs_landmarks_x = (landmarks_x*img_w).astype('int')
+        abs_landmarks_y = (landmarks_y*img_h).astype('int')
+
+        # # VIZ DEBUG
+        # ori_vis_image = image.copy()
+        # for bbox in allbboxes:
+        #     x = int(bbox[0])
+        #     y = int(bbox[1])
+        #     box_w = int(bbox[2])
+        #     box_h = int(bbox[3])
+        #     cv2.rectangle(ori_vis_image, (x, y),
+        #                   (x+box_w, y+box_h), (0, 0, 255), 2)
+        # for j, landmark in enumerate(abs_landmarks_x):
+        #     for i, landmark_x in enumerate(landmark):
+        #         x = int(landmark_x)
+        #         y = int(abs_landmarks_y[j][i])
+        #         cv2.circle(ori_vis_image, (x, y),
+        #                    2, (0, 0, 255), -1)
+        # # VIZ DEBUG
+
+        # Get minimum and maximum coordinates both on x and y
+        min_x = np.min(abs_landmarks_x)
+        max_x = np.max(abs_landmarks_x)
+        min_y = np.min(abs_landmarks_y)
+        max_y = np.max(abs_landmarks_y)
+
+        # Calculate padded border to accomodate out of bonds landmarks
+        left_border = 0
+        right_border = 0
+        top_border = 0
+        bottom_border = 0
+        modify = False
+        if min_x < 0:
+            left_border = int(0-min_x)
+            abs_landmarks_x += left_border
+            if 'bounding_box' in data_format:
+                allbboxes[:, box_indices[0]] += left_border
+            modify = True
+        if min_y < 0:
+            top_border = int(0-min_y)
+            abs_landmarks_y += top_border
+            if 'bounding_box' in data_format:
+                allbboxes[:, box_indices[1]] += top_border
+            modify = True
+        if max_x > img_w:
+            right_border = int(max_x-img_w)
+            modify = True
+        if max_y > img_h:
+            bottom_border = int(max_y-img_h)
+            modify = True
+
+        # Modify if any modification is needed
+        if modify:
+            # Pad image
+            pad_color = [0, 0, 0]
+            image = cv2.copyMakeBorder(image, top_border, bottom_border, left_border, right_border, cv2.BORDER_CONSTANT,value=pad_color)
+            new_img_h, new_img_w, c = image.shape
+            # Modify bounding boxes annotations if any
+            if 'bounding_box' in data_format:
+                allbboxes[:, [box_indices[0], box_indices[2]]] /= new_img_w
+                allbboxes[:, [box_indices[1], box_indices[3]]] /= new_img_h
+                np.put_along_axis(target, values=allbboxes, indices=np.array(box_indices)[np.newaxis, :], axis=box_axis)
+            # Modify landmarks tensor
+            landmarks_x = abs_landmarks_x / new_img_w
+            landmarks_y = abs_landmarks_y / new_img_h
+
+            landmarks_tensor[:, 0:n_pairs*2:2] = landmarks_x
+            landmarks_tensor[:, 1:n_pairs*2:2] = landmarks_y
+            np.put_along_axis(target, values=landmarks_tensor, indices=np.array(landmarks_indices)[np.newaxis, :], axis=landmarks_axis)
+
+            # # VIZ DEBUG
+            # cv2.imshow('ori', ori_vis_image)
+            # fix_vis_image = image.copy()
+            # box_indices, box_axis = data_format.bounding_box.indices, data_format.bounding_box.axis
+            # allbboxes = np.take(
+            #     target, axis=box_axis, indices=box_indices)
+            # allbboxes[:, [box_indices[0], box_indices[2]]] *= new_img_w
+            # allbboxes[:, [box_indices[1], box_indices[3]]] *= new_img_h
+            # landmarks_indices, landmarks_axis = data_format.landmarks.indices, data_format.landmarks.axis
+            # landmarks_tensor = np.take(
+            #     target, axis=landmarks_axis,
+            #     indices=landmarks_indices
+            # )
+            # n_pairs = len(landmarks_tensor[0]) // 2
+            # landmarks_x = landmarks_tensor[:, 0:n_pairs*2:2]
+            # landmarks_y = landmarks_tensor[:, 1:n_pairs*2:2]
+            # abs_landmarks_x = (landmarks_x*new_img_w).astype('int')
+            # abs_landmarks_y = (landmarks_y*new_img_h).astype('int')
+            # for bbox in allbboxes:
+            #     x = int(bbox[0])
+            #     y = int(bbox[1])
+            #     box_w = int(bbox[2])
+            #     box_h = int(bbox[3])
+            #     cv2.rectangle(fix_vis_image, (x, y),
+            #                   (x+box_w, y+box_h), (0, 0, 255), 2)
+            # for j, landmark in enumerate(abs_landmarks_x):
+            #     for i, landmark_x in enumerate(landmark):
+            #         x = int(landmark_x)
+            #         y = int(abs_landmarks_y[j][i])
+            #         cv2.circle(fix_vis_image, (x, y),
+            #                    2, (0, 0, 255), -1)
+            # cv2.imshow('fix', fix_vis_image)
+            # cv2.waitKey(0)
+            # # VIZ DEBUG
+    return image, target
