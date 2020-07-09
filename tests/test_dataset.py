@@ -37,6 +37,30 @@ def test_create_dataset():
     data = create_dataset(dummy_dataset_conf, stage="train", preprocess_config=preprocess_args)
     assert data.dataset.kwargs["msg"] == dummy_dataset_conf.train.args["msg"]
 
+def test_create_basic_dataset():
+    preprocess_args = EasyDict({
+        'input_size' : 224,
+        'input_normalization' : {
+            'mean' : [0.5, 0.5, 0.5],
+            'std' : [0.5, 0.5, 0.5]
+        }
+    })
+
+    dummy_dataset_conf = EasyDict(
+        {
+            'train' : {
+                'dataset' : "ImageFolder",
+                'args' : {
+                    'root' : 'tests/test_dataset/train'
+                }
+            }
+        }
+    )
+    data = create_dataset(dummy_dataset_conf, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
+    # assert data.dataset.kwargs["msg"] == dummy_dataset_conf.train.args["msg"]
+    import pdb; pdb.set_trace()
+    assert isinstance(data[0][0],str) or isinstance(data[0][0],Path)
+
 def test_torchvision_dataset():
     from torchvision.datasets.folder import IMG_EXTENSIONS
     IMG_EXTENSIONS += ('.py', ) ## workaround so it can predict .py

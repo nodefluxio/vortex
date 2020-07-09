@@ -9,7 +9,7 @@ from torch.utils.data.dataloader import DataLoader
 
 
 from vortex.networks.models import create_model_components
-from vortex.utils.data.dataset.wrapper.default_wrapper import DefaultDatasetWrapper
+from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper,DefaultDatasetWrapper
 from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
@@ -83,7 +83,8 @@ def create_runtime_model(model_path : Union[str, Path],
 
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
-                   stage : str):
+                   stage : str,
+                   wrapper_format : str = 'default'):
     if stage == 'train' :
         dataset = dataset_config.train.dataset
         try:
@@ -98,8 +99,14 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
-    return DefaultDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+    if wrapper_format=='default':
+        return DefaultDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
                           augmentations=augmentations, dataset_args=dataset_args)
+    elif wrapper_format=='basic':
+        return BasicDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+                          augmentations=augmentations, dataset_args=dataset_args)
+    else:
+        raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
 def create_dataloader(dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
