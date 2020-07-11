@@ -67,7 +67,7 @@ class AnnotatedL1Loss(nn.L1Loss):
     def __init__(self, *args, **kwargs):
         super(type(self),self).__init__(*args, **kwargs)
     def forward(self, input: torch.Tensor, target):
-        return super(type(self),self).forward(input=intput,target=target)
+        return super(type(self),self).forward(input=input,target=target)
 
 optimizer = ( 'SGD', {
     'lr' : 1e-3,
