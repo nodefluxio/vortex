@@ -148,7 +148,15 @@ class TestPredictionPipeline():
             # If dump_visualization and images is provided as string, allow for dump visualized image
             vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
             assert vis_dump_path.exists()
-        
+
+            assert all([isinstance(spec, dict) and \
+                ('shape' in spec) and ('pos' in spec) and ('type' in spec) and \
+                isinstance(spec['shape'], (tuple, list)) and \
+                isinstance(spec['type'], str) and \
+                isinstance(spec['pos'], int)
+                    for spec in predictor.model.input_specs.values()
+            ])
+
         ## normal predictor
         _test(vortex_predictor)
 

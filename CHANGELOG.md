@@ -28,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `metrics` --> per epoch training metrics
 - support for resume training in training pipeline
 - model checkpoint update script in `script/update_model.py`
+- `input_specs` attribute in `PytorchPredictionPipeline.model`, so that it has the same 
+  properties as in the `IRPredictionPipeline.model`.
 
 ### Changed
 

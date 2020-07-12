@@ -275,8 +275,25 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         model_components, ckpt = create_model(config.model, state_dict=str(filename), 
                                         stage='validate', return_checkpoint=True)
         model_components.network = model_components.network.to(device)
-        self.predictor = create_predictor(model_components)
-        self.predictor.to(device)
+        self.model = create_predictor(model_components)
+        self.model.to(device)
+
+        ## input_specs -> {input_name: {shape, pos, type}}
+        img_size = config.model.preprocess_args.input_size
+        additional_inputs = tuple()
+        if hasattr(model_components.postprocess, 'additional_inputs') :
+            additional_inputs = model_components.postprocess.additional_inputs
+            assert isinstance(additional_inputs, tuple) and len(additional_inputs) > 0
+            assert all(isinstance(additional_input, tuple) for additional_input in additional_inputs)
+
+        input_specs = {'input': {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}}
+        for n, (name, shape) in enumerate(additional_inputs):
+            input_specs[name] = {
+                'shape': tuple(shape),
+                'pos': n+1,
+                'type': 'float'
+            }
+        self.model.input_specs = input_specs
 
         cls_names = None
         if 'class_names' in ckpt:
@@ -327,12 +344,13 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         batch_imgs = np.stack(batch_imgs)
 
         # Do model inference
-        device = list(self.predictor.parameters())[0].device
+        device = list(self.model.parameters())[0].device
         inputs = {'input' : torch.from_numpy(batch_imgs).to(device)}
 
         ## Get model additional input specific for each task
-        if hasattr(self.predictor.postprocess, 'additional_inputs') :
-            additional_inputs = self.predictor.postprocess.additional_inputs
+        ## TODO: use input_specs
+        if hasattr(self.model.postprocess, 'additional_inputs') :
+            additional_inputs = self.model.postprocess.additional_inputs
             assert isinstance(additional_inputs, tuple)
             for additional_input in additional_inputs :
                 key, _ = additional_input
@@ -341,7 +359,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
                     inputs[key] = torch.from_numpy(np.asarray([value])).to(device)
 
         with torch.no_grad() :
-            results = self.predictor(**inputs)
+            results = self.model(**inputs)
 
         if isinstance(results, torch.Tensor) :
             results = results.cpu().numpy()
@@ -351,7 +369,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             results = list(map(lambda x: x.cpu().numpy() if isinstance(x,torch.Tensor) else x, results))
 
         # Formatting inference result
-        output_format = self.predictor.output_format
+        output_format = self.model.output_format
         results = get_prediction_results(
             results=results,
             output_format=output_format
@@ -403,13 +421,13 @@ class IRPredictionPipeline(BasePredictionPipeline):
         self.input_shape = self.model.input_specs['input']['shape']
     
     @staticmethod
-    def runtime_predict(predictor, 
+    def runtime_predict(model, 
                         image: np.ndarray, 
                         **kwargs) -> List:
         """Function to wrap Vortex runtime inference process
 
         Args:
-            predictor : Vortex runtime object
+            model : Vortex runtime object
             image (np.ndarray): array of batched input image(s) with dimension of 4 (n,h,w,c)
             kwargs (optional) : this kwargs is placement for additional input parameters specific to \
                                 models'task
@@ -440,14 +458,14 @@ class IRPredictionPipeline(BasePredictionPipeline):
         # runtime prediction as static method, can be reused in another pipeline/engine, e.g. Validator
         predict_args = {}
         for name, value in kwargs.items() :
-            if not name in predictor.input_specs :
+            if not name in model.input_specs :
                 warnings.warn('additional input arguments {} ignored'.format(name))
                 continue
             ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
-            dtype = predictor.input_specs[name]['type'].replace('tensor(','').replace(')','')
+            dtype = model.input_specs[name]['type'].replace('tensor(','').replace(')','')
             predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
                 else np.asarray(value, dtype=dtype)
-        results = predictor(image, **predict_args)
+        results = model(image, **predict_args)
         ## convert to dict for visualization
         results = [result._asdict() for result in results]
         return results
