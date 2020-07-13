@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 import yaml
 import torch
+from collections import OrderedDict
 
 from vortex.core.pipelines import (
     TrainingPipeline,
@@ -118,6 +119,14 @@ class TestPredictionPipeline():
     if Path('tests/output_predict_test').exists():
         shutil.rmtree(Path('tests/output_predict_test'))
 
+    def test_model_api(self):
+        vortex_predictor = PytorchPredictionPipeline(config = config,
+                                        weights = None,
+                                        device = 'cpu')
+        
+        assert isinstance(vortex_predictor.model.input_specs,OrderedDict)
+        assert isinstance(vortex_predictor.model.class_names,list)
+
     def test_input_from_image_path(self):
         # Instantiate predictor
         kwargs = {}
@@ -161,7 +170,7 @@ class TestPredictionPipeline():
         _test(vortex_predictor)
 
         ## no class names
-        vortex_predictor.class_names = None
+        vortex_predictor.model.class_names = None
         _test(vortex_predictor)
 
     def test_input_from_numpy_with_vis(self):
@@ -310,6 +319,14 @@ class TestIRValidationPipeline():
         assert generated_report.exists()
 
 class TestIRPredictionPipeline(): 
+
+    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    def test_model_api(self,model_input):
+        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
+                                                runtime = 'cpu')
+        
+        assert isinstance(vortex_ir_predictor.model.input_specs,OrderedDict)
+        assert isinstance(vortex_ir_predictor.model.class_names,list)
 
     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
     def test_input_from_image_path(self,model_input):
