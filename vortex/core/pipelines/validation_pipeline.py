@@ -105,8 +105,8 @@ class BaseValidationPipeline(BasePipeline):
             # Run validation process
             results = validation_executor.run(batch_size = 2)
 
-            ## OR (Currently for IRValidationPipeline only)
-            ## 'batch_size' information is also embedded in model.input_specs['input']['shape'][0]
+            ## OR (for IRValidationPipeline only, PytorchValidationPipeline can accept flexible batch size)
+            ## 'batch_size' information is embedded in model.input_specs['input']['shape'][0]
 
             batch_size = validation_executor.model.input_specs['input']['shape'][0]
             results = validation_executor.run(batch_size = batch_size)

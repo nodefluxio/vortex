@@ -475,58 +475,6 @@ print(class_names)
 
 ---
 
-#### `runtime_predict`
-
-
-
-```python
-def runtime_predict(
-      model,
-      image : numpy.ndarray,
-      **kwargs,
-)
-```
-
-
-
-**Arguments**:
-
-- `model `- Vortex runtime object
-- `image` _np.ndarray_ - array of batched input image(s) with dimension of 4 (n,h,w,c)
-- `kwargs` _optional_ - this kwargs is placement for additional input parameters specific to                                 models'task
-
-
-**Returns**:
-
-- `List` - list of prediction results
-
-
-**Examples**:
-
-
-
-```python
-from vortex.core.factory import create_runtime_model
-from vortex.core.pipelines import IRPredictionPipeline
-import cv2
-
-model_file = 'experiments/outputs/example/example_bs2.pt' # Model file with extension '.onnx' or '.pt'
-runtime = 'cpu'
-model = create_runtime_model(model_file, runtime)
-
-batch_imgs = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
-
-results = IRPredictionPipeline.runtime_predict(model, 
-                                               batch_imgs,
-                                               score_threshold=0.9,
-                                               iou_threshold=0.2
-                                               )
-```
-
-
-
----
-
 ---
 
 ### TrainingPipeline
@@ -728,8 +676,8 @@ validation_executor = IRValidationPipeline(config=config,
 # Run validation process
 results = validation_executor.run(batch_size = 2)
 
-## OR (Currently for IRValidationPipeline only)
-## 'batch_size' information is also embedded in model.input_specs['input']['shape'][0]
+## OR (for IRValidationPipeline only, PytorchValidationPipeline can accept flexible batch size)
+## 'batch_size' information is embedded in model.input_specs['input']['shape'][0]
 
 batch_size = validation_executor.model.input_specs['input']['shape'][0]
 results = validation_executor.run(batch_size = batch_size)
@@ -845,8 +793,8 @@ validation_executor = IRValidationPipeline(config=config,
 # Run validation process
 results = validation_executor.run(batch_size = 2)
 
-## OR (Currently for IRValidationPipeline only)
-## 'batch_size' information is also embedded in model.input_specs['input']['shape'][0]
+## OR (for IRValidationPipeline only, PytorchValidationPipeline can accept flexible batch size)
+## 'batch_size' information is embedded in model.input_specs['input']['shape'][0]
 
 batch_size = validation_executor.model.input_specs['input']['shape'][0]
 results = validation_executor.run(batch_size = batch_size)

@@ -323,7 +323,7 @@ class BaseValidator:
         image_dim = len(image.shape)
         image = image[np.newaxis,:] \
             if (input_dim - image_dim) else image
-        return IRPredictionPipeline.runtime_predict(predictor, image, *args, **kwargs)
+        return IRPredictionPipeline._runtime_predict(predictor, image, *args, **kwargs)
     
     def format_output(self, results) :
         """

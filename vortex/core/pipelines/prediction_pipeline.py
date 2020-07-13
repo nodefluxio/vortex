@@ -437,7 +437,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
         # self.input_shape = self.model.input_specs['input']['shape']
     
     @staticmethod
-    def runtime_predict(model, 
+    def _runtime_predict(model, 
                         image: np.ndarray, 
                         **kwargs) -> List:
         """Function to wrap Vortex runtime inference process
@@ -463,7 +463,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
 
             batch_imgs = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
 
-            results = IRPredictionPipeline.runtime_predict(model, 
+            results = IRPredictionPipeline._runtime_predict(model, 
                                                            batch_imgs,
                                                            score_threshold=0.9,
                                                            iou_threshold=0.2
@@ -508,6 +508,6 @@ class IRPredictionPipeline(BasePredictionPipeline):
         # Resize input
         batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], input_shape)
 
-        results = type(self).runtime_predict(self.model, batch_imgs, **kwargs)
+        results = type(self)._runtime_predict(self.model, batch_imgs, **kwargs)
 
         return results
