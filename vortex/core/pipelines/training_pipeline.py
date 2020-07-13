@@ -267,7 +267,7 @@ class TrainingPipeline(BasePipeline):
                 if self.valid_for_validation:
                     metrics = val_results
                 model_fname = "{}-epoch-{}.pth".format(self.config.experiment_name, epoch)
-                self.save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+                self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
 
                 # Experiment Logging
                 # Disabled on hyperparameter optimization
@@ -284,7 +284,7 @@ class TrainingPipeline(BasePipeline):
             if self.valid_for_validation:
                 metrics = val_results
             model_fname = "{}.pth".format(self.config.experiment_name)
-            model_path = self.save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+            model_path = self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
             # Copy final weight from runs directory to experiment directory
             shutil.copy(model_path, Path(self.experiment_directory))
 
@@ -363,7 +363,7 @@ class TrainingPipeline(BasePipeline):
             if mode=='r+':
                 f.write(old_content)
 
-    def save_checkpoint(self, epoch, metrics=None, filename=None):
+    def _save_checkpoint(self, epoch, metrics=None, filename=None):
         checkpoint = {
             "epoch": epoch+1, 
             "config": self.config,

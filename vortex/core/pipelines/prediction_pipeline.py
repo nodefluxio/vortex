@@ -76,22 +76,32 @@ class BasePredictionPipeline(BasePipeline):
             vortex_predictor=IRPredictionPipeline(model = model_file,
                                                   runtime = runtime)
 
-            ### You can get model's required parameter by extracting
-            ### model's 'input_specs' attributes
+            # You can get model's required parameter by extracting model's 'input_specs' attributes
 
             input_shape  = vortex_predictor.model.input_specs['input']['shape']
+
+            ## `input_specs['input']['shape']` will provide (batch_size,height,width,channel) dimension
+            ## NOTES : PytorchPredictionPipeline can accept flexible batch size,
+            ## however the `input_specs['input']['shape']` of the batch_size dimension 
+            ## will always set to 1, ignore this
+
+            # Extract additional run() input parameters specific for each model
+
             additional_run_params = [key for key in vortex_predictor.model.input_specs.keys() if key!='input']
             print(additional_run_params)
 
-            #### Assume that the model is detection model
-            #### ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
+            ## Assume that the model is detection model
+            ## ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
 
-            # Prepare batched input
+            # Prepare batched input from image files path
             batch_input = ['image1.jpg','image2.jpg']
 
             ## OR
             import cv2
-            batch_input = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
+            input_size = input_shape[1] # Assume square input
+            image1 = cv2.resize(cv2.imread('image1.jpg'), (input_size,input_size))
+            image2 = cv2.resize(cv2.imread('image2.jpg'), (input_size,input_size))
+            batch_input = np.array([image1,image2])
 
             results = vortex_predictor.run(images=batch_input,
                                            score_threshold=0.9,

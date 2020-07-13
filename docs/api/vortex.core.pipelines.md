@@ -34,7 +34,7 @@ def __init__(
 **Arguments**:
 
 - `config` _EasyDict_ - dictionary parsed from Vortex experiment file
-- `weights` _Union[str,Path,None], optional_ - path to selected Vortex model's weight. If set to None, it will                                                       assume that final model weights exist in **experiment directory**.                                                       Defaults to None.
+- `weights` _Union[str,Path], optional_ - path to selected Vortex model's weight. If set to None, it will                                                  assume that final model weights exist in **experiment directory**.                                                  Defaults to None.
 
 
 **Examples**:
@@ -47,7 +47,8 @@ from vortex.core.pipelines import GraphExportPipeline
 
 # Parse config
 config = load_config('experiments/config/example.yml')
-graph_exporter=GraphExportPipeline(config=config,weights='experiments/outputs/example/example.pth')
+graph_exporter = GraphExportPipeline(config=config,
+                                     weights='experiments/outputs/example/example.pth')
 ```
 
 
@@ -69,7 +70,8 @@ def run(
 
 **Arguments**:
 
-- `example_input` _Union[str,Path,None], optional_ - path to example input image to help graph tracing. Defaults to None.
+- `example_input` _Union[str,Path], optional_ - path to example input image to help graph tracing. 
+Defaults to None.
 
 
 **Returns**:
@@ -142,7 +144,8 @@ with open(config_path) as f:
 with open(optconfig_path) as f:
     optconfig_data = yaml.load(f, Loader=Loader)
 
-graph_exporter=HypOptPipeline(config=config,optconfig=optconfig)
+graph_exporter = HypOptPipeline(config=config,
+                                optconfig=optconfig)
 ```
 
 
@@ -171,8 +174,9 @@ def run(
 
 
 ```python
-graph_exporter=HypOptPipeline(config=config,optconfig=optconfig)
-results=graph_exporter.run()
+graph_exporter = HypOptPipeline(config=config,
+                                optconfig=optconfig)
+results = graph_exporter.run()
 ```
 
 
@@ -229,7 +233,7 @@ config = load_config(config_path)
 weights_file = 'experiments/outputs/example/example.pth'
 device = 'cuda'
 
-vortex_predictor=PytorchPredictionPipeline(config = config,
+vortex_predictor = PytorchPredictionPipeline(config = config,
                                            weights = weights_file,
                                            device = device)
 ```
@@ -285,32 +289,45 @@ vortex_predictor=PytorchPredictionPipeline(config = config,
                                            weights = weights_file,
                                            device = device)
 
-### TODO: adding 'input_specs'
-
 ## OR
 vortex_predictor=IRPredictionPipeline(model = model_file,
                                       runtime = runtime)
 
-### You can get model's required parameter by extracting
-### model's 'input_specs' attributes
+# You can get model's required parameter by extracting model's 'input_specs' attributes
 
-input_shape  = vortex_predictor.model.input_specs.shape
+input_shape  = vortex_predictor.model.input_specs['input']['shape']
+
+## `input_specs['input']['shape']` will provide (batch_size,height,width,channel) dimension
+## NOTES : PytorchPredictionPipeline can accept flexible batch size,
+## however the `input_specs['input']['shape']` of the batch_size dimension 
+## will always set to 1, ignore this
+
+# Extract additional run() input parameters specific for each model
+
 additional_run_params = [key for key in vortex_predictor.model.input_specs.keys() if key!='input']
 print(additional_run_params)
 
-#### Assume that the model is detection model
-#### ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
+## Assume that the model is detection model
+## ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
 
-# Prepare batched input
+# Prepare batched input from image files path
 batch_input = ['image1.jpg','image2.jpg']
 
 ## OR
 import cv2
-batch_input = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
+input_size = input_shape[1] # Assume square input
+image1 = cv2.resize(cv2.imread('image1.jpg'), (input_size,input_size))
+image2 = cv2.resize(cv2.imread('image2.jpg'), (input_size,input_size))
+batch_input = np.array([image1,image2])
 
 results = vortex_predictor.run(images=batch_input,
                                score_threshold=0.9,
                                iou_threshold=0.2)
+
+# Additional process : obtain class_names from model
+class_names = vortex_predictor.model.class_names
+print(class_names)
+
 ```
 
 
@@ -413,32 +430,45 @@ vortex_predictor=PytorchPredictionPipeline(config = config,
                                            weights = weights_file,
                                            device = device)
 
-### TODO: adding 'input_specs'
-
 ## OR
 vortex_predictor=IRPredictionPipeline(model = model_file,
                                       runtime = runtime)
 
-### You can get model's required parameter by extracting
-### model's 'input_specs' attributes
+# You can get model's required parameter by extracting model's 'input_specs' attributes
 
-input_shape  = vortex_predictor.model.input_specs.shape
+input_shape  = vortex_predictor.model.input_specs['input']['shape']
+
+## `input_specs['input']['shape']` will provide (batch_size,height,width,channel) dimension
+## NOTES : PytorchPredictionPipeline can accept flexible batch size,
+## however the `input_specs['input']['shape']` of the batch_size dimension 
+## will always set to 1, ignore this
+
+# Extract additional run() input parameters specific for each model
+
 additional_run_params = [key for key in vortex_predictor.model.input_specs.keys() if key!='input']
 print(additional_run_params)
 
-#### Assume that the model is detection model
-#### ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
+## Assume that the model is detection model
+## ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
 
-# Prepare batched input
+# Prepare batched input from image files path
 batch_input = ['image1.jpg','image2.jpg']
 
 ## OR
 import cv2
-batch_input = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
+input_size = input_shape[1] # Assume square input
+image1 = cv2.resize(cv2.imread('image1.jpg'), (input_size,input_size))
+image2 = cv2.resize(cv2.imread('image2.jpg'), (input_size,input_size))
+batch_input = np.array([image1,image2])
 
 results = vortex_predictor.run(images=batch_input,
                                score_threshold=0.9,
                                iou_threshold=0.2)
+
+# Additional process : obtain class_names from model
+class_names = vortex_predictor.model.class_names
+print(class_names)
+
 ```
 
 
@@ -451,7 +481,7 @@ results = vortex_predictor.run(images=batch_input,
 
 ```python
 def runtime_predict(
-      predictor,
+      model,
       image : numpy.ndarray,
       **kwargs,
 )
@@ -461,7 +491,7 @@ def runtime_predict(
 
 **Arguments**:
 
-- `predictor `- Vortex runtime object
+- `model `- Vortex runtime object
 - `image` _np.ndarray_ - array of batched input image(s) with dimension of 4 (n,h,w,c)
 - `kwargs` _optional_ - this kwargs is placement for additional input parameters specific to                                 models'task
 
@@ -516,6 +546,7 @@ def __init__(
       config : easydict.EasyDict,
       config_path : typing.Union[str, pathlib.Path, NoneType] = None,
       hypopt : bool = False,
+      resume : bool = False,
 )
 ```
 
@@ -524,8 +555,13 @@ def __init__(
 **Arguments**:
 
 - `config` _EasyDict_ - dictionary parsed from Vortex experiment file
-- `config_path` _Union[str,Path,None], optional_ - path to experiment file. Need to be provided for                                                           backup **experiment file**. Defaults to None.
-- `hypopt` _bool, optional_ - flag for hypopt, disable several pipeline process. Defaults to False.
+- `config_path` _Union[str,Path,None], optional_ - path to experiment file. 
+Need to be provided for backup **experiment file**. 
+Defaults to None.
+- `hypopt` _bool, optional_ - flag for hypopt, disable several pipeline process. 
+Defaults to False.
+- `resume` _bool, optional_ - flag to resume training. 
+Defaults to False.
 
 
 **Raises**:
@@ -544,7 +580,9 @@ from vortex.core.pipelines import TrainingPipeline
 # Parse config
 config_path = 'experiments/config/example.yml'
 config = load_config(config_path)
-train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False)
+train_executor = TrainingPipeline(config=config,
+                                  config_path=config_path,
+                                  hypopt=False)
 ```
 
 
@@ -579,7 +617,9 @@ def run(
 
 
 ```python
-train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False)
+train_executor = TrainingPipeline(config=config,
+                                  config_path=config_path,
+                                  hypopt=False)
 outputs = train_executor.run()
 ```
 
