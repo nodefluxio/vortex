@@ -37,63 +37,118 @@ config = load_config(config_path)
 with open(hypopt_train_obj_path) as f:
     hypopt_train_obj_config = EasyDict(yaml.load(f, Loader=Loader))
 
+class InfoPlaceHolder():
+    run_directory = '.'
 
-def test_train_pipeline():
+class TestTrainingPipeline():
 
-    # Clear pre-existing output file
-    if Path(config.output_directory).exists():
-        shutil.rmtree(Path(config.output_directory))
+    def test_fresh_train(self):
 
-    if Path('experiments/local_runs.log').exists():
-        os.remove(Path('experiments/local_runs.log'))
+        # Clear pre-existing output file
+        if Path(config.output_directory).exists():
+            shutil.rmtree(Path(config.output_directory))
 
-    # Instantiate Training
-    train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False)
-    output = train_executor.run()
+        if Path('experiments/local_runs.log').exists():
+            os.remove(Path('experiments/local_runs.log'))
 
-    # Check output type
-    assert isinstance(output,EasyDict)
+        # Instantiate Training
+        train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False)
+        InfoPlaceHolder.run_directory = train_executor.run_directory
 
-    # Check every enforce key
-    assert 'epoch_losses' in output.keys()
-    assert 'val_metrics' in output.keys()
-    assert 'learning_rates' in output.keys()
+        output = train_executor.run()
 
-    epoch_losses = output.epoch_losses
-    val_metrics = output.val_metrics
-    learning_rates = output.learning_rates
+        # Check output type
+        assert isinstance(output,EasyDict)
 
-    # Make sure returned values is list based on each epoch process
-    assert isinstance(epoch_losses,list)
-    assert len(epoch_losses) == config.trainer.epoch
-    assert isinstance(val_metrics,list)
-    assert len(val_metrics) == int(config.trainer.epoch/config.trainer.validation.val_epoch)
-    assert isinstance(learning_rates,list)
-    assert len(learning_rates) == config.trainer.epoch
+        # Check every enforce key
+        assert 'epoch_losses' in output.keys()
+        assert 'val_metrics' in output.keys()
+        assert 'learning_rates' in output.keys()
 
-    # Make sure every desired output exist
+        epoch_losses = output.epoch_losses
+        val_metrics = output.val_metrics
+        learning_rates = output.learning_rates
 
-    # Check experiment directory and run directory exist
-    assert Path(train_executor.run_directory).exists()
+        # Make sure returned values is list based on each epoch process
+        assert isinstance(epoch_losses,list)
+        assert len(epoch_losses) == config.trainer.epoch
+        assert isinstance(val_metrics,list)
+        assert len(val_metrics) == int(config.trainer.epoch/config.trainer.validation.val_epoch)
+        assert isinstance(learning_rates,list)
+        assert len(learning_rates) == config.trainer.epoch
 
-    # Check if config is duplicated as backup in run directory
-    backup_config = Path(train_executor.run_directory)/'config.yml'
-    assert Path(backup_config).exists()
+        # Make sure every desired output exist
 
-    # Check if final weight is generated when training ends
-    final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
-    assert Path(final_weight).exists()
+        # Check experiment directory and run directory exist
+        assert Path(train_executor.run_directory).exists()
 
-    # Check local_runs log is generated
-    assert Path('experiments/local_runs.log').exists()
+        # Check if config is duplicated as backup in run directory
+        backup_config = Path(train_executor.run_directory)/'config.yml'
+        assert Path(backup_config).exists()
 
-    ## check saved model checkpoint
-    ckpt = torch.load(final_weight)
-    required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
-    assert all((k in ckpt) for k in required_ckpt)
-    assert ckpt['config'] == config
-    assert tuple(ckpt['class_names']) == ('cat', 'dog')
+        # Check if final weight is generated when training ends
+        final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
+        assert Path(final_weight).exists()
 
+        # Check local_runs log is generated
+        assert Path('experiments/local_runs.log').exists()
+
+        ## check saved model checkpoint
+        ckpt = torch.load(final_weight)
+        required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
+        assert all((k in ckpt) for k in required_ckpt)
+        assert ckpt['config'] == config
+        assert tuple(ckpt['class_names']) == ('cat', 'dog')
+
+    def test_continue_train(self):
+        # Instantiate Training
+        config.checkpoint=InfoPlaceHolder.run_directory/'test_classification_pipelines-epoch-0.pth'
+        train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False,resume=True)
+        output = train_executor.run()
+
+        # Check output type
+        assert isinstance(output,EasyDict)
+
+        # Check every enforce key
+        assert 'epoch_losses' in output.keys()
+        assert 'val_metrics' in output.keys()
+        assert 'learning_rates' in output.keys()
+
+        epoch_losses = output.epoch_losses
+        val_metrics = output.val_metrics
+        learning_rates = output.learning_rates
+
+        # Make sure returned values is list based on each epoch process
+        rest_of_epoch = config.trainer.epoch - train_executor.start_epoch
+        assert isinstance(epoch_losses,list)
+        assert len(epoch_losses) == rest_of_epoch
+        assert isinstance(val_metrics,list)
+        assert len(val_metrics) == int(rest_of_epoch/config.trainer.validation.val_epoch)
+        assert isinstance(learning_rates,list)
+        assert len(learning_rates) == rest_of_epoch
+
+        # Make sure every desired output exist
+
+        # Check experiment directory and run directory exist
+        assert Path(train_executor.run_directory).exists()
+
+        # Check if config is duplicated as backup in run directory
+        backup_config = Path(train_executor.run_directory)/'config.yml'
+        assert Path(backup_config).exists()
+
+        # Check if final weight is generated when training ends
+        final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
+        assert Path(final_weight).exists()
+
+        # Check local_runs log is generated
+        assert Path('experiments/local_runs.log').exists()
+
+        ## check saved model checkpoint
+        ckpt = torch.load(final_weight)
+        required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
+        assert all((k in ckpt) for k in required_ckpt)
+        assert ckpt['config'] == config
+        assert tuple(ckpt['class_names']) == ('cat', 'dog')
 
 def test_validation_pipeline():
 
