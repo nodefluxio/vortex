@@ -282,7 +282,6 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         self.model.to(device)
 
         ## input_specs -> {input_name: {shape, pos, type}}
-        input_specs = OrderedDict()
         img_size = config.model.preprocess_args.input_size
         additional_inputs = tuple()
         if hasattr(model_components.postprocess, 'additional_inputs') :
@@ -290,7 +289,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             assert isinstance(additional_inputs, tuple) and len(additional_inputs) > 0
             assert all(isinstance(additional_input, tuple) for additional_input in additional_inputs)
 
-        input_specs['input'] = {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}
+        input_specs = {'input': {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}}
         for n, (name, shape) in enumerate(additional_inputs):
             input_specs[name] = {
                 'shape': tuple(shape),
@@ -325,7 +324,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             else:
                 warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
                     config.dataset))
-        self.model.class_names = cls_names
+        self.class_names = cls_names
 
         # Configure input size for image
         # self.input_size = config.model.preprocess_args.input_size
