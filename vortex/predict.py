@@ -37,9 +37,12 @@ def main(args):
     
     # Convert class index to class names,obtain results
 
-    class_names = [[vortex_predictor.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
-    print(prediction)
-    print(class_names)
+    try :
+        class_names = [[vortex_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
+    except :
+        class_names = None
+    print('Prediction : {}'.format(prediction))
+    print('Class Names : {}'.format(class_names))
 
 def add_parser(parent_parser,subparsers = None):
     if subparsers is None:

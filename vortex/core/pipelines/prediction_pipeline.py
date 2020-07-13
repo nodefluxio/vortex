@@ -6,6 +6,7 @@ import warnings
 import cv2
 from easydict import EasyDict
 import torch
+from collections import OrderedDict
 
 from vortex.core.factory import create_model,create_dataset , create_runtime_model
 from vortex_runtime import model_runtime_map
@@ -26,8 +27,7 @@ class BasePredictionPipeline(BasePipeline):
     def __init__(self):
         """Class initialization
         """
-        self.class_names = None
-        self.output_file_prefix = None
+        pass
 
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
@@ -72,8 +72,6 @@ class BasePredictionPipeline(BasePipeline):
                                                        weights = weights_file,
                                                        device = device)
 
-            ### TODO: adding 'input_specs'
-
             ## OR
             vortex_predictor=IRPredictionPipeline(model = model_file,
                                                   runtime = runtime)
@@ -81,7 +79,7 @@ class BasePredictionPipeline(BasePipeline):
             ### You can get model's required parameter by extracting
             ### model's 'input_specs' attributes
 
-            input_shape  = vortex_predictor.model.input_specs.shape
+            input_shape  = vortex_predictor.model.input_specs['input']['shape']
             additional_run_params = [key for key in vortex_predictor.model.input_specs.keys() if key!='input']
             print(additional_run_params)
 
@@ -98,6 +96,11 @@ class BasePredictionPipeline(BasePipeline):
             results = vortex_predictor.run(images=batch_input,
                                            score_threshold=0.9,
                                            iou_threshold=0.2)
+
+            # Additional process : obtain class_names from model
+            class_names = vortex_predictor.model.class_names
+            print(class_names)
+
             ```
         """
         ## make class_names optional
@@ -178,7 +181,7 @@ class BasePredictionPipeline(BasePipeline):
         for vis, results in zip(batch_vis,  batch_results) :
             result_vis.append(visualize_result(
                 vis=vis, results=[results],
-                class_names=self.class_names
+                class_names=self.model.class_names
             ))
         return result_vis
 
@@ -279,6 +282,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         self.model.to(device)
 
         ## input_specs -> {input_name: {shape, pos, type}}
+        input_specs = OrderedDict()
         img_size = config.model.preprocess_args.input_size
         additional_inputs = tuple()
         if hasattr(model_components.postprocess, 'additional_inputs') :
@@ -286,7 +290,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             assert isinstance(additional_inputs, tuple) and len(additional_inputs) > 0
             assert all(isinstance(additional_input, tuple) for additional_input in additional_inputs)
 
-        input_specs = {'input': {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}}
+        input_specs['input'] = {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}
         for n, (name, shape) in enumerate(additional_inputs):
             input_specs[name] = {
                 'shape': tuple(shape),
@@ -321,10 +325,10 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             else:
                 warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
                     config.dataset))
-        self.class_names = cls_names
+        self.model.class_names = cls_names
 
         # Configure input size for image
-        self.input_size = config.model.preprocess_args.input_size
+        # self.input_size = config.model.preprocess_args.input_size
 
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
@@ -339,8 +343,9 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         """
 
         # TODO enable padding to keep aspect ratio
-        # Resize input
-        batch_imgs = [cv2.resize(img, (self.input_size,self.input_size)) for img in batch_imgs]
+        # Resize input ( assuming square input, and stretch, no padding provided yet )
+        input_size = self.model.input_specs['input']['shape'][1]
+        batch_imgs = [cv2.resize(img, (input_size,input_size)) for img in batch_imgs]
         batch_imgs = np.stack(batch_imgs)
 
         # Do model inference
@@ -415,10 +420,11 @@ class IRPredictionPipeline(BasePredictionPipeline):
         self.output_file_prefix = '{}_ir_prediction'.format(model_type)
 
         # Obtain class_names
-        self.class_names = self.model.class_names
+        # self.class_names = self.model.class_names
 
-        # Obtain input size
-        self.input_shape = self.model.input_specs['input']['shape']
+
+        # # Obtain input size
+        # self.input_shape = self.model.input_specs['input']['shape']
     
     @staticmethod
     def runtime_predict(model, 
@@ -483,13 +489,14 @@ class IRPredictionPipeline(BasePredictionPipeline):
         """
 
         # Check input batch size to match with IR model input specs
-        n, h, w, c = self.input_shape if self.input_shape[-1] == 3 \
-        else tuple(self.input_shape[i] for i in [0,3,1,2])
+        input_shape = self.model.input_specs['input']['shape']
+        n, h, w, c = input_shape if input_shape[-1] == 3 \
+        else tuple(input_shape[i] for i in [0,3,1,2])
         assert len(batch_imgs) <= n, "expects 'images' <= n batch ({}) got {}".format(n, len(batch_imgs))
 
         # TODO add resize with pad in runtime
         # Resize input
-        batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], self.input_shape)
+        batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], input_shape)
 
         results = type(self).runtime_predict(self.model, batch_imgs, **kwargs)
 
