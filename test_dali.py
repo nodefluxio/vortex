@@ -1,7 +1,7 @@
 from vortex.core.factory import create_dataset
 from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 from easydict import EasyDict
-from typing import Type
+from typing import Type, Union
 from pathlib import Path
 import random
 import numpy as np
@@ -9,6 +9,7 @@ from collections import OrderedDict
 from nvidia.dali.pipeline import Pipeline
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
+from nvidia.dali.plugin.pytorch import DALIGenericIterator
 
 from timeit import default_timer as timer
 
@@ -109,14 +110,36 @@ class DALIExternalSourcePipeline(Pipeline):
         self.source = ops.ExternalSource(source = dataset_iterator, 
                                          num_outputs = len(dataset_iterator.data_layout))
         self.decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
+        self.pad = ops.Paste(device='gpu', fill_value=0,
+                             ratio=1, min_canvas_size=480, paste_x=0, paste_y=0)
+        self.fixed_resize = ops.Resize(
+            device='gpu', interp_type=types.DALIInterpType.INTERP_CUBIC, resize_longer=480)
+        self.peek_shape = ops.Shapes(device='gpu')
+        self.batch_pad = ops.Pad(device='cpu',axes=(0,1),fill_value=-1)
 
     def define_graph(self):
         data = self.source()
-        graph_data=dict(zip(self.data_layout, data))
-        images=self.decode(graph_data['images'])
-        labels = tuple(graph_data[layout] for layout in self.data_layout if layout!='images')
 
-        return (images,)+labels
+        graph_data=dict(zip(self.data_layout, data))
+        returned_data=dict()
+        images=self.decode(graph_data['images'])
+        images = self.fixed_resize(images)
+        ori_shapes = self.peek_shape(images)
+        images = self.pad(images)
+
+        for layout in self.data_layout:
+            if layout!='images':
+                returned_data[layout]=self.batch_pad(graph_data[layout])
+        # labels = tuple(graph_data[layout] for layout in self.data_layout if layout!='images')
+        returned_data['images']=images
+        returned_data = tuple(returned_data[layout] for layout in self.data_layout)
+        return returned_data+(ori_shapes,)
+
+class DALIDataloader(DALIGenericIterator):
+    def __next__(self):
+        data = super().__next__()
+        # TODO reformatiing and collate_fn
+        return data
 
 if __name__ == "__main__":
     preprocess_args = EasyDict({
@@ -140,9 +163,19 @@ if __name__ == "__main__":
     )
 
 
-    batch_size=128
+    batch_size=64
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
     iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
     pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,batch_size=batch_size,num_threads=4,device_id=0)
-    pipeline.build()
-    out=pipeline.run()
+
+    # Additional field to retrieve image shape
+    output_map=iterator.data_layout+['image_shape']
+    dataloader = DALIDataloader(pipelines=[pipeline],
+                                output_map=output_map,
+                                size=iterator.size,
+                                dynamic_shape=True,
+                                fill_last_batch=False,
+                                last_batch_padded=True)
+    for data in dataloader:
+        print(data[0]['bounding_box'].shape)
+
