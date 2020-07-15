@@ -149,6 +149,9 @@ class TestTrainingPipeline():
         assert all((k in ckpt) for k in required_ckpt)
         assert ckpt['config'] == config
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
+        if train_executor.trainer.scheduler is not None:
+            assert 'scheduler_state' in ckpt
+            assert train_executor.trainer.scheduler.state_dict() == ckpt['scheduler_state']
 
 def test_validation_pipeline():
 

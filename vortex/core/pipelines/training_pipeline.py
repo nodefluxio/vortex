@@ -167,6 +167,8 @@ class TrainingPipeline(BasePipeline):
         if resume:
             self.model_components.network.load_state_dict(checkpoint['state_dict'], strict=True)
             self.trainer.optimizer.load_state_dict(checkpoint['optimizer_state'])
+            if self.trainer.scheduler is not None:
+                self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])
 
         # Validation components creation
         try:
@@ -374,6 +376,8 @@ class TrainingPipeline(BasePipeline):
             checkpoint["metrics"] = metrics
         if self._has_cls_names and self.dataloader.dataset.class_names is not None:
             checkpoint["class_names"] = self.dataloader.dataset.class_names
+        if self.trainer.scheduler is not None:
+            checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
 
         filedir = self.run_directory
         if filename is None:
