@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - additional (optional) member (if any):
     - `class_names` --> model's output class names map
     - `metrics` --> per epoch training metrics
+    - `scheduler_state` -> `state_dict` for trainer's lr scheduler
 - support for resume training in training pipeline
 - model checkpoint update script in `script/update_model.py`
 - Now possible to access `class_names` and `input_specs` attributes from both `PytorchPredictionPipeline.model` and `IRPredictionPipeline.model`
