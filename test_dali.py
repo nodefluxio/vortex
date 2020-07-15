@@ -12,6 +12,10 @@ import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import copy
 import torch
+from vortex.utils.data.collater import create_collater
+
+from torch.utils.data.dataloader import DataLoader
+
 
 from timeit import default_timer as timer
 
@@ -55,9 +59,11 @@ class DALIIteratorWrapper(object):
             raise RuntimeError(
                 "'dataset' __len__ is not implemented!!")
         
-        self.data_layout = ['images']+list(self.dataset.data_format.keys())+['original_labels']
+        # Pipeline data layout, only include labels with specified `data_format`
+        # `original_labels` is unsliced labels
+        self.data_layout = ['images']+[key for key in self.dataset.data_format.keys() if self.dataset.data_format[key] is not None]+['original_labels']
 
-        # Get proper sharded data based on the device_id and total number of GPUs (world size) (For distributed training)
+        # Get proper sharded data based on the device_id and total number of GPUs (world size) (For distributed training in future usage)
         self.sharded_idx = list(range(self.dataset_len * device_id //
                                       num_gpus, self.dataset_len * (device_id + 1) // num_gpus))
         if shuffle:
@@ -86,21 +92,26 @@ class DALIIteratorWrapper(object):
                 # Original labels array is also forwarded to add flexibility for labels with unsupported data_format
                 # So it can still be forwarded to the pipeline output
                 else:
+                    if len(labels.shape)==1:
+                        labels=labels[np.newaxis,:]
                     return_data[layout].append(labels)
             self.i = (self.i + 1) % self.nrof_sharded_data
         return tuple(return_data[layout] for layout in self.data_layout)
 
     @property
     def size(self,):
-        # return self.dataset_len
         return self.nrof_sharded_data
 
     def _slice_labels(self,labels):
         sliced_labels = {}
+
         for label_name in self.dataset.data_format:
-            sliced_labels[label_name]= np.take(labels, 
-                                               axis=self.dataset.data_format[label_name].axis, 
-                                               indices=self.dataset.data_format[label_name].indices)
+            if self.dataset.data_format[label_name] is not None:
+                sliced_labels[label_name]= np.take(labels, 
+                                                axis=self.dataset.data_format[label_name].axis, 
+                                                indices=self.dataset.data_format[label_name].indices)
+        
+        ## Handle if labels contain only 'class_labels' and the data format is None
         return sliced_labels
 
     next = __next__
@@ -133,6 +144,7 @@ class DALIExternalSourcePipeline(Pipeline):
         images = self.pad(images)
 
         returned_data=dict()
+
         for layout in self.data_layout:
             if layout!='images':
                 returned_data[layout]=self.batch_pad(graph_data[layout])
@@ -146,9 +158,15 @@ class DALIDataloader():
                  dataset,
                  batch_size,
                  num_thread = 1,
-                 device_id = 0
+                 device_id = 0,
+                 collate_fn = None,
+                 shuffle = True
                  ):
-        iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
+        iterator = DALIIteratorWrapper(dataset,
+                                       batch_size=batch_size,
+                                       shuffle=shuffle,
+                                       device_id=device_id)
+
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
                                               batch_size=batch_size,
                                               num_threads=num_thread,
@@ -165,6 +183,7 @@ class DALIDataloader():
                                                         fill_last_batch=False,
                                                         last_batch_padded=True,
                                                         auto_reset=True)
+        self.collate_fn = collate_fn
     def __iter__(self):
         return self
         
@@ -200,16 +219,21 @@ class DALIDataloader():
             
             # Modify labels placeholder with augmented labels
             for label_key in self.data_format:
-                label_data_format=self.data_format[label_key]
-                augmented_label = labels_dict[label_key]
+                if label_key in self.output_layout:
+                    label_data_format=self.data_format[label_key]
+                    augmented_label = labels_dict[label_key]
 
-                # Put back augmented labels in the placeholder array for returned labels
-                np.put_along_axis(ret_targets, values=augmented_label, axis=label_data_format['axis'],
-                          indices=np.array(label_data_format['indices'])[np.newaxis, :])
+                    # Put back augmented labels in the placeholder array for returned labels
+                    np.put_along_axis(ret_targets, values=augmented_label, axis=label_data_format['axis'],
+                            indices=np.array(label_data_format['indices'])[np.newaxis, :])
 
+            if list(self.data_format.keys())==['class_label']:
+                ret_targets = ret_targets.flatten()
             batch.append((image,torch.tensor(ret_targets)))
 
-        return batch
+        if self.collate_fn is None:
+            self.collate_fn = torch.utils.data._utils.collate.default_collate
+        return self.collate_fn(batch)
 
     def __len__(self):
         if self.size%self.batch_size==0:
@@ -230,70 +254,94 @@ if __name__ == "__main__":
     preprocess_args = EasyDict({
         'input_size' : 640,
         'input_normalization' : {
-            'mean' : [0.5, 0.5, 0.5],
-            'std' : [0.5, 0.5, 0.5]
+            'mean' : [0,0,0],
+            'std' : [1, 1, 1]
         },
-        'scaler' : 255
+        'scaler' : 1
     })
+
+    # dataset_config = EasyDict(
+    #     {
+    #         'train': {
+    #             'dataset' : 'VOC2007DetectionDataset',
+    #             'args' : {
+    #                 'image_set' : 'train'
+    #             }
+    #         }
+    #     }
+    # )
 
     dataset_config = EasyDict(
         {
             'train': {
-            'dataset' : 'VOC2007DetectionDataset',
-            'args' : {
-            'image_set' : 'train'
+                'dataset': 'ImageFolder',
+                'args': {
+                    'root': 'tests/test_dataset/train'
+                },
             }
-        }
         }
     )
 
 
     batch_size=64
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
+    collater_args = {'dataformat' : dataset.data_format}
+    # collate_fn = create_collater('SSDCollate',**collater_args)
+    collate_fn = None
     dataloader = DALIDataloader(dataset,
-                 batch_size = 1,
+                 batch_size = 2,
                  num_thread = 1,
-                 device_id = 0)
-    # iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
-    # pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,batch_size=batch_size,num_threads=4,device_id=0)
-
-    # # Additional field to retrieve image shape
-    # output_map=iterator.data_layout+['image_shape']
-    # dataloader = DALIDataloader(pipelines=[pipeline],
-    #                             output_map=output_map,
-    #                             size=iterator.size,
-    #                             dynamic_shape=True,
-    #                             fill_last_batch=False,
-    #                             last_batch_padded=True)
-    # import pdb; pdb.set_trace()
+                 device_id = 0,
+                 collate_fn=collate_fn,
+                 shuffle=False)
 
     for datas in dataloader:
-        
-        # test vis
-        import cv2
-        import time
-        for data in datas:
-            image=data[0].cpu().numpy()
-            # h,w,c = image.shape
+        dali_data = datas
+        break
+    
+    # test vis
+    # import cv2
+    
+    # vis = dali_data[0][0].cpu().numpy().copy()
+    # h,w,c = vis.shape
 
-            # box_axis=dataset.data_format['bounding_box']['axis']
-            # box_indices=dataset.data_format['bounding_box']['indices']
-            # # fixed_vis_image = image.copy()
-            # allbboxes = np.take(
-            #     data[1], axis=box_axis, indices=box_indices)
-            # for bbox in allbboxes:
-            #     x = int(bbox[0]*w)
-            #     y = int(bbox[1]*h)
-            #     box_w = int(bbox[2]*w)
-            #     box_h = int(bbox[3]*h)
-            #     cv2.rectangle(image, (x, y),
-            #                   (x+box_w, y+box_h), (0, 0, 255), 2)
-            # cv2.imshow('fixed', fixed_vis_image)
-            # cv2.waitKey(0)
+    # allbboxes = dali_data[1][0][:,:4]
 
-            cv2.imshow('prev',image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+    # for bbox in allbboxes:
+    #     x = int(bbox[0]*w)
+    #     y = int(bbox[1]*h)
+    #     x2 = int(bbox[2]*w)
+    #     y2 = int(bbox[3]*h)
+    #     cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
 
+    dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='default')
 
+    dataloader_module_args = {
+        'num_workers' : 0,
+        'batch_size' : 4,
+        'shuffle' : False,
+    }
+
+    dataloader = DataLoader(dataset, collate_fn=collate_fn, **dataloader_module_args)
+
+    for datas in dataloader:
+        pytorch_data = datas
+        break
+    import pdb; pdb.set_trace()
+    # py_vis = pytorch_data[0][0].cpu().numpy().copy()
+    # py_vis = np.transpose(py_vis, (1,2,0)).copy()
+
+    # h,w,c = py_vis.shape
+
+    # allbboxes = pytorch_data[1][0][:,:4]
+    # for bbox in allbboxes:
+    #     x = int(bbox[0]*w)
+    #     y = int(bbox[1]*h)
+    #     x2 = int(bbox[2]*w)
+    #     y2 = int(bbox[3]*h)
+
+    #     cv2.rectangle(py_vis, (x, y),(x2, y2), (0, 0, 255), 2)
+    # cv2.imshow('dali', vis)
+    # cv2.imshow('pytorch', py_vis)
+    # cv2.waitKey(0)
 
