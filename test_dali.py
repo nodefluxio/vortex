@@ -10,6 +10,8 @@ from nvidia.dali.pipeline import Pipeline
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
+import copy
+import torch
 
 from timeit import default_timer as timer
 
@@ -53,7 +55,7 @@ class DALIIteratorWrapper(object):
             raise RuntimeError(
                 "'dataset' __len__ is not implemented!!")
         
-        self.data_layout = ['images']+list(self.dataset.data_format.keys())
+        self.data_layout = ['images']+list(self.dataset.data_format.keys())+['original_labels']
 
         # Get proper sharded data based on the device_id and total number of GPUs (world size) (For distributed training)
         self.sharded_idx = list(range(self.dataset_len * device_id //
@@ -74,13 +76,17 @@ class DALIIteratorWrapper(object):
         for _ in range(self.batch_size):
             selected_index = self.sharded_idx[self.i]
             image,labels = self.dataset[selected_index]
-            sliced_labels = self.slice_labels(labels)
+            sliced_labels = self._slice_labels(labels)
             for layout in self.data_layout:
                 if layout == 'images':
                     with open(image, 'rb') as f:
                         return_data[layout].append(np.frombuffer(f.read(), dtype=np.uint8))
-                else:
+                elif layout != 'original_labels':
                     return_data[layout].append(sliced_labels[layout])
+                # Original labels array is also forwarded to add flexibility for labels with unsupported data_format
+                # So it can still be forwarded to the pipeline output
+                else:
+                    return_data[layout].append(labels)
             self.i = (self.i + 1) % self.nrof_sharded_data
         return tuple(return_data[layout] for layout in self.data_layout)
 
@@ -89,7 +95,7 @@ class DALIIteratorWrapper(object):
         # return self.dataset_len
         return self.nrof_sharded_data
 
-    def slice_labels(self,labels):
+    def _slice_labels(self,labels):
         sliced_labels = {}
         for label_name in self.dataset.data_format:
             sliced_labels[label_name]= np.take(labels, 
@@ -121,25 +127,104 @@ class DALIExternalSourcePipeline(Pipeline):
         data = self.source()
 
         graph_data=dict(zip(self.data_layout, data))
-        returned_data=dict()
         images=self.decode(graph_data['images'])
         images = self.fixed_resize(images)
-        ori_shapes = self.peek_shape(images)
+        pre_padded_image_shapes = self.peek_shape(images)
         images = self.pad(images)
 
+        returned_data=dict()
         for layout in self.data_layout:
             if layout!='images':
                 returned_data[layout]=self.batch_pad(graph_data[layout])
         # labels = tuple(graph_data[layout] for layout in self.data_layout if layout!='images')
         returned_data['images']=images
         returned_data = tuple(returned_data[layout] for layout in self.data_layout)
-        return returned_data+(ori_shapes,)
+        return returned_data+(pre_padded_image_shapes,)
 
-class DALIDataloader(DALIGenericIterator):
+class DALIDataloader():
+    def __init__(self,
+                 dataset,
+                 batch_size,
+                 num_thread = 1,
+                 device_id = 0
+                 ):
+        iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
+        pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
+                                              batch_size=batch_size,
+                                              num_threads=num_thread,
+                                              device_id=device_id)
+        self.data_format = dataset.data_format
+        self.output_layout = copy.copy(iterator.data_layout)
+        self.output_layout.remove('images')
+        # Additional field to retrieve image shape
+        self.output_map = iterator.data_layout+['pre_padded_image_shape']
+        self.dali_pytorch_loader = DALIGenericIterator(pipelines=[pipeline],
+                                                        output_map=self.output_map,
+                                                        size=iterator.size,
+                                                        dynamic_shape=True,
+                                                        fill_last_batch=False,
+                                                        last_batch_padded=True,
+                                                        auto_reset=True)
+    def __iter__(self):
+        return self
+        
     def __next__(self):
-        data = super().__next__()
-        # TODO reformatiing and collate_fn
-        return data
+        output = self.dali_pytorch_loader.__next__()[0] # Vortex doesn't support multiple pipelines yet
+
+        # Prepare Pytorch style data loader output
+        batch = []
+        for i in range(len(output['images'])):
+            image = output['images'][i]
+
+            # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
+            pre_padded_image_size = output['pre_padded_image_shape'][i].cpu()[:2].type(torch.float32)
+            padded_image_size = torch.tensor(image.shape[:2]).type(torch.float32)
+            diff_ratio = pre_padded_image_size/padded_image_size
+
+            # Prepare labels array
+            labels_dict = dict()
+            for layout in self.output_layout:
+                label_output=output[layout][i].numpy()
+
+                # Remove padded value from DALI, this assume that labels dimension 1 shape is same
+                rows_with_padded_value=np.unique(np.where(label_output==-1)[0])
+                label_output=np.delete(label_output,rows_with_padded_value,axis=0)
+                
+                # Placeholder to combine all labels
+                if layout == 'original_labels':
+                    ret_targets = label_output
+                else:
+                    # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
+                    label_output = self._fix_coordinates(label_output,layout,diff_ratio)
+                    labels_dict[layout] = label_output
+            
+            # Modify labels placeholder with augmented labels
+            for label_key in self.data_format:
+                label_data_format=self.data_format[label_key]
+                augmented_label = labels_dict[label_key]
+
+                # Put back augmented labels in the placeholder array for returned labels
+                np.put_along_axis(ret_targets, values=augmented_label, axis=label_data_format['axis'],
+                          indices=np.array(label_data_format['indices'])[np.newaxis, :])
+
+            batch.append((image,torch.tensor(ret_targets)))
+
+        return batch
+
+    def __len__(self):
+        if self.size%self.batch_size==0:
+            return self.size//self.batch_size
+        else:
+            return self.size//self.batch_size+1
+
+    def _fix_coordinates(self,labels,label_key,diff_ratio):
+        diff_ratio=diff_ratio.numpy()
+        if label_key == 'bounding_box':
+            labels[:,::2] = labels[:,::2]*diff_ratio[1]
+            labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
+        elif label_key == 'landmarks':
+            pass
+        return labels
 
 if __name__ == "__main__":
     preprocess_args = EasyDict({
@@ -165,17 +250,50 @@ if __name__ == "__main__":
 
     batch_size=64
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
-    iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
-    pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,batch_size=batch_size,num_threads=4,device_id=0)
+    dataloader = DALIDataloader(dataset,
+                 batch_size = 1,
+                 num_thread = 1,
+                 device_id = 0)
+    # iterator = DALIIteratorWrapper(dataset,batch_size=batch_size)
+    # pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,batch_size=batch_size,num_threads=4,device_id=0)
 
-    # Additional field to retrieve image shape
-    output_map=iterator.data_layout+['image_shape']
-    dataloader = DALIDataloader(pipelines=[pipeline],
-                                output_map=output_map,
-                                size=iterator.size,
-                                dynamic_shape=True,
-                                fill_last_batch=False,
-                                last_batch_padded=True)
-    for data in dataloader:
-        print(data[0]['bounding_box'].shape)
+    # # Additional field to retrieve image shape
+    # output_map=iterator.data_layout+['image_shape']
+    # dataloader = DALIDataloader(pipelines=[pipeline],
+    #                             output_map=output_map,
+    #                             size=iterator.size,
+    #                             dynamic_shape=True,
+    #                             fill_last_batch=False,
+    #                             last_batch_padded=True)
+    # import pdb; pdb.set_trace()
+
+    for datas in dataloader:
+        
+        # test vis
+        import cv2
+        import time
+        for data in datas:
+            image=data[0].cpu().numpy()
+            # h,w,c = image.shape
+
+            # box_axis=dataset.data_format['bounding_box']['axis']
+            # box_indices=dataset.data_format['bounding_box']['indices']
+            # # fixed_vis_image = image.copy()
+            # allbboxes = np.take(
+            #     data[1], axis=box_axis, indices=box_indices)
+            # for bbox in allbboxes:
+            #     x = int(bbox[0]*w)
+            #     y = int(bbox[1]*h)
+            #     box_w = int(bbox[2]*w)
+            #     box_h = int(bbox[3]*h)
+            #     cv2.rectangle(image, (x, y),
+            #                   (x+box_w, y+box_h), (0, 0, 255), 2)
+            # cv2.imshow('fixed', fixed_vis_image)
+            # cv2.waitKey(0)
+
+            cv2.imshow('prev',image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+
+
 
