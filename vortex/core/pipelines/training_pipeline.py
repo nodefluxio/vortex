@@ -165,7 +165,6 @@ class TrainingPipeline(BasePipeline):
             experiment_logger=self.experiment_logger,
         )
         if resume:
-            self.model_components.network.load_state_dict(checkpoint['state_dict'], strict=True)
             self.trainer.optimizer.load_state_dict(checkpoint['optimizer_state'])
             if self.trainer.scheduler is not None:
                 self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])
