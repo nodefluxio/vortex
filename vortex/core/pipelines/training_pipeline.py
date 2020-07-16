@@ -175,7 +175,7 @@ class TrainingPipeline(BasePipeline):
         learning_rates = []
         for epoch in tqdm(range(self.config.trainer.epoch), desc="epoch"):
             loss, lr = self.trainer(self.dataloader, epoch)
-            epoch_losses.append(loss)
+            epoch_losses.append(loss.item())
             learning_rates.append(lr)
             print('epoch %s loss : %s with lr : %s' % (epoch, loss.item(), lr))
 
