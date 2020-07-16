@@ -1,17 +1,21 @@
-import os
-import sys
-from pathlib import Path
-proj_path = os.path.abspath(Path(__file__).parents[1])
-sys.path.append(proj_path)
+# import os
+# import sys
+# from pathlib import Path
+# proj_path = os.path.abspath(Path(__file__).parents[1])
+# sys.path.append(proj_path)
 
+import os
 import shutil
-from easydict import EasyDict
 import pytest
 import numpy as np
 import cv2
 import yaml
 import torch
+
+from pathlib import Path
+from easydict import EasyDict
 from collections import OrderedDict
+from copy import deepcopy
 
 from vortex.core.pipelines import (
     TrainingPipeline,
@@ -22,38 +26,65 @@ from vortex.core.pipelines import (
     IRPredictionPipeline,
     HypOptPipeline
 )
+from vortex.core.factory import create_model
 from vortex.utils.parser.parser import load_config
 from vortex.utils.parser.loader import Loader
 
 
-config_path = 'tests/config/test_classification_pipelines.yml'
-hypopt_train_obj_path = 'tests/config/test_hypopt_train_objective.yml'
-onnx_model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx'
-pt_model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.pt'
-
+config_path = "tests/config/test_classification_pipelines.yml"
+hypopt_train_obj_path = "tests/config/test_hypopt_train_objective.yml"
+onnx_model_path = "tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx"
+pt_model_path = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pt"
+pth_model_path = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pth"
 
 # Load configuration from experiment file
 config = load_config(config_path)
 with open(hypopt_train_obj_path) as f:
     hypopt_train_obj_config = EasyDict(yaml.load(f, Loader=Loader))
 
+def state_dict_is_equal(a, b):
+    if type(a) != type(b):
+        return False
+    elif isinstance(a, (OrderedDict, dict)):
+        return all(state_dict_is_equal(x, y) for x,y in zip(a.values(), b.values()))
+    elif isinstance(a, torch.Tensor):
+        return torch.equal(a, b)
+    else:
+        return a == b
+
 class InfoPlaceHolder():
-    run_directory = '.'
+    def __init__(self):
+        self.run_directory = '.'
+
+train_info = InfoPlaceHolder()
+train_info_sch = InfoPlaceHolder()
+
 
 class TestTrainingPipeline():
 
-    def test_fresh_train(self):
+    cfg_scheduler = deepcopy(config)
+    cfg_scheduler.trainer.scheduler = {
+        'method': 'StepLR',
+        'args': {'step_size': 1}
+    }
 
-        # Clear pre-existing output file
-        if Path(config.output_directory).exists():
-            shutil.rmtree(Path(config.output_directory))
-
-        if Path('experiments/local_runs.log').exists():
-            os.remove(Path('experiments/local_runs.log'))
+    @pytest.mark.parametrize("scheduler", [False, True])
+    def test_fresh_train(self, scheduler):
+        if not scheduler: # Clear existing output file on first run only
+            if Path(config.output_directory).exists():
+                shutil.rmtree(Path(config.output_directory))
+            if Path('experiments/local_runs.log').exists():
+                os.remove(Path('experiments/local_runs.log'))
 
         # Instantiate Training
-        train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False)
-        InfoPlaceHolder.run_directory = train_executor.run_directory
+        if scheduler:
+            cfg = self.cfg_scheduler
+            info_holder = train_info_sch
+        else:
+            cfg = config
+            info_holder = train_info
+        train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False)
+        info_holder.run_directory = train_executor.run_directory
 
         output = train_executor.run()
 
@@ -97,17 +128,24 @@ class TestTrainingPipeline():
         ckpt = torch.load(final_weight)
         required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
         assert all((k in ckpt) for k in required_ckpt)
-        assert ckpt['config'] == config
+        assert ckpt['config'] == cfg
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
+        assert not 'scheduler_state' in ckpt if not scheduler else 'scheduler_state' in ckpt
 
-    def test_continue_train(self):
-        # Instantiate Training
-        config.checkpoint=InfoPlaceHolder.run_directory/'test_classification_pipelines-epoch-0.pth'
-        train_executor = TrainingPipeline(config=config,config_path=config_path,hypopt=False,resume=True)
+    @pytest.mark.parametrize("scheduler", [False, True])
+    def test_continue_train(self, scheduler):
+        if scheduler:
+            cfg = self.cfg_scheduler
+            info_holder = train_info_sch
+        else:
+            cfg = deepcopy(config)
+            info_holder = train_info
+        cfg.checkpoint = info_holder.run_directory/'test_classification_pipelines-epoch-0.pth'
+        train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False,resume=True)
         output = train_executor.run()
 
         # Check output type
-        assert isinstance(output,EasyDict)
+        assert isinstance(output, EasyDict)
 
         # Check every enforce key
         assert 'epoch_losses' in output.keys()
@@ -147,11 +185,57 @@ class TestTrainingPipeline():
         ckpt = torch.load(final_weight)
         required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
         assert all((k in ckpt) for k in required_ckpt)
-        assert ckpt['config'] == config
+        assert ckpt['config'] == cfg
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
+
+        assert state_dict_is_equal(ckpt['state_dict'], train_executor.model_components.network.state_dict())
+        assert state_dict_is_equal(ckpt['optimizer_state'], train_executor.trainer.optimizer.state_dict())
         if train_executor.trainer.scheduler is not None:
             assert 'scheduler_state' in ckpt
-            assert train_executor.trainer.scheduler.state_dict() == ckpt['scheduler_state']
+            assert state_dict_is_equal(ckpt['scheduler_state'], train_executor.trainer.scheduler.state_dict())
+        else:
+            assert not 'scheduler_state' in ckpt
+
+
+def test_create_model():
+    def _check(model):
+        assert all(x in model for x in ('network', 'preprocess', 'postprocess'))
+        assert all(x in model for x in ('loss', 'collate_fn'))
+
+    model = create_model(config.model, stage='train')
+    _check(model)
+
+    ckpt = torch.load(pth_model_path)
+
+    ## using 'state_dict' path as 'str'
+    model = create_model(config.model, state_dict=pth_model_path, stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+
+    ## using 'state_dict' path as 'Path'
+    model = create_model(config.model, state_dict=Path(pth_model_path), stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+
+    ## using 'state_dict' from ckpt
+    model = create_model(config.model, state_dict=ckpt['state_dict'], stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+
+    ## using 'init_state_dict' from config
+    new_cfg_model = deepcopy(config.model)
+    new_cfg_model['init_state_dict'] = pth_model_path
+    model = create_model(new_cfg_model, stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+
+    ## if both 'init_state_dict' config and 'state_dict' argument is specified
+    ## 'state_dict' argument should be of top priority
+    ckpt_ep0 = torch.load(train_info.run_directory/'test_classification_pipelines-epoch-0.pth')
+    model = create_model(new_cfg_model, state_dict=ckpt_ep0['state_dict'], stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt_ep0['state_dict'], model.network.state_dict())
+
 
 def test_validation_pipeline():
 
@@ -176,14 +260,37 @@ class TestPredictionPipeline():
     # Clear pre-existing output file
     if Path('tests/output_predict_test').exists():
         shutil.rmtree(Path('tests/output_predict_test'))
+    
+    weight_file = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pth"
+
+    def _check_result(self, results, visualize=True):
+        # Prediction pipeline output must be EasyDict
+        assert isinstance(results, EasyDict)
+        assert 'prediction' in results
+        assert 'visualization' in results
+
+        ## Prediction output must be in a list
+        ## representation of batched output list index [0] means result for input [0]
+        assert isinstance(results.prediction, list)
+        assert isinstance(results.prediction[0], EasyDict)
+        if visualize:
+            assert isinstance(results.visualization, list)
+            assert isinstance(results.visualization[0], np.ndarray)
+        else:
+            assert results.visualization is None
+
+    def _check_pipeline(self, pipeline):
+        ckpt = torch.load(pth_model_path)
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        assert state_dict_is_equal(state_dict, pipeline.model.model.state_dict())
 
     def test_model_api(self):
         vortex_predictor = PytorchPredictionPipeline(config = config,
                                         weights = None,
                                         device = 'cpu')
-        
-        assert isinstance(vortex_predictor.model.input_specs,OrderedDict)
-        assert isinstance(vortex_predictor.model.class_names,list)
+
+        assert isinstance(vortex_predictor.model.input_specs, OrderedDict)
+        assert isinstance(vortex_predictor.model.class_names, list)
 
     def test_input_from_image_path(self):
         # Instantiate predictor
@@ -198,19 +305,8 @@ class TestPredictionPipeline():
                                     dump_visual = True,
                                     output_dir = 'tests/output_predict_test',
                                     **kwargs)
-
-            # Prediction pipeline output must be EasyDict
-            assert isinstance(results,EasyDict)
-            assert 'prediction' in results.keys()
-            assert 'visualization' in results.keys()
-
-            # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-            assert isinstance(results.prediction,list)
-            assert isinstance(results.visualization,list)
-
-            # Check list member type
-            assert isinstance(results.prediction[0],EasyDict)
-            assert isinstance(results.visualization[0],np.ndarray)
+            self._check_result(results)
+            self._check_pipeline(predictor)
 
             # If dump_visualization and images is provided as string, allow for dump visualized image
             vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
@@ -231,7 +327,8 @@ class TestPredictionPipeline():
         vortex_predictor.model.class_names = None
         _test(vortex_predictor)
 
-    def test_input_from_numpy_with_vis(self):
+    @pytest.mark.parametrize("visualize", [False, True])
+    def test_input_from_numpy(self, visualize):
         # Instantiate predictor
         kwargs = {}
         vortex_predictor = PytorchPredictionPipeline(config = config,
@@ -241,50 +338,25 @@ class TestPredictionPipeline():
         # Read image
         image_data = cv2.imread('tests/images/cat.jpg')
         results = vortex_predictor.run(images = [image_data],
-                                   visualize = True,
-                                   **kwargs)
+                                       visualize = visualize,
+                                       **kwargs)
+        self._check_result(results, visualize=visualize)
+        self._check_pipeline(vortex_predictor)
 
-        # Prediction pipeline output must be EasyDict
-        assert isinstance(results,EasyDict)
-        assert 'prediction' in results.keys()
-        assert 'visualization' in results.keys()
-
-        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-        assert isinstance(results.prediction,list)
-        assert isinstance(results.visualization,list)
-
-        # Check list member type
-        assert isinstance(results.prediction[0],EasyDict)
-        assert isinstance(results.visualization[0],np.ndarray)
-
-    def test_input_from_numpy_wo_vis(self):
-        # Instantiate predictor
-        kwargs = {}
-        vortex_predictor = PytorchPredictionPipeline(config = config,
-                                        weights = None,
-                                        device = 'cpu')
-
-        # Read image
+    def test_weight_from_argument(self):
+        vortex_predictor = PytorchPredictionPipeline(config=config,
+                                                     weights=pth_model_path,
+                                                     device = 'cpu')
         image_data = cv2.imread('tests/images/cat.jpg')
         results = vortex_predictor.run(images = [image_data],
-                                   visualize = False,
-                                   **kwargs)
+                                   visualize = False)
+        self._check_result(results, visualize=False)
+        self._check_pipeline(vortex_predictor)
 
-        # Prediction pipeline output must be EasyDict
-        assert isinstance(results,EasyDict)
-        assert 'prediction' in results.keys()
-        assert 'visualization' in results.keys()
-
-        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-        assert isinstance(results.prediction,list)
-        assert results.visualization is None
-
-        # Check list member type
-        assert isinstance(results.prediction[0],EasyDict)
-
-def test_export_pipeline():
+@pytest.mark.parametrize("weight", [None, pth_model_path])
+def test_export_pipeline(weight):
     # Initialize graph exporter
-    graph_exporter = GraphExportPipeline(config=config, weights=None)
+    graph_exporter = GraphExportPipeline(config=config, weights=weight)
 
     status = graph_exporter.run(example_input=None)
     assert isinstance(status,EasyDict)
@@ -297,6 +369,10 @@ def test_export_pipeline():
     assert isinstance(status,EasyDict)
     assert 'export_status' in status.keys()
     assert isinstance(status.export_status, bool)
+
+    ckpt = torch.load(pth_model_path)
+    state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+    assert state_dict_is_equal(state_dict, graph_exporter.predictor.model.state_dict())
 
 class TestIRValidationPipeline():
 

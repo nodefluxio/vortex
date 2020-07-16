@@ -59,7 +59,7 @@ trainer: {
       accumulation_step : 1,
     }
   },
-  epoch: 5,
+  epoch: 3,
   save_epoch: 1
 }
 output_directory: tests/output_test
