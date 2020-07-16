@@ -88,13 +88,13 @@ class DALIIteratorWrapper(object):
                     with open(image, 'rb') as f:
                         return_data[layout].append(np.frombuffer(f.read(), dtype=np.uint8))
                 elif layout != 'original_labels':
-                    return_data[layout].append(sliced_labels[layout])
+                    return_data[layout].append(sliced_labels[layout].astype('float32'))
                 # Original labels array is also forwarded to add flexibility for labels with unsupported data_format
                 # So it can still be forwarded to the pipeline output
                 else:
                     if len(labels.shape)==1:
                         labels=labels[np.newaxis,:]
-                    return_data[layout].append(labels)
+                    return_data[layout].append(labels.astype('float32'))
             self.i = (self.i + 1) % self.nrof_sharded_data
         return tuple(return_data[layout] for layout in self.data_layout)
 
@@ -110,6 +110,10 @@ class DALIIteratorWrapper(object):
                 sliced_labels[label_name]= np.take(labels, 
                                                 axis=self.dataset.data_format[label_name].axis, 
                                                 indices=self.dataset.data_format[label_name].indices)
+                
+                # Transform flattened landmarks coords into 2 dim array
+                if label_name=='landmarks':
+                    sliced_labels[label_name]=sliced_labels[label_name].reshape((int(sliced_labels[label_name].size/2), 2))
         
         ## Handle if labels contain only 'class_labels' and the data format is None
         return sliced_labels
@@ -127,6 +131,8 @@ class DALIExternalSourcePipeline(Pipeline):
         self.source = ops.ExternalSource(source = dataset_iterator, 
                                          num_outputs = len(dataset_iterator.data_layout))
         self.decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
+
+
         self.pad = ops.Paste(device='gpu', fill_value=0,
                              ratio=1, min_canvas_size=480, paste_x=0, paste_y=0)
         self.fixed_resize = ops.Resize(
@@ -148,7 +154,7 @@ class DALIExternalSourcePipeline(Pipeline):
         for layout in self.data_layout:
             if layout!='images':
                 returned_data[layout]=self.batch_pad(graph_data[layout])
-        # labels = tuple(graph_data[layout] for layout in self.data_layout if layout!='images')
+        
         returned_data['images']=images
         returned_data = tuple(returned_data[layout] for layout in self.data_layout)
         return returned_data+(pre_padded_image_shapes,)
@@ -223,6 +229,11 @@ class DALIDataloader():
                     label_data_format=self.data_format[label_key]
                     augmented_label = labels_dict[label_key]
 
+                    # Refactor reshaped landmarks
+                    if label_key == 'landmarks':
+                        nrof_obj_landmarks = int(augmented_label.size / len(self.data_format['landmarks']['indices']))
+                        augmented_label = augmented_label.reshape(nrof_obj_landmarks,len(self.data_format['landmarks']['indices']))
+
                     # Put back augmented labels in the placeholder array for returned labels
                     np.put_along_axis(ret_targets, values=augmented_label, axis=label_data_format['axis'],
                             indices=np.array(label_data_format['indices'])[np.newaxis, :])
@@ -242,12 +253,20 @@ class DALIDataloader():
             return self.size//self.batch_size+1
 
     def _fix_coordinates(self,labels,label_key,diff_ratio):
+        """Fix coordinates label after image padding which break original image wh ratio
+
+        Args:
+            labels ([type]): [description]
+            label_key ([type]): [description]
+            diff_ratio ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         diff_ratio=diff_ratio.numpy()
-        if label_key == 'bounding_box':
-            labels[:,::2] = labels[:,::2]*diff_ratio[1]
-            labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
-        elif label_key == 'landmarks':
-            pass
+        labels[:,::2] = labels[:,::2]*diff_ratio[1]
+        labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
         return labels
 
 if __name__ == "__main__":
@@ -260,6 +279,7 @@ if __name__ == "__main__":
         'scaler' : 1
     })
 
+    # Obj Detection
     # dataset_config = EasyDict(
     #     {
     #         'train': {
@@ -271,23 +291,36 @@ if __name__ == "__main__":
     #     }
     # )
 
+    # Classification
+    # dataset_config = EasyDict(
+    #     {
+    #         'train': {
+    #             'dataset': 'ImageFolder',
+    #             'args': {
+    #                 'root': 'tests/test_dataset/train'
+    #             },
+    #         }
+    #     }
+    # )
+
+    # Obj Det with Landmark
     dataset_config = EasyDict(
         {
             'train': {
-                'dataset': 'ImageFolder',
+                'dataset': 'FrontalFDDBDataset',
                 'args': {
-                    'root': 'tests/test_dataset/train'
+                    'train': True
                 },
             }
         }
     )
 
-
     batch_size=64
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
     collater_args = {'dataformat' : dataset.data_format}
     # collate_fn = create_collater('SSDCollate',**collater_args)
-    collate_fn = None
+    # collate_fn = None
+    collate_fn = create_collater('RetinaFaceCollate',**collater_args)
     dataloader = DALIDataloader(dataset,
                  batch_size = 2,
                  num_thread = 1,
@@ -300,19 +333,36 @@ if __name__ == "__main__":
         break
     
     # test vis
-    # import cv2
+    import cv2
     
-    # vis = dali_data[0][0].cpu().numpy().copy()
-    # h,w,c = vis.shape
+    vis = dali_data[0][0].cpu().numpy().copy()
+    h,w,c = vis.shape
 
-    # allbboxes = dali_data[1][0][:,:4]
+    allbboxes = dali_data[1][0][:,:4]
 
-    # for bbox in allbboxes:
-    #     x = int(bbox[0]*w)
-    #     y = int(bbox[1]*h)
-    #     x2 = int(bbox[2]*w)
-    #     y2 = int(bbox[3]*h)
-    #     cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
+    for bbox in allbboxes:
+        x = int(bbox[0]*w)
+        y = int(bbox[1]*h)
+        x2 = int(bbox[2]*w)
+        y2 = int(bbox[3]*h)
+        cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
+
+    alllandmarks = dali_data[1][0][:,4:14]
+    
+    for obj in alllandmarks:
+        landmarks = obj.reshape(5,2)
+        for i,point in enumerate(landmarks):
+            x = int(point[0]*w)
+            y = int(point[1]*h)
+
+            if i == 0 or i == 3:
+                color = (255,0,0)
+            else:
+                color = (0,0,255)
+
+            cv2.circle(vis,(x, y), 2, color, -1)
+            
+    
 
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='default')
 
@@ -327,21 +377,37 @@ if __name__ == "__main__":
     for datas in dataloader:
         pytorch_data = datas
         break
-    import pdb; pdb.set_trace()
-    # py_vis = pytorch_data[0][0].cpu().numpy().copy()
-    # py_vis = np.transpose(py_vis, (1,2,0)).copy()
 
-    # h,w,c = py_vis.shape
+    py_vis = pytorch_data[0][0].cpu().numpy().copy()
+    py_vis = np.transpose(py_vis, (1,2,0)).copy()
 
-    # allbboxes = pytorch_data[1][0][:,:4]
-    # for bbox in allbboxes:
-    #     x = int(bbox[0]*w)
-    #     y = int(bbox[1]*h)
-    #     x2 = int(bbox[2]*w)
-    #     y2 = int(bbox[3]*h)
+    h,w,c = py_vis.shape
 
-    #     cv2.rectangle(py_vis, (x, y),(x2, y2), (0, 0, 255), 2)
-    # cv2.imshow('dali', vis)
-    # cv2.imshow('pytorch', py_vis)
-    # cv2.waitKey(0)
+    allbboxes = pytorch_data[1][0][:,:4]
+    for bbox in allbboxes:
+        x = int(bbox[0]*w)
+        y = int(bbox[1]*h)
+        x2 = int(bbox[2]*w)
+        y2 = int(bbox[3]*h)
+
+        cv2.rectangle(py_vis, (x, y),(x2, y2), (0, 0, 255), 2)
+
+    alllandmarks = pytorch_data[1][0][:,4:14]
+    
+    for obj in alllandmarks:
+        landmarks = obj.reshape(5,2)
+        for i,point in enumerate(landmarks):
+            x = int(point[0]*w)
+            y = int(point[1]*h)
+
+            if i == 0 or i == 3:
+                color = (255,0,0)
+            else:
+                color = (0,0,255)
+
+            cv2.circle(py_vis,(x, y), 2, color, -1)
+
+    cv2.imshow('dali', vis)
+    cv2.imshow('pytorch', py_vis)
+    cv2.waitKey(0)
 
