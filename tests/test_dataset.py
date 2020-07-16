@@ -58,7 +58,6 @@ def test_create_basic_dataset():
     )
     data = create_dataset(dummy_dataset_conf, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
     # assert data.dataset.kwargs["msg"] == dummy_dataset_conf.train.args["msg"]
-    import pdb; pdb.set_trace()
     assert isinstance(data[0][0],str) or isinstance(data[0][0],Path)
 
 def test_torchvision_dataset():
