@@ -375,6 +375,18 @@ class TestHypOptPipeline:
         assert isinstance(trial_result,EasyDict)
         assert 'best_trial' in trial_result.keys()
         assert dump_report_path.exists()
+
+    def test_gpu_train_obj(self):
+
+        config.trainer.device = 'cuda'
+        hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
+        trial_result = hypopt.run()
+
+        dump_report_path = Path(config.output_directory) / config.experiment_name / 'hypopt' / hypopt_train_obj_config.study_name / 'best_params.txt'
+
+        assert isinstance(trial_result,EasyDict)
+        assert 'best_trial' in trial_result.keys()
+        assert dump_report_path.exists()
     
     #TODO add test_validation_obj
         
