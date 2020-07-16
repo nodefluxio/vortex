@@ -88,13 +88,13 @@ class DALIIteratorWrapper(object):
                     with open(image, 'rb') as f:
                         return_data[layout].append(np.frombuffer(f.read(), dtype=np.uint8))
                 elif layout != 'original_labels':
-                    return_data[layout].append(sliced_labels[layout].astype('float32'))
+                    return_data[layout].append(sliced_labels[layout])
                 # Original labels array is also forwarded to add flexibility for labels with unsupported data_format
                 # So it can still be forwarded to the pipeline output
                 else:
                     if len(labels.shape)==1:
                         labels=labels[np.newaxis,:]
-                    return_data[layout].append(labels.astype('float32'))
+                    return_data[layout].append(labels)
             self.i = (self.i + 1) % self.nrof_sharded_data
         return tuple(return_data[layout] for layout in self.data_layout)
 
@@ -130,34 +130,95 @@ class DALIExternalSourcePipeline(Pipeline):
         self.data_layout = dataset_iterator.data_layout
         self.source = ops.ExternalSource(source = dataset_iterator, 
                                          num_outputs = len(dataset_iterator.data_layout))
-        self.decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
-
-
-        self.pad = ops.Paste(device='gpu', fill_value=0,
-                             ratio=1, min_canvas_size=480, paste_x=0, paste_y=0)
-        self.fixed_resize = ops.Resize(
-            device='gpu', interp_type=types.DALIInterpType.INTERP_CUBIC, resize_longer=480)
-        self.peek_shape = ops.Shapes(device='gpu')
-        self.batch_pad = ops.Pad(device='cpu',axes=(0,1),fill_value=-1)
+        self.image_decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
+        self.label_cast = ops.Cast(device="cpu",
+                             dtype=types.FLOAT)
+        self.labels_pad_value = -1
+        self.standard_augment = DALIStandardAugment(scaler = 1,
+                                                    mean = [0,0,0],
+                                                    std = [1,1,1],
+                                                    input_size = 480,
+                                                    image_pad_value = 0,
+                                                    labels_pad_value = self.labels_pad_value)
+        
 
     def define_graph(self):
         data = self.source()
 
         graph_data=dict(zip(self.data_layout, data))
-        images=self.decode(graph_data['images'])
-        images = self.fixed_resize(images)
-        pre_padded_image_shapes = self.peek_shape(images)
-        images = self.pad(images)
-
-        returned_data=dict()
-
+        images=self.image_decode(graph_data['images'])
+        labels = dict()
         for layout in self.data_layout:
             if layout!='images':
-                returned_data[layout]=self.batch_pad(graph_data[layout])
+                labels[layout]=self.label_cast(graph_data[layout])
+
+        # Custom Augmentation Start
+
+        # Custom Augmentation End
+
+        returned_data = self.standard_augment(images,labels,self.data_layout)
+
+        return returned_data
+    
+
+class DALIStandardAugment():
+    def __init__(self,
+                 input_size,
+                 scaler = 255,
+                 mean = [0.,0.,0.],
+                 std = [1.,1.,1.],
+                 image_pad_value = 0,
+                 labels_pad_value = -1):
+
+        # By default, CropMirrorNormalize divide each pixel by 255, to make it similar with Pytorch Loader behavior
+        # in which we can control the scaler, we add additional scaler to reverse the effect
+        self.image_normalize = ops.CropMirrorNormalize(
+            device='gpu', mean=[value*255 for value in mean], std=[value*255 for value in std],
+            output_layout='HWC',
+            image_type=types.DALIImageType.BGR)
+
+        self.scaler = ops.Normalize(
+            device='gpu',
+            scale = float(255/scaler),
+            mean= 0,
+            stddev = 1
+        )
         
+        # Padding and resize to prepare tensor output
+        self.image_pad = ops.Paste(device='gpu', fill_value=image_pad_value,
+                             ratio=1, min_canvas_size=input_size, paste_x=0, paste_y=0)
+        self.labels_pad = ops.Pad(device='cpu',axes=(0,1),fill_value=labels_pad_value)
+        
+        self.model_input_resize = ops.Resize(
+            device='gpu', interp_type=types.DALIInterpType.INTERP_CUBIC, resize_longer=input_size)
+        self.peek_shape = ops.Shapes(device='gpu')
+
+    def __call__(self,images,labels,data_layout):
+        
+        # Resize to model input size
+        images = self.model_input_resize(images)
+        
+        # Save original shape before padding to fix label's with coordinates
+        pre_padded_image_shapes = self.peek_shape(images)
+
+        # Pad to square
+        images = self.image_pad(images)
+        
+        # Normalize input
+        images = self.image_normalize(images)
+        images = self.scaler(images)
+        
+        returned_data=dict()
         returned_data['images']=images
-        returned_data = tuple(returned_data[layout] for layout in self.data_layout)
-        return returned_data+(pre_padded_image_shapes,)
+
+        for layout in data_layout:
+            if layout!='images':
+                returned_data[layout]=self.labels_pad(labels[layout])
+        
+        returned_data = tuple(returned_data[layout] for layout in data_layout) + (pre_padded_image_shapes,)
+
+        return returned_data
+
 
 class DALIDataloader():
     def __init__(self,
@@ -177,6 +238,7 @@ class DALIDataloader():
                                               batch_size=batch_size,
                                               num_threads=num_thread,
                                               device_id=device_id)
+        self.labels_pad_value = pipeline.labels_pad_value
         self.data_format = dataset.data_format
         self.output_layout = copy.copy(iterator.data_layout)
         self.output_layout.remove('images')
@@ -199,7 +261,7 @@ class DALIDataloader():
         # Prepare Pytorch style data loader output
         batch = []
         for i in range(len(output['images'])):
-            image = output['images'][i]
+            image = output['images'][i].type(torch.float32)
 
             # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
             pre_padded_image_size = output['pre_padded_image_shape'][i].cpu()[:2].type(torch.float32)
@@ -212,7 +274,7 @@ class DALIDataloader():
                 label_output=output[layout][i].numpy()
 
                 # Remove padded value from DALI, this assume that labels dimension 1 shape is same
-                rows_with_padded_value=np.unique(np.where(label_output==-1)[0])
+                rows_with_padded_value=np.unique(np.where(label_output==self.labels_pad_value)[0])
                 label_output=np.delete(label_output,rows_with_padded_value,axis=0)
                 
                 # Placeholder to combine all labels
@@ -336,6 +398,8 @@ if __name__ == "__main__":
     import cv2
     
     vis = dali_data[0][0].cpu().numpy().copy()
+    # vis = np.transpose(vis, (1,2,0)).copy()
+    # import pdb; pdb.set_trace()
     h,w,c = vis.shape
 
     allbboxes = dali_data[1][0][:,:4]
@@ -362,7 +426,7 @@ if __name__ == "__main__":
 
             cv2.circle(vis,(x, y), 2, color, -1)
             
-    
+    cv2.imshow('dali', vis.astype('uint8'))
 
     dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='default')
 
@@ -407,7 +471,7 @@ if __name__ == "__main__":
 
             cv2.circle(py_vis,(x, y), 2, color, -1)
 
-    cv2.imshow('dali', vis)
     cv2.imshow('pytorch', py_vis)
     cv2.waitKey(0)
+    import pdb; pdb.set_trace()
 
