@@ -1,4 +1,5 @@
 supported_loaders = {}
+wrapper_format = {}
 ALL_LOADERS = []
 
 _REQUIRED_ATTRIBUTES = [
@@ -16,8 +17,9 @@ def register_module(module: str):
         if not attribute in module_attributes:
             raise RuntimeError("dear maintainer, your module(s) is supposed to have the following attribute(s) : %s; but %s is missing" % (
                 _REQUIRED_ATTRIBUTES, attribute))
-    supported_loaders[module] = module.supported_loaders
-    ALL_LOADERS.extend(module.supported_loaders)
+    supported_loaders[module] = [loader[0] for loader in module.supported_loaders]
+    wrapper_format.update({a:b for a,b in module.supported_loaders})
+    ALL_LOADERS.extend([loader[0] for loader in module.supported_loaders])
 
 
 def create_loader(loader: str, *args, **kwargs):
@@ -32,3 +34,5 @@ def create_loader(loader: str, *args, **kwargs):
 
 # for maintainer, register your module here :
 register_module('pytorch_loader')
+register_module('nvidia_dali_loader')
+

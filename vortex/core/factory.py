@@ -8,7 +8,7 @@ import logging
 
 
 from vortex.networks.models import create_model_components
-from vortex.utils.data.loader import create_loader
+from vortex.utils.data.loader import create_loader,wrapper_format
 from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper,DefaultDatasetWrapper
 from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
@@ -113,7 +113,16 @@ def create_dataloader(dataset_config : EasyDict,
                       stage : str = 'train',
                       collate_fn : Union[Callable,str,None] = None ):
 
-    dataset = create_dataset(dataset_config=dataset_config, stage=stage, preprocess_config=preprocess_config)
+    dataloader_module = dataset_config.dataloader.dataloader
+    # For backward compatibility purpose
+    if dataloader_module=='DataLoader':
+        dataloader_module='PytorchDataLoader'
+    dataloader_module_args = dataset_config.dataloader.args
+
+    dataset = create_dataset(dataset_config=dataset_config, 
+                             stage=stage, 
+                             preprocess_config=preprocess_config,
+                             wrapper_format=wrapper_format[dataloader_module])
     if isinstance(collate_fn,str):
         collater_args = {}
         try:
@@ -126,13 +135,7 @@ def create_dataloader(dataset_config : EasyDict,
         pass
     else :
         raise TypeError('Unknown type of "collate_fn", should be in the type of string, Callable, or None. Got {}'%type(collate_fn))
-    dataloader_module = dataset_config.dataloader.dataloader
-    # For backward compatibility purpose
-    if dataloader_module=='DataLoader':
-        dataloader_module='PytorchDataLoader'
-    dataloader_module_args = dataset_config.dataloader.args
-    # if not dataloader_module == 'DataLoader':
-    #     RuntimeError("dataloader %s not supported, currently only support pytorch DataLoader")
+    
     dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_module_args)
     return dataloader
 

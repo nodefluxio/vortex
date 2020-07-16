@@ -1,4 +1,3 @@
-from vortex.core.factory import create_dataset
 from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 from easydict import EasyDict
 from typing import Type, Union
@@ -12,10 +11,6 @@ import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import copy
 import torch
-from vortex.utils.data.collater import create_collater
-
-from torch.utils.data.dataloader import DataLoader
-
 
 class DALIIteratorWrapper(object):
     def __init__(self,
@@ -132,10 +127,18 @@ class DALIExternalSourcePipeline(Pipeline):
         self.label_cast = ops.Cast(device="cpu",
                              dtype=types.FLOAT)
         self.labels_pad_value = -1
-        self.standard_augment = DALIStandardAugment(scaler = 1,
-                                                    mean = [0,0,0],
-                                                    std = [1,1,1],
-                                                    input_size = 480,
+
+        preprocess_args = dataset_iterator.dataset.preprocess_args
+        if 'mean' not in preprocess_args.input_normalization:
+            preprocess_args.input_normalization.mean=[0.,0.,0.]
+        if 'std' not in preprocess_args.input_normalization:
+            preprocess_args.input_normalization.mean=[1.,1.,1.]
+        if 'scaler' not in preprocess_args.input_normalization:
+            preprocess_args.input_normalization.scaler=255
+        self.standard_augment = DALIStandardAugment(scaler = preprocess_args.input_normalization.scaler,
+                                                    mean = preprocess_args.input_normalization.mean,
+                                                    std = preprocess_args.input_normalization.std,
+                                                    input_size = preprocess_args.input_size,
                                                     image_pad_value = 0,
                                                     labels_pad_value = self.labels_pad_value)
 
@@ -156,7 +159,6 @@ class DALIExternalSourcePipeline(Pipeline):
         returned_data = self.standard_augment(images,labels,self.data_layout)
 
         return returned_data
-    
 
 class DALIStandardAugment():
     def __init__(self,
@@ -171,7 +173,7 @@ class DALIStandardAugment():
         # in which we can control the scaler, we add additional scaler to reverse the effect
         self.image_normalize = ops.CropMirrorNormalize(
             device='gpu', mean=[value*255 for value in mean], std=[value*255 for value in std],
-            output_layout='HWC',
+            output_layout='CHW',
             image_type=types.DALIImageType.BGR)
 
         self.scaler = ops.Normalize(
@@ -216,7 +218,6 @@ class DALIStandardAugment():
 
         return returned_data
 
-
 class DALIDataloader():
     def __init__(self,
                  dataset,
@@ -249,6 +250,8 @@ class DALIDataloader():
                                                         last_batch_padded=True,
                                                         auto_reset=True)
         self.collate_fn = collate_fn
+        self.size = self.dali_pytorch_loader.size
+        self.batch_size = batch_size
     def __iter__(self):
         return self
         
@@ -298,7 +301,7 @@ class DALIDataloader():
                             indices=np.array(label_data_format['indices'])[np.newaxis, :])
 
             if list(self.data_format.keys())==['class_label']:
-                ret_targets = ret_targets.flatten()
+                ret_targets = ret_targets.flatten().astype('int')
             batch.append((image,torch.tensor(ret_targets)))
 
         if self.collate_fn is None:
@@ -328,147 +331,7 @@ class DALIDataloader():
         labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
         return labels
 
-if __name__ == "__main__":
-    preprocess_args = EasyDict({
-        'input_size' : 640,
-        'input_normalization' : {
-            'mean' : [0,0,0],
-            'std' : [1, 1, 1]
-        },
-        'scaler' : 1
-    })
+supported_loaders = [('DALIDataLoader','basic')]
 
-    # Obj Detection
-    # dataset_config = EasyDict(
-    #     {
-    #         'train': {
-    #             'dataset' : 'VOC2007DetectionDataset',
-    #             'args' : {
-    #                 'image_set' : 'train'
-    #             }
-    #         }
-    #     }
-    # )
-
-    # Classification
-    # dataset_config = EasyDict(
-    #     {
-    #         'train': {
-    #             'dataset': 'ImageFolder',
-    #             'args': {
-    #                 'root': 'tests/test_dataset/train'
-    #             },
-    #         }
-    #     }
-    # )
-
-    # Obj Det with Landmark
-    dataset_config = EasyDict(
-        {
-            'train': {
-                'dataset': 'FrontalFDDBDataset',
-                'args': {
-                    'train': True
-                },
-            }
-        }
-    )
-
-    batch_size=64
-    dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='basic')
-    collater_args = {'dataformat' : dataset.data_format}
-    # collate_fn = create_collater('SSDCollate',**collater_args)
-    # collate_fn = None
-    collate_fn = create_collater('RetinaFaceCollate',**collater_args)
-    dataloader = DALIDataloader(dataset,
-                 batch_size = 2,
-                 num_thread = 1,
-                 device_id = 0,
-                 collate_fn=collate_fn,
-                 shuffle=False)
-
-    for datas in dataloader:
-        dali_data = datas
-        break
-    
-    # test vis
-    import cv2
-    
-    vis = dali_data[0][0].cpu().numpy().copy()
-    vis = np.transpose(vis, (1,2,0)).copy()
-    # import pdb; pdb.set_trace()
-    h,w,c = vis.shape
-
-    allbboxes = dali_data[1][0][:,:4]
-
-    for bbox in allbboxes:
-        x = int(bbox[0]*w)
-        y = int(bbox[1]*h)
-        x2 = int(bbox[2]*w)
-        y2 = int(bbox[3]*h)
-        cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
-
-    alllandmarks = dali_data[1][0][:,4:14]
-    
-    for obj in alllandmarks:
-        landmarks = obj.reshape(5,2)
-        for i,point in enumerate(landmarks):
-            x = int(point[0]*w)
-            y = int(point[1]*h)
-
-            if i == 0 or i == 3:
-                color = (255,0,0)
-            else:
-                color = (0,0,255)
-
-            cv2.circle(vis,(x, y), 2, color, -1)
-            
-    cv2.imshow('dali', vis.astype('uint8'))
-
-    dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='default')
-
-    dataloader_module_args = {
-        'num_workers' : 0,
-        'batch_size' : 4,
-        'shuffle' : False,
-    }
-
-    dataloader = DataLoader(dataset, collate_fn=collate_fn, **dataloader_module_args)
-
-    for datas in dataloader:
-        pytorch_data = datas
-        break
-
-    py_vis = pytorch_data[0][0].cpu().numpy().copy()
-    py_vis = np.transpose(py_vis, (1,2,0)).copy()
-
-    h,w,c = py_vis.shape
-
-    allbboxes = pytorch_data[1][0][:,:4]
-    for bbox in allbboxes:
-        x = int(bbox[0]*w)
-        y = int(bbox[1]*h)
-        x2 = int(bbox[2]*w)
-        y2 = int(bbox[3]*h)
-
-        cv2.rectangle(py_vis, (x, y),(x2, y2), (0, 0, 255), 2)
-
-    alllandmarks = pytorch_data[1][0][:,4:14]
-    
-    for obj in alllandmarks:
-        landmarks = obj.reshape(5,2)
-        for i,point in enumerate(landmarks):
-            x = int(point[0]*w)
-            y = int(point[1]*h)
-
-            if i == 0 or i == 3:
-                color = (255,0,0)
-            else:
-                color = (0,0,255)
-
-            cv2.circle(py_vis,(x, y), 2, color, -1)
-
-    cv2.imshow('pytorch', py_vis)
-    cv2.waitKey(0)
-    import pdb; pdb.set_trace()
-
+def create_loader(*args,**kwargs):
+    return DALIDataloader(*args,**kwargs)
