@@ -2,6 +2,9 @@ from easydict import EasyDict
 from typing import Union
 from pathlib import Path
 
+import os
+import torch
+
 from vortex.utils.common import check_and_create_output_dir
 from vortex.core.factory import create_model,create_dataset,create_exporter
 from vortex.predictor import create_predictor
@@ -42,11 +45,14 @@ class GraphExportPipeline(BasePipeline):
 
         # Initialize Pytorch model
         if weights is None:
-            state_dict = self.experiment_directory / '{}.pth'.format(self.experiment_name)
-        else:
-            state_dict = weights
-        model_components, ckpt = create_model(config.model, state_dict=state_dict, 
-                                              stage='validate', return_checkpoint=True)
+            weights = self.experiment_directory / '{}.pth'.format(self.experiment_name)
+            if not os.path.isfile(weights):
+                raise RuntimeError("Default weight in {} is not exist, please provide weight "
+                    "path using '--weights' argument.".format(str(filename)))
+        ckpt = torch.load(weights)
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+
+        model_components = create_model(config.model, state_dict=state_dict, stage='validate')
         model_components.network = model_components.network.eval()
         self.predictor = create_predictor(model_components).eval()
         self.image_size = config.model.preprocess_args.input_size
@@ -124,7 +130,7 @@ class GraphExportPipeline(BasePipeline):
                 example_image_path=example_input
             ) and ok
             outputs.append(str(exporter.filename))
-        print('model is exported to:', ' and '.join(outputs))
+        print('model is exported to:', ', '.join(outputs))
         # TODO specify which export is failed
         result = EasyDict({'export_status' : ok})
         return result

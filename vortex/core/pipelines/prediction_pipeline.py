@@ -1,12 +1,13 @@
 from pathlib import Path
-
-from typing import Union,List, Type
-import numpy as np
-import warnings
-import cv2
 from easydict import EasyDict
-import torch
+from typing import Union,List, Type
 from collections import OrderedDict
+
+import os
+import warnings
+import numpy as np
+import cv2
+import torch
 
 from vortex.core.factory import create_model,create_dataset , create_runtime_model
 from vortex_runtime import model_runtime_map
@@ -279,14 +280,14 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # Initialize model
         if weights is None:
-            filename = Path(experiment_directory) / ('%s.pth'%config.experiment_name)
-        else:
-            filename = Path(weights)
-            if not filename.exists():
-                raise FileNotFoundError('Selected weights file {} is not found'.format(filename))
+            weights = Path(experiment_directory) / ('{}.pth'.format(config.experiment_name))
+            if not os.path.isfile(weights):
+                raise RuntimeError("Default weight in {} is not exist, please provide weight "
+                    "path using '--weights' argument.".format(str(filename)))
+        ckpt = torch.load(weights)
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
-        model_components, ckpt = create_model(config.model, state_dict=str(filename), 
-                                        stage='validate', return_checkpoint=True)
+        model_components = create_model(config.model, state_dict=state_dict, stage='validate')
         model_components.network = model_components.network.to(device)
         self.model = create_predictor(model_components)
         self.model.to(device)
