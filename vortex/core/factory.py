@@ -7,7 +7,8 @@ import torch
 from copy import deepcopy
 from pathlib import Path
 from easydict import EasyDict
-from typing import Union,Callable,Type
+from typing import Union, Callable, Type
+from collections import OrderedDict
 from torch.utils.data.dataloader import DataLoader
 
 from vortex.networks.models import create_model_components
@@ -20,15 +21,10 @@ from vortex_runtime import model_runtime_map
 __all__ = ['create_model','create_runtime_model','create_dataset','create_dataloader','create_experiment_logger','create_exporter']
 
 def create_model(model_config : EasyDict,
-                 state_dict : Union[str,None] = None, ## path to model
-                 stage : str = 'train',
-                 return_checkpoint: bool = False,
-                 debug : bool = False) -> EasyDict:
-    if stage not in ['train','validate'] :
+                 state_dict : Union[str, dict, Path] = None, ## path to model or the actual state_dict
+                 stage : str = 'train') -> EasyDict:
+    if stage not in ['train','validate']:
         raise TypeError('Unknown model "stage" argument, got {}, expected "train" or "validate"'%stage)
-
-    if debug:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
     logging.info('Creating Pytorch model from experiment file')
 
@@ -56,25 +52,28 @@ def create_model(model_config : EasyDict,
         loss_args=loss_args,
         postprocess_args=postprocess_args,
         stage=stage)
-    # Load state_dict from config if specified in experiment file
-    if 'init_state_dict' in model_config and state_dict is None:
-        logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
-        model_path = model_config.init_state_dict
-    # If specified using function's parameter, override the experiment config init_state_dict
-    elif state_dict:
-        logging.info("Loading state_dict : {}".format(state_dict))
-        model_path = state_dict
 
     if 'init_state_dict' in model_config or state_dict is not None:
-        ckpt = torch.load(model_path)
-        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-        model_components.network.load_state_dict(state_dict, strict=True)
-        if return_checkpoint:
-            return model_components, ckpt
-    elif return_checkpoint:
-        warnings.warn("No weight path is provided but 'return_checkpoint' argument is set. "
-            "Please set either 'init_state_dict' in model namespace in config file, or "
-            "provide weight path. Only returning 'model_components'")
+        if isinstance(state_dict, Path):
+            state_dict = str(state_dict)
+
+        model_path = None
+        # Load state_dict from config if specified in experiment file
+        if 'init_state_dict' in model_config and state_dict is None:
+            logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
+            model_path = model_config.init_state_dict
+        # If specified using function's parameter, override the experiment config init_state_dict
+        elif isinstance(state_dict, str):
+            logging.info("Loading state_dict : {}".format(state_dict))
+            model_path = state_dict
+
+        if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
+            assert model_path
+            ckpt = torch.load(model_path)
+            state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        assert isinstance(state_dict, (OrderedDict, dict))
+        model_components.network.load_state_dict(state_dict, strict=True) 
+
     return model_components
 
 def create_runtime_model(model_path : Union[str, Path],
