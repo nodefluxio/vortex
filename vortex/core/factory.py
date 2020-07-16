@@ -163,9 +163,11 @@ def create_exporter(config: Union[EasyDict,dict],
     filename = experiment_name
     if 'filename' in config['args'] :
         filename = config['args']['filename']
-    if isinstance(filename,Path):
-        filename=filename.name
-    filename = output_directory.joinpath(filename + module_map[module][1])
+    if isinstance(filename, Path):
+        filename = filename.name
+    if not filename.endswith(module_map[module][1]):
+        filename += module_map[module][1]
+    filename = output_directory.joinpath(filename)
     config['args'].update({'filename' : filename})
 
     assert module in ['onnx', 'torchscript']
