@@ -13,10 +13,14 @@ To run this pipeline, make sure you've already prepared :
 - **Dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets
 - **Experiment file** : see [this section](experiment_file_config.md) to create one
 
+and additionally, if you want to **resume previous training** or **load pretrained model**, you also need :
+
+- **Vortex model's file** `*.pth` : obtained from previously executed training pipeline which corresponds to the previous mentioned experiment file. Specific checkpoint file on several epoch can be found under **run directory** ( see outputs of this training pipeline section ). This file must be configured in experiment file under [`checkpoint`](experiment_file_config.md#checkpoint) section
+
 You only need to run this command from the command line interface :
 
 ```console
-usage: vortex train [-h] -c CONFIG [--no-log]
+usage: vortex train [-h] -c CONFIG [--resume] [--no-log]
 
 Vortex training pipeline; will generate a Pytorch model file
 
@@ -24,6 +28,7 @@ optional arguments:
   -h, --help            show this help message and exit
   -c CONFIG, --config CONFIG
                         path to experiment config file
+  --resume              vortex-saved model path for resume training
   --no-log              disable logging, ignore experiment file config
 ```
 
@@ -54,8 +59,8 @@ This pipeline will generate several outputs :
     The experiment directory is `test_torchvision_dataset` and the run directory is `601f45782a884286be310b1ffe562597`
 
 - **Backup experiment file** : Experiment file will be duplicated and stored under **run directory**
-- **Intermediate model weight** : Model’s weight will be dumped into **run directory** every *n*-epoch which is configured in `save_epoch` in experiment file with `.pth` extension
-- **Final model weight** : Model’s weight after all training epoch is completed will be dumped in the **experiment directory** with `.pth` extension
+- **Intermediate model file** : File containing model’s weight and training checkpoint will be dumped into **run directory** every *n*-epoch which is configured in `save_epoch` in experiment file with `.pth` extension
+- **Final model file** : File containing model's weight and training checkpoint after all training epoch is completed will be dumped in the **experiment directory** with `.pth` extension
 - **Experiment log** : If logging is enabled, training metrics will be collected by the logging provider. Additionally if the config file is valid for validation, the validation metrics will also be collected.
 
 ---
