@@ -52,7 +52,10 @@ output_directory: experiments/outputs
 
 ---
 
-## Reproducibility and cuDNN auto-tune (OPTIONAL)
+## Reproducibility and cuDNN auto-tune
+
+**THIS CONFIGURATION IS OPTIONAL (MAY IMPACT TRAINING PERFORMANCE)**
+
 
 Flagged with `seed` key (dict) in the experiment file. This configuration setting can be set if the user wants a model training experiment reproducibility. However as noted in [this reference](https://pytorch.org/docs/stable/notes/randomness.html), completely reproducible results are not guaranteed across PyTorch releases, individual commits or different platforms, even with identical seeds. However we still can make the computation deterministic, to produce similar results. For further information, you can check [this link](https://pytorch.org/docs/stable/notes/randomness.html). E.g. :
 
@@ -269,8 +272,7 @@ model: {
     },
     postprocess_args: {
         nms: True,
-    },
-    init_state_dict: 'experiments/outputs/shufflenetv2x100_fpn_ssd_voc2007_512/16575bd31b364539817177ca14147b5d/shufflenetv2x100_fpn_ssd_voc2007_512-epoch-100.pth
+    }
 }
 ```
 
@@ -288,9 +290,16 @@ Arguments :
 - `network_args` (dict) : configuration related to the models architecture hyperparameter correspond to the respective model `name` identifier
 - `loss_args` (dict) : configuration related to loss calculation hyperparameter which will be used in the training pipeline, which correspond to the respective model `name` identifier
 - `postprocess_args` (dict) : configuration related to postprocess arguments, which correspond to the respective model `name` identifier
-- `init_state_dict` (str) : path to pretrained model, for transfer learning
 
 ---
+
+## Checkpoint
+
+Flagged with `checkpoint` key (str) in the experiment file. This configuration describe the path to Vortex model checkpoint which will be used for continue interrupted training or transfer learning to different cases with same model configuration. E.g. :
+
+```yaml
+checkpoint: experiments/outputs/shufflenetv2x100_fpn_ssd_voc2007_512/16575bd31b364539817177ca14147b5d/shufflenetv2x100_fpn_ssd_voc2007_512-epoch-10.pth
+```
 
 ## Graph Exporter
 

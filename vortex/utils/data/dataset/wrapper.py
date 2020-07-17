@@ -8,16 +8,14 @@ import cv2
 import torch
 import random
 import numpy as np
-# import torchvision.transforms.functional as tf
-from vortex.networks.modules.preprocess.normalizer import to_tensor,normalize
 import albumentations.core.composition as albumentations_compose
 import albumentations.augmentations.transforms as albumentations_tf
-from PIL.Image import Image
-import PIL
-import warnings
+from vortex.networks.modules.preprocess.normalizer import to_tensor,normalize
+from PIL import Image
 
 import os
 import sys
+import warnings
 
 from ..augment import create_transform
 from .dataset import get_base_dataset
@@ -48,12 +46,16 @@ class DatasetWrapper:
 
         self.stage = stage
         self.preprocess_args = preprocess_args
-        self.dataset = get_base_dataset(
-            dataset, dataset_args=dataset_args)
+        self.dataset = get_base_dataset(dataset, dataset_args=dataset_args)
         if not 'data_format' in self.dataset.__dict__.keys():
-            raise RuntimeError("expects dataset `%s` to have `data_format` field : dict<str,dict>, explaining data format (e.g. bounding_box, class_label, landmarks etc)" % dataset)
-        if not 'class_names' in self.dataset.__dict__.keys():
-            raise RuntimeError("expects dataset `%s` to have `class_names` field : list<str>, explaining class string names which also map to its index positioning in the list. E.g. self.class_names = ['cat','dog'] means class_label = 0 is 'cat' " % dataset)
+            raise RuntimeError("expects dataset `{}` to have `data_format` field : dict<str,dict> "
+                "explaining data format (e.g. bounding_box, class_label, landmarks etc)".format(dataset))
+        ## make class_names optional
+        # if not 'class_names' in self.dataset.__dict__.keys():
+        #     raise RuntimeError("expects dataset `{}` to have `class_names` field : list<str>, explaining "
+        #         "class string names which also map to its index positioning in the list. E.g. "
+        #         "self.class_names = ['cat','dog'] means class_label = 0 is 'cat' ".format(dataset))
+        self.class_names = None if not hasattr(self.dataset, 'class_names') else self.dataset.class_names
         self.data_format = EasyDict(self.dataset.data_format)
         # Data format standard check
         self.data_format = check_data_format_standard(self.data_format)
@@ -106,7 +108,7 @@ class DatasetWrapper:
             image = cv2.imread(image)
 
         # If dataset is PIL Image, convert to numpy array, support for torchvision dataset
-        elif isinstance(image, PIL.Image.Image):
+        elif isinstance(image, Image.Image):
             image = np.array(image)
 
         # From this point, until specified otherwise, image is in numpy array format
@@ -138,7 +140,7 @@ class DatasetWrapper:
                 image, target = augment(image, target)
                 if target.shape[0] < 1:
                     raise RuntimeError("The configured augmentations resulting in 0 shape target!! Please check your augmentation and avoid this!!")
-        if not isinstance(image, PIL.Image.Image) and not isinstance(image, np.ndarray):
+        if not isinstance(image, Image.Image) and not isinstance(image, np.ndarray):
             raise RuntimeError('Expected augmentation output in PIL.Image.Image or numpy.ndarray format, got %s ' % type(image))
         if (np.all(image >= 0.) and np.all(image <= 1.)) or isinstance(image, torch.Tensor):
             pixel_min, pixel_max = np.min(image), np.max(image)

@@ -1,10 +1,12 @@
 from pathlib import Path
-
-from typing import Union,List, Type
-import numpy as np
-import warnings
-import cv2
 from easydict import EasyDict
+from typing import Union,List, Type
+from collections import OrderedDict
+
+import os
+import warnings
+import numpy as np
+import cv2
 import torch
 
 from vortex.core.factory import create_model,create_dataset , create_runtime_model
@@ -26,8 +28,7 @@ class BasePredictionPipeline(BasePipeline):
     def __init__(self):
         """Class initialization
         """
-        self.class_names = None
-        self.output_file_prefix = None
+        pass
 
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
@@ -72,41 +73,57 @@ class BasePredictionPipeline(BasePipeline):
                                                        weights = weights_file,
                                                        device = device)
 
-            ### TODO: adding 'input_specs'
-
             ## OR
             vortex_predictor=IRPredictionPipeline(model = model_file,
                                                   runtime = runtime)
 
-            ### You can get model's required parameter by extracting
-            ### model's 'input_specs' attributes
+            # You can get model's required parameter by extracting model's 'input_specs' attributes
 
-            input_shape  = vortex_predictor.model.input_specs.shape
+            input_shape  = vortex_predictor.model.input_specs['input']['shape']
+
+            ## `input_specs['input']['shape']` will provide (batch_size,height,width,channel) dimension
+            ## NOTES : PytorchPredictionPipeline can accept flexible batch size,
+            ## however the `input_specs['input']['shape']` of the batch_size dimension 
+            ## will always set to 1, ignore this
+
+            # Extract additional run() input parameters specific for each model
+
             additional_run_params = [key for key in vortex_predictor.model.input_specs.keys() if key!='input']
             print(additional_run_params)
 
-            #### Assume that the model is detection model
-            #### ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
+            ## Assume that the model is detection model
+            ## ['score_threshold', 'iou_threshold'] << this parameter must be provided in run() arguments
 
-            # Prepare batched input
+            # Prepare batched input from image files path
             batch_input = ['image1.jpg','image2.jpg']
 
             ## OR
             import cv2
-            batch_input = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
+            input_size = input_shape[1] # Assume square input
+            image1 = cv2.resize(cv2.imread('image1.jpg'), (input_size,input_size))
+            image2 = cv2.resize(cv2.imread('image2.jpg'), (input_size,input_size))
+            batch_input = np.array([image1,image2])
 
             results = vortex_predictor.run(images=batch_input,
                                            score_threshold=0.9,
                                            iou_threshold=0.2)
+
+            # Additional process : obtain class_names from model
+            class_names = vortex_predictor.model.class_names
+            print(class_names)
+
             ```
         """
-        assert self.class_names , "'self.class_names' must be implemented in the sub class"
+        ## make class_names optional
+        ## assert self.class_names , "'self.class_names' must be implemented in the sub class"
         assert self.output_file_prefix , "'self.output_file_prefix' must be implemented in the sub class"
 
-        assert isinstance(images,list) or isinstance(images,np.ndarray), "'images' arguments must be provided with list or numpy ndarray, found {}".format(type(images))
+        assert isinstance(images,list) or isinstance(images,np.ndarray), "'images' arguments must be "\
+            "provided with list or numpy ndarray, found {}".format(type(images))
 
         if isinstance(images[0],np.ndarray) and dump_visual:
-            warnings.warn("Provided 'images' arguments type is np ndarray and 'dump_visual' is set to True, will not dump any image file due to lack of filename information")
+            warnings.warn("Provided 'images' arguments type is np ndarray and 'dump_visual' is set to "
+                "True, will not dump any image file due to lack of filename information")
 
         # Check image availability if image path is provided
         if isinstance(images[0],str) or isinstance(images[0],Path):
@@ -117,12 +134,13 @@ class BasePredictionPipeline(BasePipeline):
         elif isinstance(images[0],np.ndarray):
             batch_mat = images
             for image in batch_mat:
-                assert len(image.shape) == 3, "Provided 'images' list member in numpy ndarray must be of dim 3, [h , w , c]"
+                assert len(image.shape) == 3, "Provided 'images' list member in numpy ndarray must be "\
+                    "of dim 3, [h , w , c]"
         else:
-            raise TypeError("'images' arguments must be provided with list of image path or list of numpy ndarray, found {}".format(type(images[0])))
+            raise TypeError("'images' arguments must be provided with list of image path or list of "
+                "numpy ndarray, found {}".format(type(images[0])))
 
         # Resize input images
-        
         batch_vis = [mat.copy() for mat in batch_mat]
         batch_imgs = batch_mat
         results = self._run_inference(batch_imgs,**kwargs)
@@ -174,7 +192,7 @@ class BasePredictionPipeline(BasePipeline):
         for vis, results in zip(batch_vis,  batch_results) :
             result_vis.append(visualize_result(
                 vis=vis, results=[results],
-                class_names=self.class_names
+                class_names=self.model.class_names
             ))
         return result_vis
 
@@ -255,12 +273,6 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         # Configure experiment directory
         experiment_directory, _ = check_and_create_output_dir(config)
 
-        # Initialize dataset to get class_names
-        dataset = create_dataset(config.dataset, 
-                                stage='train', 
-                                preprocess_config=config.model.preprocess_args)
-        self.class_names = dataset.dataset.class_names if hasattr(dataset.dataset, 'class_names') else None
-
         # Set compute device
         if device is None:
             device = config.trainer.device
@@ -268,19 +280,66 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # Initialize model
         if weights is None:
-            filename = Path(experiment_directory) / ('%s.pth'%config.experiment_name)
-        else:
-            filename = Path(weights)
-            if not filename.exists():
-                raise FileNotFoundError('Selected weights file {} is not found'.format(filename))
+            weights = Path(experiment_directory) / ('{}.pth'.format(config.experiment_name))
+            if not os.path.isfile(weights):
+                raise RuntimeError("Default weight in {} is not exist, please provide weight "
+                    "path using '--weights' argument.".format(str(filename)))
+        ckpt = torch.load(weights)
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
-        model_components = create_model(config.model,state_dict=str(filename),stage='validate')
+        model_components = create_model(config.model, state_dict=state_dict, stage='validate')
         model_components.network = model_components.network.to(device)
-        self.predictor = create_predictor(model_components)
-        self.predictor.to(device)
+        self.model = create_predictor(model_components)
+        self.model.to(device)
+
+        ## input_specs -> {input_name: {shape, pos, type}}
+        input_specs = OrderedDict()
+        img_size = config.model.preprocess_args.input_size
+        additional_inputs = tuple()
+        if hasattr(model_components.postprocess, 'additional_inputs') :
+            additional_inputs = model_components.postprocess.additional_inputs
+            assert isinstance(additional_inputs, tuple) and len(additional_inputs) > 0
+            assert all(isinstance(additional_input, tuple) for additional_input in additional_inputs)
+
+        input_specs['input'] = {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}
+        for n, (name, shape) in enumerate(additional_inputs):
+            input_specs[name] = {
+                'shape': tuple(shape),
+                'pos': n+1,
+                'type': 'float'
+            }
+        self.model.input_specs = input_specs
+
+        cls_names = None
+        if 'class_names' in ckpt:
+            cls_names = ckpt['class_names']
+        else:
+            from vortex.utils.data.dataset.dataset import all_datasets
+            dataset_available = False
+            for datasets in all_datasets.values():
+                if config.dataset.train.dataset in datasets:
+                    dataset_available = True
+                    break
+
+            if dataset_available:
+                # Initialize dataset to get class_names
+                warnings.warn("'class_names' is not available in your model checkpoint, please "
+                    "update your model using 'scripts/update_model.py' script. \nCreating dataset "
+                    "to get 'class_names'")
+                dataset = create_dataset(config.dataset, stage='train', 
+                    preprocess_config=config.model.preprocess_args)
+                if hasattr(dataset.dataset, 'class_names'):
+                    cls_names = dataset.dataset.class_names
+                else:
+                    warnings.warn("'class_names' is not available in dataset, setting "
+                        "'class_names' to None.")
+            else:
+                warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
+                    config.dataset))
+        self.model.class_names = cls_names
 
         # Configure input size for image
-        self.input_size = config.model.preprocess_args.input_size
+        # self.input_size = config.model.preprocess_args.input_size
 
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
@@ -295,17 +354,19 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         """
 
         # TODO enable padding to keep aspect ratio
-        # Resize input
-        batch_imgs = [cv2.resize(img, (self.input_size,self.input_size)) for img in batch_imgs]
+        # Resize input ( assuming square input, and stretch, no padding provided yet )
+        input_size = self.model.input_specs['input']['shape'][1]
+        batch_imgs = [cv2.resize(img, (input_size,input_size)) for img in batch_imgs]
         batch_imgs = np.stack(batch_imgs)
 
         # Do model inference
-        device = list(self.predictor.parameters())[0].device
+        device = list(self.model.parameters())[0].device
         inputs = {'input' : torch.from_numpy(batch_imgs).to(device)}
 
         ## Get model additional input specific for each task
-        if hasattr(self.predictor.postprocess, 'additional_inputs') :
-            additional_inputs = self.predictor.postprocess.additional_inputs
+        ## TODO: use input_specs
+        if hasattr(self.model.postprocess, 'additional_inputs') :
+            additional_inputs = self.model.postprocess.additional_inputs
             assert isinstance(additional_inputs, tuple)
             for additional_input in additional_inputs :
                 key, _ = additional_input
@@ -314,7 +375,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
                     inputs[key] = torch.from_numpy(np.asarray([value])).to(device)
 
         with torch.no_grad() :
-            results = self.predictor(**inputs)
+            results = self.model(**inputs)
 
         if isinstance(results, torch.Tensor) :
             results = results.cpu().numpy()
@@ -324,7 +385,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             results = list(map(lambda x: x.cpu().numpy() if isinstance(x,torch.Tensor) else x, results))
 
         # Formatting inference result
-        output_format = self.predictor.output_format
+        output_format = self.model.output_format
         results = get_prediction_results(
             results=results,
             output_format=output_format
@@ -370,19 +431,20 @@ class IRPredictionPipeline(BasePredictionPipeline):
         self.output_file_prefix = '{}_ir_prediction'.format(model_type)
 
         # Obtain class_names
-        self.class_names = self.model.class_names
+        # self.class_names = self.model.class_names
 
-        # Obtain input size
-        self.input_shape = self.model.input_specs['input']['shape']
+
+        # # Obtain input size
+        # self.input_shape = self.model.input_specs['input']['shape']
     
     @staticmethod
-    def runtime_predict(predictor, 
+    def _runtime_predict(model, 
                         image: np.ndarray, 
                         **kwargs) -> List:
         """Function to wrap Vortex runtime inference process
 
         Args:
-            predictor : Vortex runtime object
+            model : Vortex runtime object
             image (np.ndarray): array of batched input image(s) with dimension of 4 (n,h,w,c)
             kwargs (optional) : this kwargs is placement for additional input parameters specific to \
                                 models'task
@@ -402,7 +464,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
 
             batch_imgs = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
 
-            results = IRPredictionPipeline.runtime_predict(model, 
+            results = IRPredictionPipeline._runtime_predict(model, 
                                                            batch_imgs,
                                                            score_threshold=0.9,
                                                            iou_threshold=0.2
@@ -413,14 +475,14 @@ class IRPredictionPipeline(BasePredictionPipeline):
         # runtime prediction as static method, can be reused in another pipeline/engine, e.g. Validator
         predict_args = {}
         for name, value in kwargs.items() :
-            if not name in predictor.input_specs :
+            if not name in model.input_specs :
                 warnings.warn('additional input arguments {} ignored'.format(name))
                 continue
             ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
-            dtype = predictor.input_specs[name]['type'].replace('tensor(','').replace(')','')
+            dtype = model.input_specs[name]['type'].replace('tensor(','').replace(')','')
             predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
                 else np.asarray(value, dtype=dtype)
-        results = predictor(image, **predict_args)
+        results = model(image, **predict_args)
         ## convert to dict for visualization
         results = [result._asdict() for result in results]
         return results
@@ -438,14 +500,15 @@ class IRPredictionPipeline(BasePredictionPipeline):
         """
 
         # Check input batch size to match with IR model input specs
-        n, h, w, c = self.input_shape if self.input_shape[-1] == 3 \
-        else tuple(self.input_shape[i] for i in [0,3,1,2])
+        input_shape = self.model.input_specs['input']['shape']
+        n, h, w, c = input_shape if input_shape[-1] == 3 \
+        else tuple(input_shape[i] for i in [0,3,1,2])
         assert len(batch_imgs) <= n, "expects 'images' <= n batch ({}) got {}".format(n, len(batch_imgs))
 
         # TODO add resize with pad in runtime
         # Resize input
-        batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], self.input_shape)
+        batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], input_shape)
 
-        results = type(self).runtime_predict(self.model, batch_imgs, **kwargs)
+        results = type(self)._runtime_predict(self.model, batch_imgs, **kwargs)
 
         return results

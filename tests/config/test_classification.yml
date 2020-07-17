@@ -25,7 +25,7 @@ dataset: {
 model: {
   name: softmax,
   network_args : {
-    backbone : shufflenetv2_x1.0,
+    backbone : shufflenetv2_x0.5,
     n_classes : 10,
     pretrained_backbone: true,
     freeze_backbone: false

@@ -1,12 +1,15 @@
 import os
 import sys
-from pathlib import Path
-import torch
-from easydict import EasyDict
-from typing import Union,Callable,Type
 import logging
-from torch.utils.data.dataloader import DataLoader
+import warnings
+import torch
 
+from copy import deepcopy
+from pathlib import Path
+from easydict import EasyDict
+from typing import Union, Callable, Type
+from collections import OrderedDict
+from torch.utils.data.dataloader import DataLoader
 
 from vortex.networks.models import create_model_components
 from vortex.utils.data.dataset.wrapper import DatasetWrapper
@@ -18,14 +21,10 @@ from vortex_runtime import model_runtime_map
 __all__ = ['create_model','create_runtime_model','create_dataset','create_dataloader','create_experiment_logger','create_exporter']
 
 def create_model(model_config : EasyDict,
-                 state_dict : Union[str,None] = None,
-                 stage : str = 'train',
-                 debug : bool = False) -> EasyDict:
-    if stage not in ['train','validate'] :
+                 state_dict : Union[str, dict, Path] = None, ## path to model or the actual state_dict
+                 stage : str = 'train') -> EasyDict:
+    if stage not in ['train','validate']:
         raise TypeError('Unknown model "stage" argument, got {}, expected "train" or "validate"'%stage)
-
-    if debug:
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
     logging.info('Creating Pytorch model from experiment file')
 
@@ -53,16 +52,28 @@ def create_model(model_config : EasyDict,
         loss_args=loss_args,
         postprocess_args=postprocess_args,
         stage=stage)
-    # Load state_dict from config if specified in experiment file
-    if 'init_state_dict' in model_config and state_dict is None:
-        logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
-        model_components.network.load_state_dict(
-            torch.load(model_config.init_state_dict), strict=True)
-    # If specified using function's parameter, override the experiment config init_state_dict
-    elif state_dict:
-        logging.info("Loading state_dict : {}".format(state_dict))
-        model_components.network.load_state_dict(
-            torch.load(state_dict), strict=True)
+
+    if 'init_state_dict' in model_config or state_dict is not None:
+        if isinstance(state_dict, Path):
+            state_dict = str(state_dict)
+
+        model_path = None
+        # Load state_dict from config if specified in experiment file
+        if 'init_state_dict' in model_config and state_dict is None:
+            logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
+            model_path = model_config.init_state_dict
+        # If specified using function's parameter, override the experiment config init_state_dict
+        elif isinstance(state_dict, str):
+            logging.info("Loading state_dict : {}".format(state_dict))
+            model_path = state_dict
+
+        if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
+            assert model_path
+            ckpt = torch.load(model_path)
+            state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        assert isinstance(state_dict, (OrderedDict, dict))
+        model_components.network.load_state_dict(state_dict, strict=True) 
+
     return model_components
 
 def create_runtime_model(model_path : Union[str, Path],
@@ -84,6 +95,7 @@ def create_runtime_model(model_path : Union[str, Path],
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str):
+    dataset_config = deepcopy(dataset_config)
     if stage == 'train' :
         dataset = dataset_config.train.dataset
         try:
@@ -105,6 +117,9 @@ def create_dataloader(dataset_config : EasyDict,
                       preprocess_config : EasyDict, 
                       stage : str,
                       collate_fn : Union[Callable,str,None] = None ):
+
+    dataset_config = deepcopy(dataset_config)
+    preprocess_config = deepcopy(preprocess_config)
 
     dataset = create_dataset(dataset_config=dataset_config, stage='train', preprocess_config=preprocess_config)
     if isinstance(collate_fn,str):
@@ -148,9 +163,11 @@ def create_exporter(config: Union[EasyDict,dict],
     filename = experiment_name
     if 'filename' in config['args'] :
         filename = config['args']['filename']
-    if isinstance(filename,Path):
-        filename=filename.name
-    filename = output_directory.joinpath(filename + module_map[module][1])
+    if isinstance(filename, Path):
+        filename = filename.name
+    if not filename.endswith(module_map[module][1]):
+        filename += module_map[module][1]
+    filename = output_directory.joinpath(filename)
     config['args'].update({'filename' : filename})
 
     assert module in ['onnx', 'torchscript']

@@ -1,5 +1,6 @@
 experiment_name: efficientnet_lite0_softmax_mnist
 logging: None
+checkpoint: None
 dataset: {
   train: {
     dataset: MNIST,

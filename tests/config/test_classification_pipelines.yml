@@ -25,7 +25,7 @@ dataset: {
 model: {
   name: softmax,
   network_args: {
-    backbone: efficientnet_lite0,
+    backbone: shufflenetv2_x0.5,
     n_classes: 2,
     pretrained_backbone: True,
   },
@@ -59,7 +59,7 @@ trainer: {
       accumulation_step : 1,
     }
   },
-  epoch: 5,
+  epoch: 3,
   save_epoch: 1
 }
 output_directory: tests/output_test
