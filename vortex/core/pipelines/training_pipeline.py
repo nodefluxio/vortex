@@ -97,33 +97,36 @@ class TrainingPipeline(BasePipeline):
         """
 
         self.start_epoch = 0
-        if resume:
+        state_dict = None
+        if resume or 'checkpoint' in config:
             if 'checkpoint' not in config:
                 raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
                     "in the config file. Please specify 'checkpoint' option in the top level "
                     "of your config file pointing to model path used for resume.")
             checkpoint = torch.load(config.checkpoint)
-            self.start_epoch = checkpoint['epoch']
+            state_dict = checkpoint['state_dict']
 
-            model_config = EasyDict(checkpoint['config'])
-            if config.model.name != model_config.model.name:
-                raise RuntimeError("Model name configuration specified in config file ({}) is not "
-                    "the same as saved in model checkpoint ({}).".format(config.model.name,
-                    model_config.model.name))
-            if config.model.network_args != model_config.model.network_args:
-                raise RuntimeError("'network_args' configuration specified in config file ({}) is "
-                    "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
-                    model_config.model.network_args))
-            if config.dataset.train.dataset != model_config.dataset.train.dataset:
-                raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
-                    "in model checkpoint ({}).".format(config.dataset.train.dataset, 
-                    model_config.dataset.train.dataset))
+            if resume:
+                self.start_epoch = checkpoint['epoch']
+                model_config = EasyDict(checkpoint['config'])
+                if config.model.name != model_config.model.name:
+                    raise RuntimeError("Model name configuration specified in config file ({}) is not "
+                        "the same as saved in model checkpoint ({}).".format(config.model.name,
+                        model_config.model.name))
+                if config.model.network_args != model_config.model.network_args:
+                    raise RuntimeError("'network_args' configuration specified in config file ({}) is "
+                        "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
+                        model_config.model.network_args))
+                if config.dataset.train.dataset != model_config.dataset.train.dataset:
+                    raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
+                        "in model checkpoint ({}).".format(config.dataset.train.dataset, 
+                        model_config.dataset.train.dataset))
 
-            if ('n_classes' in config.model.network_args and 
-                    (config.model.network_args.n_classes != model_config.model.network_args.n_classes)):
-                raise RuntimeError("Number of classes configuration specified in config file ({}) "
-                    "is not the same as saved in model checkpoint ({}).".format(
-                    config.model.network_args.n_classes, model_config.model.network_args.n_classes))
+                if ('n_classes' in config.model.network_args and 
+                        (config.model.network_args.n_classes != model_config.model.network_args.n_classes)):
+                    raise RuntimeError("Number of classes configuration specified in config file ({}) "
+                        "is not the same as saved in model checkpoint ({}).".format(
+                        config.model.network_args.n_classes, model_config.model.network_args.n_classes))
 
         self.config = config
         self.hypopt = hypopt
@@ -151,7 +154,7 @@ class TrainingPipeline(BasePipeline):
 
         # Training components creation
         self.device = config.trainer.device
-        self.model_components = create_model(model_config=config.model)
+        self.model_components = create_model(model_config=config.model, state_dict=state_dict)
         self.model_components.network = self.model_components.network.to(self.device)
         self.criterion = self.model_components.loss.to(self.device)
 
@@ -165,7 +168,6 @@ class TrainingPipeline(BasePipeline):
             experiment_logger=self.experiment_logger,
         )
         if resume:
-            self.model_components.network.load_state_dict(checkpoint['state_dict'], strict=True)
             self.trainer.optimizer.load_state_dict(checkpoint['optimizer_state'])
             if self.trainer.scheduler is not None:
                 self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])

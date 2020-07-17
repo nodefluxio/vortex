@@ -132,6 +132,55 @@ class TestTrainingPipeline():
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
         assert not 'scheduler_state' in ckpt if not scheduler else 'scheduler_state' in ckpt
 
+    def test_fresh_train_with_ckpt(self):
+        # Instantiate Training
+        cfg = deepcopy(config)
+        cfg.checkpoint = train_info.run_directory/'test_classification_pipelines-epoch-0.pth'
+        train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False)
+
+        ckpt = torch.load(cfg.checkpoint)
+        assert state_dict_is_equal(ckpt['state_dict'], train_executor.model_components.network.state_dict())
+
+        output = train_executor.run()
+
+        # Check outputs
+        assert isinstance(output, EasyDict)
+        assert all(x in output for x in ('epoch_losses', 'val_metrics', 'learning_rates'))
+
+        epoch_losses = output.epoch_losses
+        val_metrics = output.val_metrics
+        learning_rates = output.learning_rates
+
+        # Make sure returned values is list based on each epoch process
+        assert isinstance(epoch_losses,list)
+        assert len(epoch_losses) == config.trainer.epoch
+        assert isinstance(val_metrics,list)
+        assert len(val_metrics) == int(config.trainer.epoch/config.trainer.validation.val_epoch)
+        assert isinstance(learning_rates,list)
+        assert len(learning_rates) == config.trainer.epoch
+
+        # Check experiment directory and run directory exist
+        train_executor.run_directory = Path(train_executor.run_directory)
+        assert train_executor.run_directory.exists()
+
+        # Check if config is duplicated as backup in run directory
+        assert train_executor.run_directory.joinpath("config.yml").exists()
+
+        # Check if final weight is generated when training ends
+        final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
+        assert Path(final_weight).exists()
+
+        # Check local_runs log is generated
+        assert Path('experiments/local_runs.log').exists()
+
+        ## check saved model checkpoint
+        ckpt = torch.load(final_weight)
+        required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
+        assert all((k in ckpt) for k in required_ckpt)
+        assert ckpt['config'] == cfg
+        assert tuple(ckpt['class_names']) == ('cat', 'dog')
+        assert not 'scheduler_state' in ckpt
+
     @pytest.mark.parametrize("scheduler", [False, True])
     def test_continue_train(self, scheduler):
         if scheduler:
@@ -142,6 +191,10 @@ class TestTrainingPipeline():
             info_holder = train_info
         cfg.checkpoint = info_holder.run_directory/'test_classification_pipelines-epoch-0.pth'
         train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False,resume=True)
+
+        ckpt = torch.load(cfg.checkpoint)
+        assert state_dict_is_equal(ckpt['state_dict'], train_executor.model_components.network.state_dict())
+
         output = train_executor.run()
 
         # Check output type
