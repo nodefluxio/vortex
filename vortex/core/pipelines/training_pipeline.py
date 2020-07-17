@@ -223,8 +223,7 @@ class TrainingPipeline(BasePipeline):
                           total=self.config.trainer.epoch, initial=self.start_epoch, 
                           dynamic_ncols=True):
             loss, lr = self.trainer(self.dataloader, epoch)
-            # loss, lr = torch.tensor(1.2313), 0.1
-            epoch_losses.append(loss)
+            epoch_losses.append(loss.item())
             learning_rates.append(lr)
             print('epoch %s loss : %s with lr : %s' % (epoch, loss.item(), lr))
 
