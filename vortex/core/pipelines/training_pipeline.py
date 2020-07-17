@@ -379,7 +379,6 @@ class TrainingPipeline(BasePipeline):
             checkpoint["class_names"] = self.dataloader.dataset.class_names
         if self.trainer.scheduler is not None:
             checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
-
         filedir = self.run_directory
         if filename is None:
             filename = "{}.pth".format(self.config.experiment_name)

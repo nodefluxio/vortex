@@ -7,7 +7,7 @@ package_name = 'visual-cortex'
 # Requirements
 # TODO spawn subprocess for apt installation
 with open('requirements.txt') as f:
-    install_requires = f.read().splitlines()
+    install_requires = [line for line in f.read().splitlines() if not line.startswith('#') ]
 
 # Extra requirements for optuna visualization
 with open('optuna.vis.requirements.txt') as f:
@@ -37,3 +37,14 @@ setup(name=package_name,
       license='MIT',
       packages=find_packages(exclude=['external','external.datasets','experiments','tests']),
       zip_safe=False)
+
+## Additional setup for NVIDIA-DALI, dependency links is no longer supported by pip
+
+import subprocess
+
+p = subprocess.Popen(["pip3",
+                      "install",
+                      "--extra-index-url","https://developer.download.nvidia.com/compute/redist",
+                      "nvidia-dali-cuda100"],
+                     stdout=subprocess.PIPE)
+p.wait()
