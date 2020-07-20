@@ -39,3 +39,36 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
 
 _register_task('detection')
 _register_task('classification')
+
+import inspect
+from functools import partial
+
+def register_model_(model_name, m):
+    """
+    Register model with model_name.
+    Args:
+        model_name: str
+        m: module or function, should have `create_model_components`
+            function, or is named `create_model_components`
+    """
+    assert isinstance(model_name, str)
+    is_function = inspect.isfunction(m)
+    is_module = inspect.ismodule(m)
+    assert is_function or is_module
+    if is_function:
+        module = inspect.getmodule(m)
+        assert m.__name__ == 'create_model_components'
+    else:
+        assert 'create_model_components' in dir(m)
+        module = m
+    ## TODO: check fn args
+    supported_models[module] = model_name
+    all_models.append(model_name)
+    return m
+
+def register_model(model_name):
+    """
+    Decorator factory for register model,
+    binds model_name to returnded function.
+    """
+    return partial(register_model_, model_name)
