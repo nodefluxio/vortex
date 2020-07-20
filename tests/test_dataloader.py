@@ -1,4 +1,5 @@
 from vortex.core.factory import create_dataloader
+from vortex.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper
 from easydict import EasyDict
 import torch
 import pytest
@@ -49,6 +50,7 @@ def check_loader(dataloader):
     assert fetched_data[0].shape[2] == preprocess_args.input_size # Assume square input
     assert isinstance(len(dataloader),int)
     assert hasattr(dataloader,'dataset')
+    assert isinstance(dataloader.dataset,BasicDatasetWrapper)
 
 @pytest.mark.parametrize("config", [classification_config])
 def test_pytorch_loader(config):
