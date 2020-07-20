@@ -269,3 +269,8 @@ experiments/outputs/*
 !experiments/outputs/shufflenetv2x100_retinaface_frontal_fddb_640
 !experiments/outputs/shufflenetv2x200_fpn_ssd_voc2007_512
 !experiments/outputs/resnet18_softmax_cifar10/reports/assets/*
+
+*-ubyte
+*-ubyte.gz
+*.tar.gz
+*cifar-10-batches-py
