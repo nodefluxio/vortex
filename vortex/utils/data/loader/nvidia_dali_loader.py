@@ -126,7 +126,7 @@ class DALIExternalSourcePipeline(Pipeline):
         self.image_decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
         self.label_cast = ops.Cast(device="cpu",
                              dtype=types.FLOAT)
-        self.labels_pad_value = -1
+        self.labels_pad_value = -9
 
         preprocess_args = dataset_iterator.dataset.preprocess_args
         if 'mean' not in preprocess_args.input_normalization:
@@ -253,6 +253,7 @@ class DALIDataloader():
         self.collate_fn = collate_fn
         self.size = self.dali_pytorch_loader.size
         self.batch_size = batch_size
+        self.preprocess_args = iterator.dataset.preprocess_args
     def __iter__(self):
         return self
         
@@ -266,7 +267,8 @@ class DALIDataloader():
 
             # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
             pre_padded_image_size = output['pre_padded_image_shape'][i].cpu()[:2].type(torch.float32)
-            padded_image_size = torch.tensor(image.shape[:2]).type(torch.float32)
+            input_size = self.preprocess_args.input_size
+            padded_image_size = torch.tensor([input_size,input_size]).type(torch.float32)
             diff_ratio = pre_padded_image_size/padded_image_size
 
             # Prepare labels array
