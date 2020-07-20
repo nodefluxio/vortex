@@ -76,3 +76,18 @@ def register_backbone(model_name):
     binds model_name to returned function.
     """
     return partial(register_backbone_, model_name)
+
+def remove_backbone(model_name):
+    global all_models, supported_models
+    if not model_name in all_models:
+        return False
+    for k, model_list in supported_models.items():
+        if model_name in model_list:
+            for m in model_list:
+                all_models.remove(m)
+            break
+    supported_models = {
+        module: model_list for module, model_list in supported_models.items() \
+            if model_name not in model_list
+    }
+    return True

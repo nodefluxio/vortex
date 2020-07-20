@@ -72,3 +72,14 @@ def register_model(model_name):
     binds model_name to returnded function.
     """
     return partial(register_model_, model_name)
+
+def remove_model(model_name):
+    global all_models, supported_models
+    if not model_name in all_models:
+        return False
+    all_models.remove(model_name)
+    supported_models = {
+        module: model_list for module, model_list in supported_models.items() \
+            if model_name not in model_list
+    }
+    return True
