@@ -6,8 +6,8 @@ if __name__ == "__main__":
     preprocess_args = EasyDict({
         'input_size' : 640,
         'input_normalization' : {
-            'mean' : [0,0,0],
-            'std' : [1, 1, 1],
+            'mean' : [.5,.5,.5],
+            'std' : [.5, .5, .5],
             'scaler' : 255
         },
     })
@@ -74,92 +74,51 @@ if __name__ == "__main__":
                                    preprocess_config = preprocess_args,
                                    collate_fn=collate_fn)
 
-    for datas in dataloader:
-        dali_data = datas
-        break
-    
-    # test vis
     import cv2
-    
-    image_index = 2
-    vis = dali_data[0][image_index].cpu()
-    vis = vis.mul(preprocess_args.input_normalization.scaler)
+    import torch
 
-    vis = np.transpose(vis.numpy(), (1,2,0)).copy()
-    # import pdb; pdb.set_trace()
-    h,w,c = vis.shape
+    for datas in dataloader:
+        for i in range(datas[0].shape[0]):
+            vis = datas[0][i].cpu()
 
-    allbboxes = dali_data[1][image_index][:,:4]
+            mean=torch.as_tensor(preprocess_args.input_normalization.mean, dtype=torch.float)
+            std=torch.as_tensor(preprocess_args.input_normalization.std, dtype=torch.float)
 
-    for bbox in allbboxes:
-        x = int(bbox[0]*w)
-        y = int(bbox[1]*h)
-        x2 = int(bbox[2]*w)
-        y2 = int(bbox[3]*h)
-        cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
+            vis.mul_(std[:,None,None]).add_(mean[:,None,None])
 
-    alllandmarks = dali_data[1][image_index][:,4:14]
-    
-    for obj in alllandmarks:
-        landmarks = obj.reshape(5,2)
-        for i,point in enumerate(landmarks):
-            x = int(point[0]*w)
-            y = int(point[1]*h)
 
-            if i == 0 or i == 3:
-                color = (255,0,0)
-            else:
-                color = (0,0,255)
+            vis = vis.mul(preprocess_args.input_normalization.scaler)
 
-            cv2.circle(vis,(x, y), 2, color, -1)
-            
-    cv2.imshow('dali', vis.astype('uint8'))
-    cv2.waitKey(0)
+            vis = np.transpose(vis.numpy(), (1,2,0)).copy()
+            # import pdb; pdb.set_trace()
+            h,w,c = vis.shape
+        
+            if 'bounding_box' in dataloader.dataset.data_format:
 
-    # dataset = create_dataset(dataset_config, stage="train", preprocess_config=preprocess_args,wrapper_format='default')
+                allbboxes = datas[1][i][:,:4]
 
-    # dataloader_module_args = {
-    #     'num_workers' : 0,
-    #     'batch_size' : 4,
-    #     'shuffle' : False,
-    # }
+                for bbox in allbboxes:
+                    x = int(bbox[0]*w)
+                    y = int(bbox[1]*h)
+                    x2 = int(bbox[2]*w)
+                    y2 = int(bbox[3]*h)
+                    cv2.rectangle(vis, (x, y),(x2, y2), (0, 0, 255), 2)
 
-    # dataloader = DataLoader(dataset, collate_fn=collate_fn, **dataloader_module_args)
+            if 'landmarks' in dataloader.dataset.data_format:
+                alllandmarks = datas[1][i][:,4:14]
+                
+                for obj in alllandmarks:
+                    landmarks = obj.reshape(5,2)
+                    for i,point in enumerate(landmarks):
+                        x = int(point[0]*w)
+                        y = int(point[1]*h)
 
-    # for datas in dataloader:
-    #     pytorch_data = datas
-    #     break
+                        if i == 0 or i == 3:
+                            color = (255,0,0)
+                        else:
+                            color = (0,0,255)
 
-    # py_vis = pytorch_data[0][0].cpu().numpy().copy()
-    # py_vis = np.transpose(py_vis, (1,2,0)).copy()
+                        cv2.circle(vis,(x, y), 2, color, -1)
 
-    # h,w,c = py_vis.shape
-
-    # allbboxes = pytorch_data[1][0][:,:4]
-    # for bbox in allbboxes:
-    #     x = int(bbox[0]*w)
-    #     y = int(bbox[1]*h)
-    #     x2 = int(bbox[2]*w)
-    #     y2 = int(bbox[3]*h)
-
-    #     cv2.rectangle(py_vis, (x, y),(x2, y2), (0, 0, 255), 2)
-
-    # alllandmarks = pytorch_data[1][0][:,4:14]
-    
-    # for obj in alllandmarks:
-    #     landmarks = obj.reshape(5,2)
-    #     for i,point in enumerate(landmarks):
-    #         x = int(point[0]*w)
-    #         y = int(point[1]*h)
-
-    #         if i == 0 or i == 3:
-    #             color = (255,0,0)
-    #         else:
-    #             color = (0,0,255)
-
-    #         cv2.circle(py_vis,(x, y), 2, color, -1)
-
-    # cv2.imshow('pytorch', py_vis)
-    # cv2.waitKey(0)
-    # import pdb; pdb.set_trace()
-
+            cv2.imshow('vis', vis.astype('uint8'))
+            cv2.waitKey(0)
