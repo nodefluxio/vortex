@@ -35,9 +35,9 @@ preprocess_args = EasyDict({
         'input_size' : 640,
         'input_normalization' : {
             'mean' : [0,0,0],
-            'std' : [1, 1, 1]
+            'std' : [1, 1, 1],
+            'scaler' : 1
         },
-        'scaler' : 1
     })
 
 def check_loader(dataloader):
