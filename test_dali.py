@@ -12,18 +12,18 @@ if __name__ == "__main__":
         },
     })
 
-    # Obj Detection
-    collate_fn = 'SSDCollate'
-    dataset_config = EasyDict(
-        {
-            'train': {
-                'dataset' : 'VOC2007DetectionDataset',
-                'args' : {
-                    'image_set' : 'train'
-                }
-            }
-        }
-    )
+    # # Obj Detection
+    # collate_fn = 'SSDCollate'
+    # dataset_config = EasyDict(
+    #     {
+    #         'train': {
+    #             'dataset' : 'VOC2007DetectionDataset',
+    #             'args' : {
+    #                 'image_set' : 'train'
+    #             }
+    #         }
+    #     }
+    # )
 
     # # Classification
     # collate_fn = None
@@ -38,18 +38,18 @@ if __name__ == "__main__":
     #     }
     # )
 
-    # # Obj Det with Landmark
-    # collate_fn = 'RetinaFaceCollate'
-    # dataset_config = EasyDict(
-    #     {
-    #         'train': {
-    #             'dataset': 'FrontalFDDBDataset',
-    #             'args': {
-    #                 'train': True
-    #             },
-    #         }
-    #     }
-    # )
+    # Obj Det with Landmark
+    collate_fn = 'RetinaFaceCollate'
+    dataset_config = EasyDict(
+        {
+            'train': {
+                'dataset': 'FrontalFDDBDataset',
+                'args': {
+                    'train': True
+                },
+            }
+        }
+    )
 
     dali_loader = EasyDict({
         'dataloader': 'DALIDataLoader',
@@ -69,7 +69,16 @@ if __name__ == "__main__":
         },
     })
 
+    aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
+                                                               {'transform': 'HorizontalFlip','args':{'p':1}},
+                                                               {'transform': 'VerticalFlip','args':{'p':1}},
+                                                               ]}
+           }
+          
+          ]
+
     dataset_config.dataloader = dali_loader
+    dataset_config.train.augmentations = aug
     dataloader = create_dataloader(dataset_config=dataset_config,
                                    preprocess_config = preprocess_args,
                                    collate_fn=collate_fn)
