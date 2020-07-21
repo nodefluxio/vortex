@@ -65,26 +65,25 @@ class StandardAugment():
         # Add aditional information
         data.additional_info.pre_padded_image_shapes = pre_padded_image_shapes
         data.data_layout.append('pre_padded_image_shapes')
-
         return data
 
 class HorizontalFlip():
     def __init__(self,p=0.5):
-        self.flip_coin = ops.CoinFlip(probability=p)
+        self.flip_coin_hflip = ops.CoinFlip(probability=p)
         self.image_hflip = ops.Flip(device='gpu')
         self.bbox_hflip = ops.BbFlip(device='cpu')
         self.ldmrks_hflip = ops.CoordFlip(layout='xy',device='cpu')
 
     def __call__(self,**data):
         data = EasyDict(data)
-        flip = self.flip_coin()
+        hflip_coin = self.flip_coin_hflip()
         
         # Flip data
-        data.images = self.image_hflip(data.images,horizontal=flip)
+        data.images = self.image_hflip(data.images,horizontal=hflip_coin)
         if 'bounding_box' in data.labels:
-            data.labels.bounding_box = self.bbox_hflip(data.labels.bounding_box,horizontal=flip)
+            data.labels.bounding_box = self.bbox_hflip(data.labels.bounding_box,horizontal=hflip_coin)
         if 'landmarks' in data.labels:
-            data.labels.landmarks = self.ldmrks_hflip(data.labels.landmarks,flip_x=flip)
+            data.labels.landmarks = self.ldmrks_hflip(data.labels.landmarks,flip_x=hflip_coin)
 
         # Store additional information
         
@@ -96,28 +95,28 @@ class HorizontalFlip():
         else:
             flip_flags.sort()
             flip_flag_keyname = 'flip_flag_'+str(flip_flags[-1]+1)
-        data.additional_info[flip_flag_keyname] = flip
+        data.additional_info[flip_flag_keyname] = hflip_coin
         data.data_layout.append(flip_flag_keyname)
         
         return data
 
 class VerticalFlip():
     def __init__(self,p=0.5):
-        self.flip_coin = ops.CoinFlip(probability=p)
-        self.image_hflip = ops.Flip(device='gpu')
-        self.bbox_hflip = ops.BbFlip(device='cpu')
-        self.ldmrks_hflip = ops.CoordFlip(layout='xy',device='cpu')
+        self.flip_coin_vflip = ops.CoinFlip(probability=p)
+        self.image_vflip = ops.Flip(device='gpu',horizontal=0)
+        self.bbox_vflip = ops.BbFlip(device='cpu',horizontal=0)
+        self.ldmrks_vflip = ops.CoordFlip(layout='xy',device='cpu',flip_x=0)
 
     def __call__(self,**data):
         data = EasyDict(data)
-        flip = self.flip_coin()
+        vflip_coin = self.flip_coin_vflip()
         
         # Flip data
-        data.images = self.image_hflip(data.images,vertical=flip)
+        data.images = self.image_vflip(data.images,vertical=vflip_coin)
         if 'bounding_box' in data.labels:
-            data.labels.bounding_box = self.bbox_hflip(data.labels.bounding_box,vertical=flip)
+            data.labels.bounding_box = self.bbox_vflip(data.labels.bounding_box,vertical=vflip_coin)
         if 'landmarks' in data.labels:
-            data.labels.landmarks = self.ldmrks_hflip(data.labels.landmarks,flip_y=flip)
+            data.labels.landmarks = self.ldmrks_vflip(data.labels.landmarks,flip_y=vflip_coin)
 
         # Store additional information
         
@@ -129,6 +128,7 @@ class VerticalFlip():
         else:
             flip_flags.sort()
             flip_flag_keyname = 'flip_flag_'+str(flip_flags[-1]+1)
-        data.additional_info[flip_flag_keyname] = flip
+        data.additional_info[flip_flag_keyname] = vflip_coin
         data.data_layout.append(flip_flag_keyname)
+
         return data

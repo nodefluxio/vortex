@@ -145,7 +145,9 @@ class DALIExternalSourcePipeline(Pipeline):
         flag_count = 0
         if self.dali_augments:
             for augment in self.dali_augments.compose:
-                if type(augment).__name__ == 'HorizontalFlip' or 'VerticalFlip':
+
+                # Somehow, VerticalFlip in DALI didn't break the sequence for asymm landmarks
+                if type(augment).__name__ == 'HorizontalFlip' or type(augment).__name__ == 'VerticalFlip':
                     self.pipeline_output_data_layout.append('flip_flag_'+str(flag_count))
                     flag_count+=1
 
@@ -208,7 +210,6 @@ class DALIExternalSourcePipeline(Pipeline):
                 pipeline_output.append(data.labels[component])
             elif component in data.additional_info:
                 pipeline_output.append(data.additional_info[component])
-        pipeline_output = tuple(pipeline_output)
         return pipeline_output
 
 class DALIDataloader():
@@ -317,7 +318,32 @@ class DALIDataloader():
                     # Refactor reshaped landmarks and apply asymmetric coordinates fixing if needed
                     if label_key == 'landmarks':
                         nrof_obj_landmarks = int(augmented_label.size / len(self.data_format['landmarks']['indices']))
+                        
+                        # Reshape to shape [nrof_objects,nrof_points] 
                         augmented_label = augmented_label.reshape(nrof_obj_landmarks,len(self.data_format['landmarks']['indices']))
+
+                        # Coordinates sequence fixing for asymmetric landmarks
+                        if 'asymm_pairs' in self.data_format['landmarks']:
+                            # Extract flip flag from pipeline output
+                            # import pdb; pdb.set_trace()
+                            flip_flags = np.array([output[key][i].numpy() for key in output.keys() if key.startswith('flip_flag_')])
+                            flip_count = np.sum(flip_flags)
+                            print(flip_flags)
+                            print(flip_count)
+
+                            # if flip count mod 2 is even, skip coordinates sequence flipping
+                            if flip_count%2 == 1:
+                                n_keypoints = int(len(augmented_label[0])/2)
+                                augmented_label = augmented_label.reshape((-1, n_keypoints, 2))
+
+                                # For each index keypoints pair, swap the position
+                                for keypoint_pair in self.data_format.landmarks.asymm_pairs:
+                                    keypoint_pair = np.array(keypoint_pair)
+                                    augmented_label[:, keypoint_pair,
+                                            :] = augmented_label[:, keypoint_pair[::-1], :]
+                                    # Convert back to original format
+                                augmented_label = augmented_label.reshape((-1, n_keypoints * 2))
+
 
                     # Put back augmented labels in the placeholder array for returned labels
                     np.put_along_axis(ret_targets, values=augmented_label, axis=label_data_format['axis'],
