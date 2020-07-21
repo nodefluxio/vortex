@@ -56,7 +56,7 @@ if __name__ == "__main__":
         'args': {
             'device_id' : 0,
             'num_thread': 1,
-            'batch_size': 4,
+            'batch_size': 1,
             'shuffle': False,
             },
     })
@@ -70,12 +70,23 @@ if __name__ == "__main__":
     })
 
     aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
-                                                               {'transform': 'HorizontalFlip','args':{'p':1}},
-                                                               {'transform': 'VerticalFlip','args':{'p':1}},
+                                                               {'transform': 'HorizontalFlip','args':{'p':0.5}},
+                                                               {'transform': 'VerticalFlip','args':{'p':0.5}},
                                                                ]}
            }
           
           ]
+    
+    # aug = [{'module' : 'albumentations','args' : {'transforms' : [
+    #                                                         #    {'transform': 'HorizontalFlip','args':{'p':1}},
+    #                                                            {'transform': 'VerticalFlip','args':{'p':1}},
+    #                                                            ]}
+    #        }
+          
+    #       ]
+
+
+    # aug = []    
 
     dataset_config.dataloader = dali_loader
     dataset_config.train.augmentations = aug
@@ -122,8 +133,10 @@ if __name__ == "__main__":
                         x = int(point[0]*w)
                         y = int(point[1]*h)
 
-                        if i == 0 or i == 3:
+                        if i == 0:
                             color = (255,0,0)
+                        elif i == 4:
+                            color = (0,255,0)
                         else:
                             color = (0,0,255)
 
