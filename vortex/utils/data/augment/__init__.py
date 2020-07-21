@@ -33,3 +33,5 @@ def create_transform(transform: str, *args, **kwargs):
 
 # for maintainer, register your module here :
 register_module('albumentations')
+register_module('nvidia_dali')
+

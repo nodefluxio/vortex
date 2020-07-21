@@ -1,4 +1,4 @@
-from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
+from ..dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 from easydict import EasyDict
 from typing import Type, Union
 from pathlib import Path
@@ -11,6 +11,7 @@ import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import copy
 import torch
+from ..augment import create_transform
 
 class DALIIteratorWrapper(object):
     def __init__(self,
@@ -126,8 +127,9 @@ class DALIExternalSourcePipeline(Pipeline):
         self.image_decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
         self.label_cast = ops.Cast(device="cpu",
                              dtype=types.FLOAT)
-        self.labels_pad_value = -9
+        self.labels_pad_value = -99
 
+        # Standard Augments Resize and Pad to Square
         preprocess_args = dataset_iterator.dataset.preprocess_args
         if 'mean' not in preprocess_args.input_normalization:
             preprocess_args.input_normalization.mean=[0.,0.,0.]
@@ -135,88 +137,61 @@ class DALIExternalSourcePipeline(Pipeline):
             preprocess_args.input_normalization.mean=[1.,1.,1.]
         if 'scaler' not in preprocess_args.input_normalization:
             preprocess_args.input_normalization.scaler=255
-        self.standard_augment = DALIStandardAugment(scaler = preprocess_args.input_normalization.scaler,
-                                                    mean = preprocess_args.input_normalization.mean,
-                                                    std = preprocess_args.input_normalization.std,
-                                                    input_size = preprocess_args.input_size,
-                                                    image_pad_value = 0,
-                                                    labels_pad_value = self.labels_pad_value)
+
+        standard_augment = EasyDict()
+        standard_augment.transforms = [
+            {'transform': 'StandardAugment','args':{'scaler' : preprocess_args.input_normalization.scaler,
+                                                    'mean' : preprocess_args.input_normalization.mean,
+                                                    'std' : preprocess_args.input_normalization.std,
+                                                    'input_size' : preprocess_args.input_size,
+                                                    'image_pad_value' : 0,
+                                                    'labels_pad_value' : self.labels_pad_value
+                                                    }
+            }
+        ]
+        self.standard_augments = create_transform(
+            'nvidia_dali', **standard_augment)
+        # self.standard_augment = DALIStandardAugment(scaler = preprocess_args.input_normalization.scaler,
+        #                                             mean = preprocess_args.input_normalization.mean,
+        #                                             std = preprocess_args.input_normalization.std,
+        #                                             input_size = preprocess_args.input_size,
+        #                                             image_pad_value = 0,
+        #                                             labels_pad_value = self.labels_pad_value)
 
     def define_graph(self):
-        data = self.source()
+        pipeline_input = self.source()
 
-        graph_data=dict(zip(self.data_layout, data))
-        images=self.image_decode(graph_data['images'])
-        labels = dict()
+        # Prepare pipeline input data
+        data = EasyDict()
+        graph_data=dict(zip(self.data_layout, pipeline_input))
+        data.images = self.image_decode(graph_data['images'])
+        data.labels = EasyDict()
         for layout in self.data_layout:
             if layout!='images':
-                labels[layout]=self.label_cast(graph_data[layout])
-
+                data.labels[layout]=self.label_cast(graph_data[layout])
+        data.additional_info=EasyDict()
+        data.data_layout=self.data_layout
         # Custom Augmentation Start
 
         # Custom Augmentation End
+        data = self.standard_augments(**data)
 
-        returned_data = self.standard_augment(images,labels,self.data_layout)
-
-        return returned_data
-
-class DALIStandardAugment():
-    def __init__(self,
-                 input_size,
-                 scaler = 255,
-                 mean = [0.,0.,0.],
-                 std = [1.,1.,1.],
-                 image_pad_value = 0,
-                 labels_pad_value = -1):
-
-        # By default, CropMirrorNormalize divide each pixel by 255, to make it similar with Pytorch Loader behavior
-        # in which we can control the scaler, we add additional scaler to reverse the effect
-        self.image_normalize = ops.CropMirrorNormalize(
-            device='gpu', mean=[value*255 for value in mean], std=[value*255 for value in std],
-            output_layout='CHW',
-            image_type=types.DALIImageType.BGR)
-
-        self.scaler = ops.Normalize(
-            device='gpu',
-            scale = float(255/scaler),
-            mean= 0,
-            stddev = 1
-        )
+        # Prepare pipeline output tuple
+        pipeline_output = []
         
-        # Padding and resize to prepare tensor output
-        self.image_pad = ops.Paste(device='gpu', fill_value=image_pad_value,
-                             ratio=1, min_canvas_size=input_size, paste_x=0, paste_y=0)
-        self.labels_pad = ops.Pad(device='cpu',axes=(0,1),fill_value=labels_pad_value)
-        
-        self.model_input_resize = ops.Resize(
-            device='gpu', interp_type=types.DALIInterpType.INTERP_CUBIC, resize_longer=input_size)
-        self.peek_shape = ops.Shapes(device='gpu')
+        # Iterate new layout
+        new_layout = data.data_layout
 
-    def __call__(self,images,labels,data_layout):
-        
-        # Resize to model input size
-        images = self.model_input_resize(images)
-        
-        # Save original shape before padding to fix label's with coordinates
-        pre_padded_image_shapes = self.peek_shape(images)
+        for component in new_layout:
+            if component == 'images':
+                pipeline_output.append(data[component])
+            elif component in data.labels:
+                pipeline_output.append(data.labels[component])
+            elif component in data.additional_info:
+                pipeline_output.append(data.additional_info[component])
 
-        # Pad to square
-        images = self.image_pad(images)
-        
-        # Normalize input
-        images = self.image_normalize(images)
-        images = self.scaler(images)
-        
-        returned_data=dict()
-        returned_data['images']=images
-
-        for layout in data_layout:
-            if layout!='images':
-                returned_data[layout]=self.labels_pad(labels[layout])
-        
-        returned_data = tuple(returned_data[layout] for layout in data_layout) + (pre_padded_image_shapes,)
-
-        return returned_data
+        pipeline_output = tuple(pipeline_output)
+        return pipeline_output
 
 class DALIDataloader():
     def __init__(self,
