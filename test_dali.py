@@ -6,26 +6,26 @@ if __name__ == "__main__":
     preprocess_args = EasyDict({
         'input_size' : 640,
         'input_normalization' : {
-            'mean' : [.5,.5,.5],
-            'std' : [.5, .5, .5],
+            'mean' : [.3,.1,.2],
+            'std' : [.4, .1, .2],
             'scaler' : 255
         },
     })
 
     # Obj Detection
-    # collate_fn = 'SSDCollate'
-    # dataset_config = EasyDict(
-    #     {
-    #         'train': {
-    #             'dataset' : 'VOC2007DetectionDataset',
-    #             'args' : {
-    #                 'image_set' : 'train'
-    #             }
-    #         }
-    #     }
-    # )
+    collate_fn = 'SSDCollate'
+    dataset_config = EasyDict(
+        {
+            'train': {
+                'dataset' : 'VOC2007DetectionDataset',
+                'args' : {
+                    'image_set' : 'train'
+                }
+            }
+        }
+    )
 
-    # Classification
+    # # Classification
     # collate_fn = None
     # dataset_config = EasyDict(
     #     {
@@ -38,18 +38,18 @@ if __name__ == "__main__":
     #     }
     # )
 
-    # Obj Det with Landmark
-    collate_fn = 'RetinaFaceCollate'
-    dataset_config = EasyDict(
-        {
-            'train': {
-                'dataset': 'FrontalFDDBDataset',
-                'args': {
-                    'train': True
-                },
-            }
-        }
-    )
+    # # Obj Det with Landmark
+    # collate_fn = 'RetinaFaceCollate'
+    # dataset_config = EasyDict(
+    #     {
+    #         'train': {
+    #             'dataset': 'FrontalFDDBDataset',
+    #             'args': {
+    #                 'train': True
+    #             },
+    #         }
+    #     }
+    # )
 
     dali_loader = EasyDict({
         'dataloader': 'DALIDataLoader',
