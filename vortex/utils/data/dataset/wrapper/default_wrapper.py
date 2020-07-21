@@ -43,10 +43,9 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
                          )
         # Configured computer vision augmentation initialization
         self.augments = None
+
         if stage == 'train' and self.augmentations_list is not None:
             self.augments = []
-            if not isinstance(self.augmentations_list, List):
-                raise TypeError('expect augmentations config type as a list, got %s' % type(self.augmentations_list))
             for augment in self.augmentations_list:
                 module_name = augment.module
                 module_args = augment.args
@@ -56,6 +55,7 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
                 tf_kwargs['data_format'] = self.data_format
                 augments = create_transform(module_name, **tf_kwargs)
                 self.augments.append(augments)
+
         # Standardized computer vision augmentation initialization, longest resize and pad to square
         standard_tf_kwargs = EasyDict()
         standard_tf_kwargs.data_format = self.data_format

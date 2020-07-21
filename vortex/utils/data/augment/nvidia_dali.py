@@ -8,7 +8,7 @@ supported_transforms = [
 
 class NvidiaDALIWrapper():
     
-    def __init__(self,transforms):
+    def __init__(self,transforms,*args,**kwargs):
         self.compose = _parse_compose(transforms)
 
     def __call__(self,**data):
@@ -32,7 +32,7 @@ def _parse_compose(transforms: List[EasyDict]):
                 nvidia_dali.__getattribute__(transform)(**args))
         except Exception as e:
             raise RuntimeError(
-                'when trying to create instance of %s with args : %s; got the following error : %s; please check albumentations documentations' % (transform, args, str(e)))
+                'when trying to create instance of %s with args : %s; got the following error : %s; please check Nvidia DALI wrapper in Vortex documentations' % (transform, args, str(e)))
     return transforms_compose
 
 

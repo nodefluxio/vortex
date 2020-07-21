@@ -1,6 +1,6 @@
 from ..dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 from easydict import EasyDict
-from typing import Type, Union
+from typing import Type, Union, List
 from pathlib import Path
 import random
 import numpy as np
@@ -115,13 +115,19 @@ class DALIIteratorWrapper(object):
     next = __next__
 
 class DALIExternalSourcePipeline(Pipeline):
-    def __init__(self, dataset_iterator, batch_size, num_threads, device_id, seed = 12345):
+    def __init__(self, dataset_iterator, 
+                       batch_size, 
+                       num_threads, 
+                       device_id, 
+                       dali_augments = None,
+                       seed = 12345):
         super().__init__(
                         batch_size,
                         num_threads,
                         device_id,
                         seed=seed)
-        self.data_layout = dataset_iterator.data_layout
+        self.original_data_layout = copy.copy(dataset_iterator.data_layout)
+        self.pipeline_output_data_layout = copy.copy(dataset_iterator.data_layout)
         self.source = ops.ExternalSource(source = dataset_iterator, 
                                          num_outputs = len(dataset_iterator.data_layout))
         self.image_decode = ops.ImageDecoder(device = "mixed", output_type = types.BGR)
@@ -129,6 +135,22 @@ class DALIExternalSourcePipeline(Pipeline):
                              dtype=types.FLOAT)
         self.labels_pad_value = -99
 
+        # Nvidia DALI augmentations from experiment file
+        self.dali_augments = dali_augments
+
+        # Modify pipeline output data layout to prepare placeholder for required information
+        # that need to be passed from DALI pipeline to DALI loader
+        
+        ## Information placeholder for flip augmentation flag used for asymmetric information
+        flag_count = 0
+        if self.dali_augments:
+            for augment in self.dali_augments.compose:
+                if type(augment).__name__ == 'HorizontalFlip' or 'VerticalFlip':
+                    self.pipeline_output_data_layout.append('flip_flag_'+str(flag_count))
+                    flag_count+=1
+
+        ## Information placeholder for standard augment used for coordinates fixing
+        self.pipeline_output_data_layout.append('pre_padded_image_shape')
         # Standard Augments Resize and Pad to Square
         preprocess_args = dataset_iterator.dataset.preprocess_args
         if 'mean' not in preprocess_args.input_normalization:
@@ -151,27 +173,24 @@ class DALIExternalSourcePipeline(Pipeline):
         ]
         self.standard_augments = create_transform(
             'nvidia_dali', **standard_augment)
-        # self.standard_augment = DALIStandardAugment(scaler = preprocess_args.input_normalization.scaler,
-        #                                             mean = preprocess_args.input_normalization.mean,
-        #                                             std = preprocess_args.input_normalization.std,
-        #                                             input_size = preprocess_args.input_size,
-        #                                             image_pad_value = 0,
-        #                                             labels_pad_value = self.labels_pad_value)
 
     def define_graph(self):
         pipeline_input = self.source()
 
         # Prepare pipeline input data
         data = EasyDict()
-        graph_data=dict(zip(self.data_layout, pipeline_input))
+        graph_data=dict(zip(self.original_data_layout, pipeline_input))
         data.images = self.image_decode(graph_data['images'])
         data.labels = EasyDict()
-        for layout in self.data_layout:
+        for layout in self.original_data_layout:
             if layout!='images':
                 data.labels[layout]=self.label_cast(graph_data[layout])
         data.additional_info=EasyDict()
-        data.data_layout=self.data_layout
+        data.data_layout=self.original_data_layout
         # Custom Augmentation Start
+
+        if self.dali_augments:
+            data = self.dali_augments(**data)
 
         # Custom Augmentation End
         data = self.standard_augments(**data)
@@ -189,7 +208,6 @@ class DALIExternalSourcePipeline(Pipeline):
                 pipeline_output.append(data.labels[component])
             elif component in data.additional_info:
                 pipeline_output.append(data.additional_info[component])
-
         pipeline_output = tuple(pipeline_output)
         return pipeline_output
 
@@ -207,17 +225,46 @@ class DALIDataloader():
                                        shuffle=shuffle,
                                        device_id=device_id)
 
+        self.dataset = iterator.dataset
+        self.data_format = dataset.data_format
+        self.preprocess_args = iterator.dataset.preprocess_args
+
+        # Initialize DALI only augmentations
+        self.augmentations_list = self.dataset.augmentations_list
+
+        dali_augments = None
+        self.external_augments = None
+        if self.dataset.stage == 'train' and self.augmentations_list is not None:
+            self.external_augments = []
+            # Handler if using Nvidia DALI, if DALI augmentations is used in experiment file, it must be in the first order
+            aug_module_sequence = [augment.module for augment in self.augmentations_list]
+            if 'nvidia_dali' in aug_module_sequence and aug_module_sequence[0] != 'nvidia_dali':
+                raise RuntimeError('Nvidia DALI augmentation module must be in the first order of the "augmentations" list!, found {}'.format(aug_module_sequence[0]))
+
+            for augment in self.augmentations_list:
+                module_name = augment.module
+                module_args = augment.args
+                if not isinstance(module_args, dict):
+                    raise TypeError("expect augmentation module's args value to be dictionary, got %s" % type(module_args))
+                tf_kwargs = module_args
+                tf_kwargs['data_format'] = self.data_format
+                augments = create_transform(module_name, **tf_kwargs)
+                if module_name == 'nvidia_dali':
+                    dali_augments = augments
+                else:
+                    self.external_augments.append(augments)
+
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
                                               batch_size=batch_size,
                                               num_threads=num_thread,
-                                              device_id=device_id)
-        self.dataset = iterator.dataset
+                                              device_id=device_id,
+                                              dali_augments=dali_augments)
         self.labels_pad_value = pipeline.labels_pad_value
-        self.data_format = dataset.data_format
-        self.output_layout = copy.copy(iterator.data_layout)
-        self.output_layout.remove('images')
+        self.original_data_layout = copy.copy(pipeline.original_data_layout)
+        self.original_data_layout.remove('images')
+
         # Additional field to retrieve image shape
-        self.output_map = iterator.data_layout+['pre_padded_image_shape']
+        self.output_map = pipeline.pipeline_output_data_layout
         self.dali_pytorch_loader = DALIGenericIterator(pipelines=[pipeline],
                                                         output_map=self.output_map,
                                                         size=iterator.size,
@@ -228,13 +275,11 @@ class DALIDataloader():
         self.collate_fn = collate_fn
         self.size = self.dali_pytorch_loader.size
         self.batch_size = batch_size
-        self.preprocess_args = iterator.dataset.preprocess_args
     def __iter__(self):
         return self
         
     def __next__(self):
         output = self.dali_pytorch_loader.__next__()[0] # Vortex doesn't support multiple pipelines yet
-
         # Prepare Pytorch style data loader output
         batch = []
         for i in range(len(output['images'])):
@@ -248,7 +293,7 @@ class DALIDataloader():
 
             # Prepare labels array
             labels_dict = dict()
-            for layout in self.output_layout:
+            for layout in self.original_data_layout:
                 label_output=output[layout][i].numpy()
 
                 # Remove padded value from DALI, this assume that labels dimension 1 shape is same
@@ -262,14 +307,14 @@ class DALIDataloader():
                     # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
                     label_output = self._fix_coordinates(label_output,layout,diff_ratio)
                     labels_dict[layout] = label_output
-            
+
             # Modify labels placeholder with augmented labels
             for label_key in self.data_format:
-                if label_key in self.output_layout:
+                if label_key in self.original_data_layout:
                     label_data_format=self.data_format[label_key]
                     augmented_label = labels_dict[label_key]
 
-                    # Refactor reshaped landmarks
+                    # Refactor reshaped landmarks and apply asymmetric coordinates fixing if needed
                     if label_key == 'landmarks':
                         nrof_obj_landmarks = int(augmented_label.size / len(self.data_format['landmarks']['indices']))
                         augmented_label = augmented_label.reshape(nrof_obj_landmarks,len(self.data_format['landmarks']['indices']))

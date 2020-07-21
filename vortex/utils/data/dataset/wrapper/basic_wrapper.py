@@ -20,6 +20,22 @@ class BasicDatasetWrapper():
         self.stage = stage
         self.preprocess_args = preprocess_args
         self.augmentations_list = augmentations
+
+        if stage == 'train' and self.augmentations_list is not None:
+            if not isinstance(self.augmentations_list, List):
+                raise TypeError('expect augmentations config type as a list, got %s' % type(self.augmentations_list))
+
+            # Handle multiple declaration of same augmentation modules
+            aug_module_sequence = [augment.module for augment in self.augmentations_list]
+            duplicate_modules = []
+            for module in list(set(aug_module_sequence)):
+                module_count = aug_module_sequence.count(module)
+                if module_count > 1:
+                    duplicate_modules.append(module)
+
+            if len(duplicate_modules)!=0:
+                raise RuntimeError('Detected duplicate declaration of augmentation modules in experiment file "augmentations" section, duplicate modules found = {}'.format(duplicate_module))
+
         self.dataset = get_base_dataset(
             dataset, dataset_args=dataset_args)
         if not 'data_format' in self.dataset.__dict__.keys():
