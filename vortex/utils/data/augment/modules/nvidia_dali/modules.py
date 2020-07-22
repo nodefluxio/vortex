@@ -8,7 +8,8 @@ __all__ = ['StandardAugment',
            'HorizontalFlip',
            'VerticalFlip',
            'RandomBrightnessContrast',
-           'RandomJitter']
+           'RandomJitter',
+           'RandomHueSaturationValue']
 
 class StandardAugment():
     def __init__(self,
@@ -142,10 +143,10 @@ class RandomBrightnessContrast():
     
     def __init__(self,
                  p = .5,
-                 brightness_limit : Union[List,float] = 0.,
-                 contrast_limit : Union[List,float] = 0.):
-        brightness_limit = self._check_and_convert_limit_value(brightness_limit)
-        contrast_limit = self._check_and_convert_limit_value(contrast_limit)
+                 brightness_limit : Union[List,float] = 0.5,
+                 contrast_limit : Union[List,float] = 0.5):
+        brightness_limit = _check_and_convert_limit_value(brightness_limit)
+        contrast_limit = _check_and_convert_limit_value(contrast_limit)
         self.brightness_uniform = ops.Uniform(range=brightness_limit)
         self.contrast_uniform = ops.Uniform(range=contrast_limit)
         self.random_brightness_contrast = ops.BrightnessContrast(device='gpu')
@@ -156,35 +157,20 @@ class RandomBrightnessContrast():
     def __call__(self,**data):
         data = EasyDict(data)
 
-        brightness_values = self.brightness_uniform()
-        contrast_values = self.contrast_uniform()
+        brightness_rng = self.brightness_uniform()
+        contrast_rng = self.contrast_uniform()
 
         aug_images = self.random_brightness_contrast(data.images,
-                                                      brightness=brightness_values,
-                                                      contrast=contrast_values)
-
+                                                      brightness=brightness_rng,
+                                                      contrast=contrast_rng)
+        
+        # DALI multiplexing to apply probability for applied augmentation or not
         apply_condition = self.bool(self.rng())
         neg_condition = apply_condition ^ True
         data.images = apply_condition * aug_images + neg_condition * data.images
         return data
 
-    def _check_and_convert_limit_value(self,value):
-        if isinstance(value,List) or isinstance(value,Tuple):
-            if len(value)!=2 or value[0]>value[-1]:
-                raise ValueError('Limit must be provided as list/tuple with length 2 -> [min,max] value, \
-                                  found {}'.format(value))
-            
-        elif isinstance(value,int) or isinstance(value,float):
-            value = [-value,value]
-        else:
-            raise ValueError('Unknown limit type, expected to be list/tuple or int, found {}'.format(value))
-        
-        if value[0] < -1:
-            raise ValueError('Minimum value limit is -1, found {}'.format(value[0]))
-
-        value = np.array(value) + 1.0
-        value = value.tolist()
-        return value
+    
 
 class RandomJitter():
 
@@ -207,6 +193,61 @@ class RandomJitter():
 
         return data
 
-# class RandomHueSaturationValue():
+class RandomHueSaturationValue():
     
-#     def __init__(self,)
+    def __init__(self,
+                 p : .5,
+                 hue_limit : Union[List,float] = 20.,
+                 saturation_limit : Union[List,float] = .5,
+                 value_limit : Union[List,float] = .5):
+        
+        hue_limit = _check_and_convert_limit_value(hue_limit,None,0)
+        saturation_limit = _check_and_convert_limit_value(saturation_limit)
+        value_limit = _check_and_convert_limit_value(value_limit)
+
+        self.hsv = ops.Hsv(device='gpu')
+
+        self.hue_uniform = ops.Uniform(range=hue_limit)
+        self.saturation_uniform = ops.Uniform(range=saturation_limit)
+        self.value_uniform = ops.Uniform(range=value_limit)
+
+        self.rng = ops.CoinFlip(probability = p)
+        self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
+    
+    def __call__(self,**data):
+        data = EasyDict(data)
+
+        hue_rng = self.hue_uniform()
+        saturation_rng = self.saturation_uniform()
+        value_rng = self.value_uniform()
+
+        aug_images = self.hsv(data.images,
+                              hue = hue_rng,
+                              saturation = saturation_rng,
+                              value = value_rng)
+
+        # DALI multiplexing to apply probability for applied augmentation or not
+        apply_condition = self.bool(self.rng())
+        neg_condition = apply_condition ^ True
+        data.images = apply_condition * aug_images + neg_condition * data.images
+
+        return data
+
+def _check_and_convert_limit_value(value,minimum = 0,modifier = 1):
+    if isinstance(value,List) or isinstance(value,Tuple):
+        if len(value)!=2 or value[0]>value[-1]:
+            raise ValueError('Limit must be provided as list/tuple with length 2 -> [min,max] value, \
+                                found {}'.format(value))
+    elif isinstance(value,int) or isinstance(value,float):
+        value = [-value,value]
+        value = np.array(value) + modifier
+    else:
+        import pdb; pdb.set_trace()    
+        raise ValueError('Unknown limit type, expected to be list/tuple or int, found {}'.format(value))
+    
+    if minimum:
+        if value[0] < minimum:
+            raise ValueError('Minimum value limit is 0, found {}'.format(value[0]))
+
+    value = value.tolist()
+    return value
