@@ -25,31 +25,31 @@ if __name__ == "__main__":
     #     }
     # )
 
-    # # Classification
-    # collate_fn = None
-    # dataset_config = EasyDict(
-    #     {
-    #         'train': {
-    #             'dataset': 'ImageFolder',
-    #             'args': {
-    #                 'root': 'tests/test_dataset/train'
-    #             },
-    #         }
-    #     }
-    # )
-
-    # Obj Det with Landmark
-    collate_fn = 'RetinaFaceCollate'
+    # Classification
+    collate_fn = None
     dataset_config = EasyDict(
         {
             'train': {
-                'dataset': 'FrontalFDDBDataset',
+                'dataset': 'ImageFolder',
                 'args': {
-                    'train': True
+                    'root': 'tests/test_dataset/classification/train'
                 },
             }
         }
     )
+
+    # # Obj Det with Landmark
+    # collate_fn = 'RetinaFaceCollate'
+    # dataset_config = EasyDict(
+    #     {
+    #         'train': {
+    #             'dataset': 'FrontalFDDBDataset',
+    #             'args': {
+    #                 'train': True
+    #             },
+    #         }
+    #     }
+    # )
 
     dali_loader = EasyDict({
         'dataloader': 'DALIDataLoader',
@@ -88,7 +88,8 @@ if __name__ == "__main__":
                                                                 #         'value_limit': .3
                                                                     
                                                                 # }},
-                                                                {'transform': 'RandomWater','args':{'p':0.5}},
+                                                                # {'transform': 'RandomWater','args':{'p':0.5}},
+                                                                {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
                                                                ]}
            }
           

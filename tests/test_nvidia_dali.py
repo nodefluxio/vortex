@@ -71,9 +71,10 @@ transforms = [{'transform': 'HorizontalFlip','args':{'p':1}},
               {'transform': 'RandomJitter','args':{'p' : 1,'nDegree' : 2}},
               {'transform': 'RandomHueSaturationValue','args':{'p' :1,'hue_limit' : 20,'saturation_limit': .3,'value_limit': .3}},
               {'transform': 'RandomWater','args':{'p' :1}},
+              {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
               ]
 
-excpected_raise_error_transform = ['RandomWater']
+excpected_raise_error_transform = ['RandomWater','RandomRotate']
 
 @pytest.mark.parametrize("dataset_config", [class_dataset_config,lndmrks_dataset_config])
 @pytest.mark.parametrize("transform", [transform for transform in transforms])
