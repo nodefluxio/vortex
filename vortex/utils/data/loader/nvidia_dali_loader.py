@@ -163,6 +163,7 @@ class DALIExternalSourcePipeline(Pipeline):
             preprocess_args.input_normalization.scaler=255
 
         standard_augment = EasyDict()
+        standard_augment.data_format = dataset_iterator.dataset.data_format
         standard_augment.transforms = [
             {'transform': 'StandardAugment','args':{'scaler' : preprocess_args.input_normalization.scaler,
                                                     'mean' : preprocess_args.input_normalization.mean,

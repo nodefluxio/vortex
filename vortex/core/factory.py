@@ -151,7 +151,6 @@ def create_dataloader(dataset_config : EasyDict,
         pass
     else :
         raise TypeError('Unknown type of "collate_fn", should be in the type of string, Callable, or None. Got {}'%type(collate_fn))
-    
     dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_module_args)
     return dataloader
 
