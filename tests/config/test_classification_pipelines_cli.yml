@@ -4,13 +4,13 @@ dataset: {
   train: {
     dataset: ImageFolder,
     args: {
-      root: tests/test_dataset/train
+      root: tests/test_dataset/classification/train
     },
   },
   eval: {
     dataset: ImageFolder,
     args: {
-      root: tests/test_dataset/val
+      root: tests/test_dataset/classification/val
     }
   },
   dataloader: {
