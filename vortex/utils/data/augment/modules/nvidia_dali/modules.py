@@ -141,6 +141,7 @@ class VerticalFlip():
 class RandomBrightnessContrast():
     
     def __init__(self,
+                 p = .5,
                  brightness_limit : Union[List,float] = 0.,
                  contrast_limit : Union[List,float] = 0.):
         brightness_limit = self._check_and_convert_limit_value(brightness_limit)
@@ -149,16 +150,22 @@ class RandomBrightnessContrast():
         self.contrast_uniform = ops.Uniform(range=contrast_limit)
         self.random_brightness_contrast = ops.BrightnessContrast(device='gpu')
 
+        self.rng = ops.CoinFlip(probability = p)
+        self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
+
     def __call__(self,**data):
         data = EasyDict(data)
 
         brightness_values = self.brightness_uniform()
         contrast_values = self.contrast_uniform()
 
-        data.images = self.random_brightness_contrast(data.images,
+        aug_images = self.random_brightness_contrast(data.images,
                                                       brightness=brightness_values,
                                                       contrast=contrast_values)
-        
+
+        apply_condition = self.bool(self.rng())
+        neg_condition = apply_condition ^ True
+        data.images = apply_condition * aug_images + neg_condition * data.images
         return data
 
     def _check_and_convert_limit_value(self,value):
@@ -199,3 +206,7 @@ class RandomJitter():
         data.images=self.jitter(data.images,mask = coin_flip)
 
         return data
+
+# class RandomHueSaturationValue():
+    
+#     def __init__(self,)
