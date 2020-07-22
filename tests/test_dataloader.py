@@ -8,7 +8,7 @@ classification_config = EasyDict({
   'train': {
     'dataset': 'ImageFolder',
     'args': {
-      'root': 'tests/test_dataset/train'
+      'root': 'tests/test_dataset/classification/train'
     },
   },
 })
