@@ -72,15 +72,22 @@ if __name__ == "__main__":
     aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
                                                             #    {'transform': 'HorizontalFlip','args':{'p':0.5}},
                                                             #    {'transform': 'VerticalFlip','args':{'p':0.5}},
-                                                               {'transform': 'RandomBrightnessContrast','args':{
-                                                                   'brightness_limit' : 1,
-                                                                   'contrast_limit' : 1,
-                                                                   'p': .5,
-                                                               }},
+                                                            #    {'transform': 'RandomBrightnessContrast','args':{
+                                                            #        'brightness_limit' : 1,
+                                                            #        'contrast_limit' : 1,
+                                                            #        'p': .5,
+                                                            #    }},
                                                                 # {'transform': 'RandomJitter','args':{
                                                                 #     'p' : .5,
                                                                 #     'nDegree' : 2
                                                                 # }},
+                                                                    {'transform': 'RandomHueSaturationValue','args':{
+                                                                        'p' :1,
+                                                                        'hue_limit' : 20,
+                                                                        'saturation_limit': .3,
+                                                                        'value_limit': .3
+                                                                    
+                                                                }},
                                                                ]}
            }
           
