@@ -3,6 +3,7 @@ import nvidia.dali.types as types
 from easydict import EasyDict
 from typing import Union,Tuple,List
 import numpy as np
+from .utils import _check_and_convert_limit_value
 
 __all__ = ['StandardAugment',
            'HorizontalFlip',
@@ -10,7 +11,8 @@ __all__ = ['StandardAugment',
            'RandomBrightnessContrast',
            'RandomJitter',
            'RandomHueSaturationValue',
-           'RandomWater']
+           'RandomWater',
+           'RandomRotate']
 
 class StandardAugment():
     def __init__(self,
@@ -270,22 +272,35 @@ class RandomWater():
 
         return data
 
+class RandomRotate():
 
-def _check_and_convert_limit_value(value,minimum = 0,modifier = 1):
-    if isinstance(value,List) or isinstance(value,Tuple):
-        if len(value)!=2 or value[0]>value[-1]:
-            raise ValueError('Limit must be provided as list/tuple with length 2 -> [min,max] value, \
-                                found {}'.format(value))
-    elif isinstance(value,int) or isinstance(value,float):
-        value = [-value,value]
-        value = np.array(value) + modifier
-    else:
-        import pdb; pdb.set_trace()    
-        raise ValueError('Unknown limit type, expected to be list/tuple or int, found {}'.format(value))
-    
-    if minimum:
-        if value[0] < minimum:
-            raise ValueError('Minimum value limit is 0, found {}'.format(value[0]))
+    def __init__(self,
+                 p = .5,
+                 angle_limit: Union[List,float] = 45.,
+                 fill_value= 0.):
 
-    value = value.tolist()
-    return value
+        angle_limit = _check_and_convert_limit_value(angle_limit,None,0)
+
+        self.angle_uniform = ops.Uniform(range=angle_limit)
+
+        self.rotate = ops.Rotate(device='gpu',
+                                 fill_value = 0.,
+                                 keep_size=True)
+
+        self.rng = ops.CoinFlip(probability = p)
+        self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
+
+    def __call__(self,**data):
+        data = EasyDict(data)
+
+        angle_rng = self.angle_uniform()
+        aug_images = self.rotate(data.images,
+                                  angle = angle_rng)
+
+        # DALI multiplexing to apply probability for applied augmentation or not
+        apply_condition = self.bool(self.rng())
+        neg_condition = apply_condition ^ True
+        data.images = apply_condition * aug_images + neg_condition * data.images
+
+        return data
+
