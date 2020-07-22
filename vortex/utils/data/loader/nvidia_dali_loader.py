@@ -199,7 +199,7 @@ class DALIExternalSourcePipeline(Pipeline):
 
         # Prepare pipeline output tuple
         pipeline_output = []
-        
+
         # Iterate new layout
         new_layout = data.data_layout
 
@@ -328,8 +328,6 @@ class DALIDataloader():
                             # import pdb; pdb.set_trace()
                             flip_flags = np.array([output[key][i].numpy() for key in output.keys() if key.startswith('flip_flag_')])
                             flip_count = np.sum(flip_flags)
-                            print(flip_flags)
-                            print(flip_count)
 
                             # if flip count mod 2 is even, skip coordinates sequence flipping
                             if flip_count%2 == 1:
