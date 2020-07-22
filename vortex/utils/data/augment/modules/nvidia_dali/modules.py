@@ -9,7 +9,8 @@ __all__ = ['StandardAugment',
            'VerticalFlip',
            'RandomBrightnessContrast',
            'RandomJitter',
-           'RandomHueSaturationValue']
+           'RandomHueSaturationValue',
+           'RandomWater']
 
 class StandardAugment():
     def __init__(self,
@@ -232,6 +233,43 @@ class RandomHueSaturationValue():
         data.images = apply_condition * aug_images + neg_condition * data.images
 
         return data
+
+class RandomWater():
+
+    def __init__(self,
+                 p = .5,
+                 ampl_x=10.0,
+                 ampl_y=10.0,
+                 freq_x=0.049087,
+                 freq_y=0.049087,
+                 phase_x=0.0,
+                 phase_y=0.0,
+                 fill_value=0.0):
+        
+        self.water_aug = ops.Water(device='gpu',
+                                   ampl_x=ampl_x,
+                                   ampl_y=ampl_y,
+                                   freq_x=freq_x,
+                                   freq_y=freq_y,
+                                   phase_x=phase_x,
+                                   phase_y=phase_y,
+                                   fill_value=fill_value
+                                   )
+        self.rng = ops.CoinFlip(probability = p)
+        self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
+
+    def __call__(self,**data):
+        data = EasyDict(data)
+
+        aug_images = self.water_aug(data.images)
+
+        # DALI multiplexing to apply probability for applied augmentation or not
+        apply_condition = self.bool(self.rng())
+        neg_condition = apply_condition ^ True
+        data.images = apply_condition * aug_images + neg_condition * data.images
+
+        return data
+
 
 def _check_and_convert_limit_value(value,minimum = 0,modifier = 1):
     if isinstance(value,List) or isinstance(value,Tuple):

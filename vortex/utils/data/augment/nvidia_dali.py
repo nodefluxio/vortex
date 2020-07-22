@@ -9,7 +9,20 @@ supported_transforms = [
 class NvidiaDALIWrapper():
     
     def __init__(self,transforms,*args,**kwargs):
+        
+        transforms_sequence = [module.transform for module in transforms]
+        data_format = kwargs['data_format']
+        
+        # Filter selected augmentation that can't be applied if specified labels is exist
+        # e.g. some transformation that sensitive to coordinates but DALI doesn't provide
+        # support for the labels transformation such as Rotate and Water transform
+        if 'landmarks' in data_format or 'bounding_box' in data_format:
+            if 'RandomWater' in transforms_sequence or 'RandomRotate' in transforms_sequence:
+                raise RuntimeError('Currently "RandomWater" and "RandomRotate" cannot be used \
+                    with model that support object detection and landmarks task!')
+
         self.compose = _parse_compose(transforms)
+        
 
     def __call__(self,**data):
         for transform in self.compose:

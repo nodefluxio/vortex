@@ -70,7 +70,10 @@ transforms = [{'transform': 'HorizontalFlip','args':{'p':1}},
               {'transform': 'RandomBrightnessContrast','args':{'p':1,'brightness_limit' : .2,'contrast_limit' : .2}},
               {'transform': 'RandomJitter','args':{'p' : 1,'nDegree' : 2}},
               {'transform': 'RandomHueSaturationValue','args':{'p' :1,'hue_limit' : 20,'saturation_limit': .3,'value_limit': .3}},
+              {'transform': 'RandomWater','args':{'p' :1}},
               ]
+
+excpected_raise_error_transform = ['RandomWater']
 
 @pytest.mark.parametrize("dataset_config", [class_dataset_config,lndmrks_dataset_config])
 @pytest.mark.parametrize("transform", [transform for transform in transforms])
@@ -78,9 +81,18 @@ def test_dali(dataset_config,transform):
     dataset_config.dataloader = dali_loader
     augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transform]}})]
     dataset_config.train.augmentations = augmentations
-    dataloader = create_dataloader(dataset_config=dataset_config,
-                                   preprocess_config = preprocess_args,
-                                   collate_fn=dataset_config.collate_fn)
-    for data in dataloader:
-        fetched_data = data
-        break
+    
+    if dataset_config == lndmrks_dataset_config and transform['transform'] in excpected_raise_error_transform:
+        with pytest.raises(RuntimeError):
+            dataloader = create_dataloader(dataset_config=dataset_config,
+                                        preprocess_config = preprocess_args,
+                                        collate_fn=dataset_config.collate_fn)
+    else:
+        dataloader = create_dataloader(dataset_config=dataset_config,
+                                        preprocess_config = preprocess_args,
+                                        collate_fn=dataset_config.collate_fn)
+
+        for data in dataloader:
+            fetched_data = data
+            break
+    

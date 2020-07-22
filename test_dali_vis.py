@@ -81,13 +81,14 @@ if __name__ == "__main__":
                                                                 #     'p' : .5,
                                                                 #     'nDegree' : 2
                                                                 # }},
-                                                                    {'transform': 'RandomHueSaturationValue','args':{
-                                                                        'p' :1,
-                                                                        'hue_limit' : 20,
-                                                                        'saturation_limit': .3,
-                                                                        'value_limit': .3
+                                                                #     {'transform': 'RandomHueSaturationValue','args':{
+                                                                #         'p' :1,
+                                                                #         'hue_limit' : 20,
+                                                                #         'saturation_limit': .3,
+                                                                #         'value_limit': .3
                                                                     
-                                                                }},
+                                                                # }},
+                                                                {'transform': 'RandomWater','args':{'p':0.5}},
                                                                ]}
            }
           
