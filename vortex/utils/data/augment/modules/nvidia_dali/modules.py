@@ -7,7 +7,8 @@ import numpy as np
 __all__ = ['StandardAugment',
            'HorizontalFlip',
            'VerticalFlip',
-           'RandomBrightnessContrast']
+           'RandomBrightnessContrast',
+           'RandomJitter']
 
 class StandardAugment():
     def __init__(self,
@@ -177,3 +178,24 @@ class RandomBrightnessContrast():
         value = np.array(value) + 1.0
         value = value.tolist()
         return value
+
+class RandomJitter():
+
+    def __init__(self,
+                 p = .5,
+                 nDegree = 2,
+                 fill_value = 0.):
+
+        self.jitter = ops.Jitter(device = 'gpu',
+                                 fill_value = 0,
+                                 nDegree = nDegree)
+        
+        self.flip_coin = ops.CoinFlip(probability=p)
+    
+    def __call__(self,**data):
+        data = EasyDict(data)
+
+        coin_flip = self.flip_coin()
+        data.images=self.jitter(data.images,mask = coin_flip)
+
+        return data

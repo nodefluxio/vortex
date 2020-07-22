@@ -70,12 +70,16 @@ if __name__ == "__main__":
     })
 
     aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
-                                                            #    {'transform': 'HorizontalFlip','args':{'p':0.5}},
+                                                               {'transform': 'HorizontalFlip','args':{'p':0.5}},
                                                             #    {'transform': 'VerticalFlip','args':{'p':0.5}},
-                                                               {'transform': 'RandomBrightnessContrast','args':{
-                                                                   'brightness_limit' : .2,
-                                                                   'contrast_limit' : .2
-                                                               }},
+                                                            #    {'transform': 'RandomBrightnessContrast','args':{
+                                                            #        'brightness_limit' : .2,
+                                                            #        'contrast_limit' : .2
+                                                            #    }},
+                                                                {'transform': 'RandomJitter','args':{
+                                                                    'p' : 0.5,
+                                                                    'nDegree' : 2
+                                                                }},
                                                                ]}
            }
           
