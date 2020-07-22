@@ -66,7 +66,8 @@ dali_loader = EasyDict({
 })
 
 transforms = [{'transform': 'HorizontalFlip','args':{'p':1}},
-              {'transform': 'VerticalFlip','args':{'p':1}}
+              {'transform': 'VerticalFlip','args':{'p':1}},
+              {'transform': 'RandomBrightnessContrast','args':{'brightness_limit' : .2,'contrast_limit' : .2}}
               ]
 
 @pytest.mark.parametrize("dataset_config", [class_dataset_config,lndmrks_dataset_config])

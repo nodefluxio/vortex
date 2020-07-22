@@ -29,7 +29,7 @@ def _parse_compose(transforms: List[EasyDict]):
                 "unsupported module '%s' in our Vortex wrapper of Nvidia DALI ops please check" % transform)
         try:
             transforms_compose.append(
-                nvidia_dali.__getattribute__(transform)(**args))
+                nvidia_dali.__getattribute__(transform)(**args))            
         except Exception as e:
             raise RuntimeError(
                 'when trying to create instance of %s with args : %s; got the following error : %s; please check Nvidia DALI wrapper in Vortex documentations' % (transform, args, str(e)))

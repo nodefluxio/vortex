@@ -1,10 +1,13 @@
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
 from easydict import EasyDict
+from typing import Union,Tuple,List
+import numpy as np
 
 __all__ = ['StandardAugment',
            'HorizontalFlip',
-           'VerticalFlip']
+           'VerticalFlip',
+           'RandomBrightnessContrast']
 
 class StandardAugment():
     def __init__(self,
@@ -101,6 +104,7 @@ class HorizontalFlip():
         return data
 
 class VerticalFlip():
+
     def __init__(self,p=0.5):
         self.flip_coin_vflip = ops.CoinFlip(probability=p)
         self.image_vflip = ops.Flip(device='gpu',horizontal=0)
@@ -132,3 +136,44 @@ class VerticalFlip():
         data.data_layout.append(flip_flag_keyname)
 
         return data
+
+class RandomBrightnessContrast():
+    
+    def __init__(self,
+                 brightness_limit : Union[List,float] = 0.,
+                 contrast_limit : Union[List,float] = 0.):
+        brightness_limit = self._check_and_convert_limit_value(brightness_limit)
+        contrast_limit = self._check_and_convert_limit_value(contrast_limit)
+        self.brightness_uniform = ops.Uniform(range=brightness_limit)
+        self.contrast_uniform = ops.Uniform(range=contrast_limit)
+        self.random_brightness_contrast = ops.BrightnessContrast(device='gpu')
+
+    def __call__(self,**data):
+        data = EasyDict(data)
+
+        brightness_values = self.brightness_uniform()
+        contrast_values = self.contrast_uniform()
+
+        data.images = self.random_brightness_contrast(data.images,
+                                                      brightness=brightness_values,
+                                                      contrast=contrast_values)
+        
+        return data
+
+    def _check_and_convert_limit_value(self,value):
+        if isinstance(value,List) or isinstance(value,Tuple):
+            if len(value)!=2 or value[0]>value[-1]:
+                raise ValueError('Limit must be provided as list/tuple with length 2 -> [min,max] value, \
+                                  found {}'.format(value))
+            
+        elif isinstance(value,int) or isinstance(value,float):
+            value = [-value,value]
+        else:
+            raise ValueError('Unknown limit type, expected to be list/tuple or int, found {}'.format(value))
+        
+        if value[0] < -1:
+            raise ValueError('Minimum value limit is -1, found {}'.format(value[0]))
+
+        value = np.array(value) + 1.0
+        value = value.tolist()
+        return value
