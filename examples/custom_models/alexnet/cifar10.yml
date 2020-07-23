@@ -50,22 +50,9 @@ trainer: {
   optimizer: {
     method: SGD,
     args: {
-      lr: 0.0194,
+      lr: 0.001,
       momentum: 0.9,
       weight_decay: 0.0005,
-    }
-  },
-  scheduler : {
-    method : CosineLRScheduler,
-    args : {
-      t_initial : 20,
-      t_mul : 1.0,
-      lr_min : 0.00001,
-      warmup_lr_init: 0.00001,
-      warmup_t: 5,
-      cycle_limit : 1,
-      t_in_epochs : True,
-      decay_rate : 0.1,
     }
   },
   validation: {
