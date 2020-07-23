@@ -71,12 +71,12 @@ if __name__ == "__main__":
 
     aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
                                                             #    {'transform': 'HorizontalFlip','args':{'p':0.5}},
-                                                               {'transform': 'VerticalFlip','args':{'p':0.5}},
-                                                            #    {'transform': 'RandomBrightnessContrast','args':{
-                                                            #        'brightness_limit' : 1,
-                                                            #        'contrast_limit' : 1,
-                                                            #        'p': .5,
-                                                            #    }},
+                                                            #    {'transform': 'VerticalFlip','args':{'p':0.5}},
+                                                               {'transform': 'RandomBrightnessContrast','args':{
+                                                                   'brightness_limit' : 1,
+                                                                   'contrast_limit' : 1,
+                                                                   'p': .5,
+                                                               }},
                                                                 # {'transform': 'RandomJitter','args':{
                                                                 #     'p' : .5,
                                                                 #     'nDegree' : 2
@@ -117,17 +117,17 @@ if __name__ == "__main__":
 
     for datas in dataloader:
         for i in range(datas[0].shape[0]):
-            vis = datas[0][i].cpu().numpy()
+            vis = datas[0][i].cpu()
 
-            # mean=torch.as_tensor(preprocess_args.input_normalization.mean, dtype=torch.float)
-            # std=torch.as_tensor(preprocess_args.input_normalization.std, dtype=torch.float)
+            mean=torch.as_tensor(preprocess_args.input_normalization.mean, dtype=torch.float)
+            std=torch.as_tensor(preprocess_args.input_normalization.std, dtype=torch.float)
 
-            # vis.mul_(std[:,None,None]).add_(mean[:,None,None])
+            vis.mul_(std[:,None,None]).add_(mean[:,None,None])
 
 
-            # vis = vis.mul(preprocess_args.input_normalization.scaler)
+            vis = vis.mul(preprocess_args.input_normalization.scaler)
 
-            # vis = np.transpose(vis.numpy(), (1,2,0)).copy()
+            vis = np.transpose(vis.numpy(), (1,2,0)).copy()
             # import pdb; pdb.set_trace()
             h,w,c = vis.shape
         

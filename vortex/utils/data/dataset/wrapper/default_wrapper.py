@@ -6,7 +6,7 @@ import cv2
 import torch
 import numpy as np
 # import torchvision.transforms.functional as tf
-from vortex.networks.modules.preprocess.normalizer import to_tensor,normalize
+from .....networks.modules.preprocess.normalizer import to_tensor,normalize
 import albumentations.core.composition as albumentations_compose
 import albumentations.augmentations.transforms as albumentations_tf
 from PIL import Image
