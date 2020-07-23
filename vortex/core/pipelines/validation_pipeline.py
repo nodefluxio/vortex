@@ -81,10 +81,23 @@ class BaseValidationPipeline(BasePipeline):
         # Dataset initialization
         # TODO selection to validate also on training data
         self.dataset = create_dataset(config.dataset, config.model.preprocess_args,stage='validate')
-        self.dataset_info = ('eval',config.dataset.eval.dataset)
+        if 'name' in config.dataset.eval:
+            dataset_name = config.dataset.eval.name
+        elif 'dataset' in config.dataset.eval:
+            dataset_name = config.dataset.eval.dataset
+        else:
+            raise RuntimeError("Dataset name in 'config.dataset.eval.name' is not set "
+                "in config.dataset ({}).".format(config.dataset.eval))
+        self.dataset_info = ('eval', dataset_name)
 
         # Validator arguments
-        self.validation_args = config.trainer.validation.args
+        if 'validator' in config:
+            validator_cfg = config.validator
+        elif 'validation' in config.trainer:
+            validator_cfg = config.trainer.validation
+        else:
+            raise RuntimeError("Validator config in 'config.validator' is not set.")
+        self.validation_args = validator_cfg.args
         self.val_experiment_name = self.experiment_name
 
     def run(self,

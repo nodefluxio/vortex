@@ -464,7 +464,7 @@ class ValidationObjective(BaseObjective) :
         """
 
         vortex_validator = PytorchValidationPipeline(config=self.config,weights=self.weights,generate_report=False,hypopt=True)
-        val_metrics = vortex_validator.run(batch_size=config.dataset.dataloader.args.batch_size) #batch size is inferred from experiment file
+        val_metrics = vortex_validator.run(batch_size=config.dataloader.args.batch_size) #batch size is inferred from experiment file
         assert self.metric_name in val_metrics, "'metric_name' = '%s' not found, available metrics = %s"%(self.metric_name,list(val_metrics.keys()))
         metric = val_metrics[self.metric_name]
         return metric
