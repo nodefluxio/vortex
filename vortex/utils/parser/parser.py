@@ -1,6 +1,7 @@
 import yaml
 import enforce
 import easydict
+import warnings
 
 from .loader import Loader
 
@@ -143,6 +144,13 @@ def __validation_tree(required: bool = True, exp_step: ExperimentType = Experime
     validation_iou = ExperimentNode('iou_threshold', parent=validation_args, required=False)
     return validation
 
+def __validator_tree(required=True, parent=None):
+    validator = ExperimentNode('validator', required=required, parent=parent, docstring='validator config')
+    pred_args = ExperimentNode('predictor_args', parent=validator, required=False)
+    addition_args = ExperimentNode('additional_args', parent=validator, required=False)
+    val_epoch = ExperimentNode('val_epoch', parent=validator, required=False)
+    return validator
+
 
 def __optimizer_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
     optimizer = ExperimentNode(
@@ -165,12 +173,18 @@ def __exporter_tree(required: bool = True, exp_step: ExperimentType = Experiment
     return exporter
 
 
-def __scheduler_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
-    scheduler = ExperimentNode(
-        'scheduler', required=required, docstring='learning rate scheduler config')
+def __scheduler_tree(required: bool = True, parent=None, exp_step: ExperimentType = ExperimentType.UNKNOWN):
+    ## only for backward compatibility
+    scheduler = ExperimentNode('scheduler', required=False, parent=parent, 
+        docstring='learning rate scheduler config')
     scheduler_method = ExperimentNode('method', parent=scheduler)
     scheduler_args = ExperimentNode('args', parent=scheduler)
-    return scheduler
+
+    lr_scheduler = ExperimentNode('lr_scheduler', required=required, parent=parent, 
+        docstring='learning rate scheduler config')
+    lr_scheduler_method = ExperimentNode('method', parent=lr_scheduler)
+    lr_scheduler_args = ExperimentNode('args', parent=lr_scheduler)
+    return lr_scheduler, scheduler
 
 
 def __dataset_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
@@ -186,20 +200,24 @@ def __dataset_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
         train_required, add_train = False, False
         eval_required, add_eval = False, False
     if add_train:
-        dataset_train = ExperimentNode(
-            'train', parent=dataset, required=train_required, docstring='training dataset')
-        dataset_train_name = ExperimentNode(
-            'dataset', parent=dataset_train, required=train_required, docstring='dataset class')
-        dataset_train_args = ExperimentNode(
-            'args', parent=dataset_train, required=train_required, docstring='arguments to be passed to dataset class')
+        dataset_train = ExperimentNode('train', parent=dataset, required=train_required, 
+            docstring='training dataset')
+        dataset_train_cls = ExperimentNode('dataset', parent=dataset_train, required=False, 
+            docstring='dataset class')
+        dataset_train_name = ExperimentNode('name', parent=dataset_train, required=train_required,
+            docstring='train dataset name')
+        dataset_train_args = ExperimentNode('args', parent=dataset_train, required=train_required, 
+            docstring='arguments to be passed to dataset class')
     if add_eval:
-        dataset_eval = ExperimentNode(
-            'eval', parent=dataset, required=eval_required, docstring='validation dataset')
-        dataset_eval_name = ExperimentNode(
-            'dataset', parent=dataset_eval, required=eval_required, docstring='dataset class')
-        dataset_eval_args = ExperimentNode(
-            'args', parent=dataset_eval, required=eval_required, docstring='arguments to be passed to dataset class')
-    dataloader = __dataloader_tree(required=train_required)
+        dataset_eval = ExperimentNode('eval', parent=dataset, required=eval_required, 
+            docstring='validation dataset')
+        dataset_eval_cls = ExperimentNode('dataset', parent=dataset_eval, required=False, 
+            docstring='dataset class')
+        dataset_eval_name = ExperimentNode('name', parent=dataset_eval, required=eval_required,
+            docstring='validation dataset name')
+        dataset_eval_args = ExperimentNode('args', parent=dataset_eval, required=eval_required, 
+            docstring='arguments to be passed to dataset class')
+    dataloader = __dataloader_tree(required=False)
     dataloader.parent = dataset
     return dataset
 
@@ -207,20 +225,19 @@ def __dataset_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
 def __trainer_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
     trainer = ExperimentNode('trainer', docstring='trainer configuration')
     if (exp_step == ExperimentType.VALIDATE) or (exp_step == ExperimentType.HYPOPT):
-        validation = __validation_tree(required=True)
+        validation = __validation_tree(required=False)
         validation.parent = trainer
     elif exp_step == ExperimentType.TRAIN:
         validation = __validation_tree(required=False)
         validation.parent = trainer
-        save_epoch = ExperimentNode(
-            'save_epoch', parent=trainer, docstring='every `save_epoch` epoch step, we will save the weights')
+        save_epoch = ExperimentNode('save_epoch', parent=trainer, 
+            docstring='every `save_epoch` epoch step, we will save the weights')
     device = ExperimentNode('device', parent=trainer,
                             docstring='on which device we should train?')
     if (exp_step == ExperimentType.TRAIN) or (exp_step == ExperimentType.HYPOPT):
         optimizer = __optimizer_tree()
-        scheduler = __scheduler_tree(required=False)
         optimizer.parent = trainer
-        scheduler.parent = trainer
+        lr_scheduler, scheduler = __scheduler_tree(required=False, parent=trainer)
         driver = ExperimentNode('driver', parent=trainer, required=True)
         driver_module = ExperimentNode('module', parent=driver, required=True)
         driver_args = ExperimentNode('args', parent=driver, required=False)
@@ -241,6 +258,9 @@ def __train_config():
     logging.parent = config
     dataset = __dataset_tree(required=True, exp_step=exp_step)
     dataset.parent = config
+    dataloader = __dataloader_tree(required=True, exp_step=exp_step)
+    dataloader.parent = config
+    validator = __validator_tree(required=False, parent=config)
     seed = __seed_tree(False, exp_step=exp_step)
     seed.parent = config
     name = ExperimentNode(
@@ -283,6 +303,9 @@ def __validate_config():
     model.parent = config
     dataset = __dataset_tree(required=True, exp_step=exp_step)
     dataset.parent = config
+    dataloader = __dataloader_tree(required=True, exp_step=exp_step)
+    dataloader.parent = config
+    validator = __validator_tree(required=True, parent=config)
     name = ExperimentNode(
         'experiment_name', docstring='this is your experiment name', parent=config)
     output_directory = ExperimentNode(
@@ -362,6 +385,50 @@ def show_config_requirements(experiment_type: str, format: str = 'text'):
             return gv
 
 
+def _check_deprecation(config):
+    if 'train' in config.dataset and 'dataset' in config.dataset.train:
+        warnings.warn("'config.dataset.train.dataset' is now changed to "
+            "'config.dataset.train.name'", DeprecationWarning)
+        config.dataset.train.name = config.dataset.train.dataset
+        delattr(config.dataset.train, 'dataset')
+    if 'eval' in config.dataset and 'dataset' in config.dataset.eval:
+        warnings.warn("'config.dataset.eval.dataset' is now changed to "
+            "'config.dataset.eval.name'", DeprecationWarning)
+        config.dataset.eval.name = config.dataset.eval.dataset
+        delattr(config.dataset.eval, 'dataset')
+
+    if 'device' in config.trainer and 'device' not in config:
+        warnings.warn("'config.trainer.device' is now moved to "
+            "'config.device'", DeprecationWarning)
+        config.device = config.trainer.device
+        delattr(config.trainer, 'device')
+
+    if 'dataloader' in config.dataset and 'dataloader' not in config:
+        warnings.warn("'config.dataset.dataloader' is now moved to "
+            "'config.dataloader'", DeprecationWarning)
+        config.dataloader = config.dataset.dataloader
+        delattr(config.dataset, 'dataloader')
+    if 'dataloader' in config.dataloader:
+        warnings.warn("'config.dataloader.dataloader' is now changed to "
+            "'config.dataloader.name'", DeprecationWarning)
+        config.dataloader.name = config.dataloader.dataloader
+        delattr(config.dataloader, 'dataloader')
+
+    if 'augmentations' in config.dataset and 'augmentations' not in config:
+        warnings.warn("'config.dataset.augmentations' is now moved to "
+            "'config.augmentations'", DeprecationWarning)
+        config.augmentations = config.dataset.augmentations
+        delattr(config.dataset, 'augmentations')
+
+    if 'scheduler' in config.trainer:
+        warnings.warn("'config.trainer.scheduler' is now changed to "
+            "'config.trainer.lr_scheduler'", DeprecationWarning)
+        config.trainer.scheduler = config.trainer.lr_scheduler
+        delattr(config.trainer, 'lr_scheduler')
+
+    return config
+
+
 def check_config(config: Union[Path, dict, easydict.EasyDict], experiment_type: str):
     if isinstance(config, str):
         config = Path(config)
@@ -400,6 +467,7 @@ def load_config(filename: Union[Path, str]) -> easydict.EasyDict:
     with file.open() as f:
         config = yaml.load(f, Loader)
     config = easydict.EasyDict(config)
+    config = _check_deprecation(config)
     return config
 
 
