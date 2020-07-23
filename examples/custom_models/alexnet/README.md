@@ -21,5 +21,5 @@ Demonstrate steps to create custom classification model and integrate to vortex.
   ```
 - TensorRT Inference (using exported ONNX model)
   ```
-  python3.6 alexnet.py predict cifar10.yml
+  python3.6 alexnet.py predict --config cifar10.yml -i example_image.jpg
   ```
