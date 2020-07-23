@@ -1,6 +1,6 @@
 # Data Loader
 
-This section listed all available `dataloader` modules configurations. Part of [`dataset.dataloader` configurations](../user-guides/experiment_file_config.md#dataset) in experiment file.
+This section listed all available `dataloader` modules configurations. Part of [`config.dataloader` configurations](../user-guides/experiment_file_config.md#dataset) in experiment file.
 
 ---
 
@@ -10,7 +10,7 @@ A standard Pytorch data loader.
 
 ```yaml
 dataloader: {
-    dataloader: DataLoader,
+    module: DataLoader,
     args: {
         num_workers: 0,
         batch_size: 16,

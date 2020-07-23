@@ -1,6 +1,6 @@
 # Augmentations
 
-This section listed all available `augmentations` modules configurations. Part of [`dataset.train` configurations](../user-guides/experiment_file_config.md#dataset) in experiment file.
+This section listed all available `augmentations` modules configurations. Part of [main configurations](../user-guides/experiment_file_config.md#dataset) in experiment file.
 
 ---
 

@@ -23,24 +23,22 @@ Flagged with `parameters` key (list[dict]) in the hypopt config file. This field
 For example we want to search the parameter of `score_threshold` and `iou_threshold` in which their structure in the experiment file is shown below :
 
 ```yaml
-trainer: {
-    ## optional field for validation step
-    validation: {
-        ## passed to validator class
-        args: {
-            score_threshold: 0.9,
-            iou_threshold: 0.2,
-        },
-        val_epoch: 5,
+## optional field for validation step
+validator: {
+    ## passed to validator class
+    args: {
+        score_threshold: 0.9,
+        iou_threshold: 0.2,
     },
-}
+    val_epoch: 5,
+},
 ```
 
 Thus, we declare these parameters in the hypopt config as shown below:
 
 ```yaml
 parameters: [
-    trainer.validation.args.score_threshold: {
+    validator.args.score_threshold: {
         suggestion: suggest_discrete_uniform,
         args: {
             low: 0.05,
@@ -48,7 +46,7 @@ parameters: [
             q: 0.025,
         }
     },
-    trainer.validation.args.iou_threshold: {
+    validator.args.iou_threshold: {
         suggestion: suggest_discrete_uniform,
         args: {
             low: 0.05,
@@ -260,7 +258,7 @@ E.g.:
 ```yaml
 override: {
     trainer.epoch: 10,
-    trainer.validation.val_epoch: 2,
+    validator.val_epoch: 2,
 }
 ```
 
