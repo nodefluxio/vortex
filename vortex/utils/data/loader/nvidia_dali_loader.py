@@ -12,6 +12,11 @@ from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import copy
 import torch
 from ..augment import create_transform
+from ..dataset.wrapper.default_wrapper import check_and_fix_coordinates
+from ....networks.modules.preprocess.normalizer import to_tensor,normalize
+import cv2
+from PIL import Image
+
 
 class DALIIteratorWrapper(object):
     def __init__(self,
@@ -237,10 +242,10 @@ class DALIDataloader():
         self.augmentations_list = self.dataset.augmentations_list
 
         dali_augments = None
-        self.external_augments = None
+        external_augments = None
         normalize = True
         if self.dataset.stage == 'train' and self.augmentations_list is not None:
-            self.external_augments = []
+            external_augments = []
             # Handler if using Nvidia DALI, if DALI augmentations is used in experiment file, it must be in the first order
             aug_module_sequence = [augment.module for augment in self.augmentations_list]
             if 'nvidia_dali' in aug_module_sequence and aug_module_sequence[0] != 'nvidia_dali':
@@ -257,11 +262,17 @@ class DALIDataloader():
                 if module_name == 'nvidia_dali':
                     dali_augments = augments
                 else:
-                    self.external_augments.append(augments)
+                    external_augments.append(augments)
 
-            # If there are any external augments follow, do not apply normalization and channel format swap in DALI pipeline
-            if len(self.external_augments)!=0:
+            # If there are any external augments 
+            if len(external_augments)!=0:
+                # do not apply normalization and channel format swap in DALI pipeline
                 normalize = False
+
+                # Instantiate external augments executor
+                self.external_executor = ExternalAugmentsExecutor(transforms_list = external_augments,
+                                                                data_format = self.data_format,
+                                                                preprocess_args = self.preprocess_args)
 
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
                                               batch_size=batch_size,
@@ -362,7 +373,8 @@ class DALIDataloader():
             batch.append((image,torch.tensor(ret_targets)))
 
         # Apply external (non-DALI) augments
-        # DO HERE
+        batch = [(image.cpu(),target) for image,target in batch]
+        batch = [self.external_executor(data) for data in batch]
         #
 
         if self.collate_fn is None:
@@ -392,7 +404,71 @@ class DALIDataloader():
         labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
         return labels
 
-supported_loaders = [('DALIDataLoader','basic')]
+class ExternalAugmentsExecutor():
+    def __init__(self,
+                 transforms_list,
+                 data_format,
+                 preprocess_args):
+        self.augments = transforms_list
+        self.data_format = data_format
+        self.preprocess_args = preprocess_args
+
+        # Standardized computer vision augmentation initialization, longest resize and pad to square
+        standard_tf_kwargs = EasyDict()
+        standard_tf_kwargs.data_format = self.data_format
+        standard_tf_kwargs.transforms = [
+            {'transform': 'LongestMaxSize', 'args': {'max_size': preprocess_args.input_size}},
+            {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
+                                                  'min_width': preprocess_args.input_size,
+                                                  'border_mode': cv2.BORDER_CONSTANT,
+                                                  'value': [0, 0, 0]}},
+        ]
+        self.standard_augments = create_transform(
+            'albumentations', **standard_tf_kwargs)
+
+    def __call__(self,data):
+        image = data[0].numpy()
+        target = data[1].numpy()
+        # Configured computer vision augment -- START
+        if self.augments is not None:
+            # Out of image shape coordinates adaptation -- START
+            image, target = check_and_fix_coordinates(
+                image, target, self.data_format)
+            # Out of image shape coordinates adaptation --  END
+            for augment in self.augments:
+                image, target = augment(image, target)
+                if target.shape[0] < 1:
+                    raise RuntimeError("The configured augmentations resulting in 0 shape target!! Please check your augmentation and avoid this!!")
+        if not isinstance(image, Image.Image) and not isinstance(image, np.ndarray):
+            raise RuntimeError('Expected augmentation output in PIL.Image.Image or numpy.ndarray format, got %s ' % type(image))
+        if (np.all(image >= 0.) and np.all(image <= 1.)) or isinstance(image, torch.Tensor):
+            pixel_min, pixel_max = np.min(image), np.max(image)
+            if pixel_min == 0. and pixel_max == 0.:
+                raise RuntimeError('Augmentation image output producing blank image ( all pixel value == 0 ), please check and visualize your augmentation process!!')
+            else:
+                raise RuntimeError('Augmentation image output expect unnormalized pixel value (0-255), got min %2.2f and max %2.2f' % (pixel_min, pixel_max))
+        # Configured computer vision augment -- END
+        # Standard computer vision augment -- START
+        image, target = self.standard_augments(image, target)
+
+        input_normalization = self.preprocess_args.input_normalization
+        if 'scaler' not in input_normalization:
+            input_normalization.scaler=255
+        image = torch.from_numpy(np.expand_dims(image, axis=0))
+        image = to_tensor(image,scaler=input_normalization.scaler)
+        image = normalize(
+            image, input_normalization.mean, input_normalization.std).squeeze(0)
+        # Standard computer vision augment -- END
+        if not isinstance(target, torch.Tensor):
+            if isinstance(target, np.ndarray):
+                target = torch.from_numpy(target)
+            else:
+                raise RuntimeError(
+                    'unsupported data type for target, got %s' % type(target))
+        data = image, target
+        return data
+
+supported_loaders = [('DALIDataLoader','basic')] # (Supported data loader, Supported dataset wrapper format)
 
 def create_loader(*args,**kwargs):
     return DALIDataloader(*args,**kwargs)
