@@ -153,13 +153,33 @@ class TrainingPipeline(BasePipeline):
             self.experiment_logger=None
 
         # Training components creation
-        self.device = config.trainer.device
+        if 'device' in config:
+            self.device = config.device
+        elif 'device' in config.trainer:
+            self.device = config.trainer.device
+        else:
+            raise RuntimeError("'device' field not found in config. Please specify properly in main level.")
         self.model_components = create_model(model_config=config.model, state_dict=state_dict)
         self.model_components.network = self.model_components.network.to(self.device)
         self.criterion = self.model_components.loss.to(self.device)
 
-        self.dataloader = create_dataloader(dataset_config=config.dataset,
+        if 'dataloader' in config:
+            dataloader_config = config.dataloader
+        elif 'dataloader' in config.dataset:
+            dataloader_config = config.dataset.dataloader
+        else:
+            raise RuntimeError("Dataloader config field not found in config.")
+
+        augment_config = None
+        if 'augmentations' in config:
+            augment_config = config.augmentations
+        elif 'augmentations' in config.dataset:
+            augment_config = config.dataset.augmentations
+
+        self.dataloader = create_dataloader(dataloader_config=dataloader_config,
+                                            dataset_config=config.dataset,
                                             preprocess_config=config.model.preprocess_args,
+                                            train_augment_config=augment_config,
                                             collate_fn=self.model_components.collate_fn,
                                             stage='train')
         self.trainer = engine.create_trainer(
