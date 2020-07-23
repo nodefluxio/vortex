@@ -265,6 +265,7 @@ class DALIDataloader():
                 else:
                     external_augments.append(augments)
 
+            self.external_executors = None
             # If there are any external augments 
             if len(external_augments)!=0:
                 # do not apply normalization and channel format swap in DALI pipeline
@@ -380,10 +381,11 @@ class DALIDataloader():
             batch.append((image,torch.tensor(ret_targets)))
 
         # Apply external (non-DALI) augments, utilizing ray
-        batch = [(image.cpu(),target) for image,target in batch]
-        batch_ref = ray.put(batch)
-        batch_futures = [self.external_executors[index].run.remote(batch_ref,index) for index in range(len(batch))]
-        batch = ray.get(batch_futures)
+        if self.external_executors :
+            batch = [(image.cpu(),target) for image,target in batch]
+            batch_ref = ray.put(batch)
+            batch_futures = [self.external_executors[index].run.remote(batch_ref,index) for index in range(len(batch))]
+            batch = ray.get(batch_futures)
         #
 
         if self.collate_fn is None:

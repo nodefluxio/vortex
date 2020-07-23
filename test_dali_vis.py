@@ -92,7 +92,7 @@ if __name__ == "__main__":
                                                                 # {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
                                                                ]}
            },
-          {'module' : 'albumentations','args' : {'transforms' : [{'transform': 'HorizontalFlip','args':{'p':1}}]}}
+        #   {'module' : 'albumentations','args' : {'transforms' : [{'transform': 'HorizontalFlip','args':{'p':1}}]}}
           ]
     
     # aug = [{'module' : 'albumentations','args' : {'transforms' : [
