@@ -2,7 +2,7 @@
 study_name : detection_param_search
 ## parameters to optimize, mandatory
 parameters : [
-  trainer.validation.args.score_threshold : {
+  validator.args.score_threshold : {
     suggestion : suggest_discrete_uniform,
     args : {
       low : 0.05,
@@ -10,7 +10,7 @@ parameters : [
       q : 0.025,
     }
   },
-  trainer.validation.args.iou_threshold : {
+  validator.args.iou_threshold : {
     suggestion : suggest_discrete_uniform,
     args : {
       low : 0.05,

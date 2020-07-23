@@ -1,28 +1,25 @@
 experiment_name: test_classification_pipelines
 logging: None
-checkpoint: None
-device: 'cpu'
-output_directory: tests/output_test
 dataset: {
   train: {
-    name: ImageFolder,
+    dataset: ImageFolder,
     args: {
       root: tests/test_dataset/train
     },
   },
   eval: {
-    name: ImageFolder,
+    dataset: ImageFolder,
     args: {
       root: tests/test_dataset/val
     }
   },
-}
-dataloader: {
-  module: DataLoader,
-  args: {
-    num_workers: 1,
-    batch_size: 2,
-    shuffle: True,
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 1,
+      batch_size: 2,
+      shuffle: True,
+    },
   },
 }
 model: {
@@ -55,6 +52,7 @@ trainer: {
     args: {},
     val_epoch: 2,
   },
+  device: 'cpu',
   driver: {
     module: DefaultTrainer,
     args: {
@@ -64,6 +62,7 @@ trainer: {
   epoch: 3,
   save_epoch: 1
 }
+output_directory: tests/output_test
 exporter : [
   {
     module : onnx,
