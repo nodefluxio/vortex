@@ -385,45 +385,44 @@ def show_config_requirements(experiment_type: str, format: str = 'text'):
 
 
 def _check_deprecation(config):
+    import warnings
+    def _warn_print(message, category, filename, lineno, file=None, line=None):
+        print("DeprecationWarning:", message)
+    warnings.showwarning = _warn_print
+
     if 'train' in config.dataset and 'dataset' in config.dataset.train:
         warnings.warn("'config.dataset.train.dataset' is now changed to "
-            "'config.dataset.train.name'", DeprecationWarning)
-        config.dataset.train.name = config.dataset.train.dataset
-        delattr(config.dataset.train, 'dataset')
+            "'config.dataset.train.name'")
+        config.dataset.train.name = config.dataset.train.pop('dataset')
     if 'eval' in config.dataset and 'dataset' in config.dataset.eval:
         warnings.warn("'config.dataset.eval.dataset' is now changed to "
-            "'config.dataset.eval.name'", DeprecationWarning)
-        config.dataset.eval.name = config.dataset.eval.dataset
-        delattr(config.dataset.eval, 'dataset')
+            "'config.dataset.eval.name'",)
+        config.dataset.eval.name = config.dataset.eval.pop('dataset')
 
     if 'device' in config.trainer and 'device' not in config:
         warnings.warn("'config.trainer.device' is now moved to "
-            "'config.device'", DeprecationWarning)
-        config.device = config.trainer.device
-        delattr(config.trainer, 'device')
+            "'config.device'")
+        config.device = config.trainer.pop('device')
 
     if 'dataloader' in config.dataset and 'dataloader' not in config:
         warnings.warn("'config.dataset.dataloader' is now moved to "
-            "'config.dataloader'", DeprecationWarning)
-        config.dataloader = config.dataset.dataloader
-        delattr(config.dataset, 'dataloader')
+            "'config.dataloader'")
+        config.dataloader = config.dataset.pop('dataloader')
     if 'dataloader' in config.dataloader:
         warnings.warn("'config.dataloader.dataloader' is now changed to "
-            "'config.dataloader.name'", DeprecationWarning)
-        config.dataloader.name = config.dataloader.dataloader
-        delattr(config.dataloader, 'dataloader')
+            "'config.dataloader.name'")
+        config.dataloader.name = config.dataloader.pop('dataloader')
 
     if 'augmentations' in config.dataset and 'augmentations' not in config:
         warnings.warn("'config.dataset.augmentations' is now moved to "
-            "'config.augmentations'", DeprecationWarning)
-        config.augmentations = config.dataset.augmentations
-        delattr(config.dataset, 'augmentations')
+            "'config.augmentations'")
+        config.augmentations = config.dataset.pop('augmentations')
 
     if 'scheduler' in config.trainer:
         warnings.warn("'config.trainer.scheduler' is now changed to "
-            "'config.trainer.lr_scheduler'", DeprecationWarning)
-        config.trainer.scheduler = config.trainer.lr_scheduler
-        delattr(config.trainer, 'lr_scheduler')
+            "'config.trainer.lr_scheduler'")
+        config.trainer.lr_scheduler = config.trainer.pop('scheduler')
+    return config
 
 def _check_none_str(config):
     assert isinstance(config, dict)
