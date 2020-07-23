@@ -275,7 +275,13 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # Set compute device
         if device is None:
-            device = config.trainer.device
+            if 'device' in config:
+                device = config.device
+            elif 'device' in config.trainer:
+                device = config.trainer.device
+            else:
+                raise RuntimeError("'device' argument is not configured and not found in 'config.device'. "
+                    "Please specify either one.")
         device = torch.device(device)
 
         # Initialize model
