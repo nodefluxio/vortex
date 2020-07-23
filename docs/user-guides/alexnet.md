@@ -3,7 +3,7 @@
 ```
 
 Integrating Custom Classification Model to Vortex
-=========================================================
+=================================================
 This tutorial shows how to create custom model and integrate to `vortex`.
 The tutorial consists of 5 steps:
 
@@ -31,7 +31,7 @@ that can be integrated to `vortex`. In order to do that, our model needs
 olny to have `task` and `output_format` member variables.
 
 For the sake of simplicity, we will reuse `AlexNet` from `torchvision` by
-subclassing `torchvision`'s `AlexNet` and add the required member variable
+instantiate `torchvision`'s `AlexNet` and add the required member variable
 `task` and `output_format`. `output_format` will be used to slice tensor
 output from post-process module. 
 
@@ -45,21 +45,20 @@ check numpy, onnx, or torch docs for more details.
 For classification models, we need `class_label` and `class_confidence`.
 Note that this `output_format` will be used for single sample.
 
-```python
-class AlexNet(vision.models.AlexNet):
-    def __init__(self, *args, **kwargs):
-        super(AlexNet,self).__init__(*args,**kwargs)
-        ## necessary attributes
-        self.task = "classification"
-        self.output_format = dict(
-            class_label=dict(
-                indices=[0], axis=0
-            ),
-            class_confidence=dict(
-                indices=[1], axis=0
-            )
-        )
+The code will looks like:
 ```
+       alexnet = vision.models.alexnet(...)
+       alexnet.task = "classification"
+       alexnet.output_format = dict(
+           class_label=dict(
+               indices=[0], axis=0
+           ),
+           class_confidence=dict(
+               indices=[1], axis=0
+           )
+       )
+```
+
 
 2. Create PostProcess module
 ----------------------------
@@ -129,7 +128,7 @@ create_model_components(model_name, preprocess_args, network_args, loss_args, po
 where model_name is a `str` holds the model name (`'alexnet'` in this case), `preprocess_args`,
 `network_args`, `loss_args`, `postprocess_args` are mapping (`dict`) containing parameters from
 configuration file, while `stage` is a string containing experiment stage (either `'train'` or `'validate'`)
-given by vortex driver. Note that we simply *unpack argument mappings*  using `**` operator.
+given by vortex driver. Note that we simply *unpack argument mapping*  using `**` operator.
 
 There are two ways of registering *builder* function, using decorator `register_model`
 ```
@@ -149,11 +148,20 @@ def create_model_components(
     postprocess_args, stage) -> dict:
 
     ## let's get model from torchvision
-    ## then 'cast' to our AlexNet class, casting is not necessary 
+    ## then add 'task' and 'output_format' to our AlexNet class,
+    ## adding attributes is not necessary 
     ## if your model already have 'task' and 'output_format'
-    ## you can also manually add attributes instead of casting
     alexnet = vision.models.alexnet(**network_args)
-    alexnet.__type__ = AlexNet
+    ## necessary attributes
+    alexnet.task = "classification"
+    alexnet.output_format = dict(
+        class_label=dict(
+            indices=[0], axis=0
+        ),
+        class_confidence=dict(
+            indices=[1], axis=0
+        )
+    )
 
     postprocess = AlexNetPostProcess(**postprocess_args)
     loss_fn = ClassificationLoss(**loss_args)

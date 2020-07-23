@@ -28,7 +28,7 @@ import vortex.networks.modules as vortex_modules
 # olny to have `task` and `output_format` member variables.
 #
 # For the sake of simplicity, we will reuse `AlexNet` from `torchvision` by
-# subclassing `torchvision`'s `AlexNet` and add the required member variable
+# instantiate `torchvision`'s `AlexNet` and add the required member variable
 # `task` and `output_format`. `output_format` will be used to slice tensor
 # output from post-process module. 
 #
@@ -41,20 +41,20 @@ import vortex.networks.modules as vortex_modules
 #
 # For classification models, we need `class_label` and `class_confidence`.
 # Note that this `output_format` will be used for single sample.
-
-class AlexNet(vision.models.AlexNet):
-    def __init__(self, *args, **kwargs):
-        super(AlexNet,self).__init__(*args,**kwargs)
-        ## necessary attributes
-        self.task = "classification"
-        self.output_format = dict(
-            class_label=dict(
-                indices=[0], axis=0
-            ),
-            class_confidence=dict(
-                indices=[1], axis=0
-            )
-        )
+#
+# The code will looks like:
+# ```
+#        alexnet = vision.models.alexnet(...)
+#        alexnet.task = "classification"
+#        alexnet.output_format = dict(
+#            class_label=dict(
+#                indices=[0], axis=0
+#            ),
+#            class_confidence=dict(
+#                indices=[1], axis=0
+#            )
+#        )
+# ```
 
 ######################################################################
 # 2. Create PostProcess module
@@ -142,11 +142,20 @@ def create_model_components(
     postprocess_args, stage) -> dict:
 
     ## let's get model from torchvision
-    ## then 'cast' to our AlexNet class, casting is not necessary 
+    ## then add 'task' and 'output_format' to our AlexNet class,
+    ## adding attributes is not necessary 
     ## if your model already have 'task' and 'output_format'
-    ## you can also manually add attributes instead of casting
     alexnet = vision.models.alexnet(**network_args)
-    alexnet.__type__ = AlexNet
+    ## necessary attributes
+    alexnet.task = "classification"
+    alexnet.output_format = dict(
+        class_label=dict(
+            indices=[0], axis=0
+        ),
+        class_confidence=dict(
+            indices=[1], axis=0
+        )
+    )
 
     postprocess = AlexNetPostProcess(**postprocess_args)
     loss_fn = ClassificationLoss(**loss_args)
