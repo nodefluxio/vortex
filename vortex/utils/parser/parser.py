@@ -1,6 +1,7 @@
 import yaml
 import enforce
 import easydict
+import copy
 
 from .loader import Loader
 
@@ -127,7 +128,7 @@ def __seed_tree(required: bool = True, exp_step: ExperimentType = ExperimentType
 def __dataloader_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
     dataloader = ExperimentNode('dataloader', required=required,
                                 docstring='dataloader currently only support pytorch DataLoader')
-    loader = ExperimentNode('dataloader', parent=dataloader)
+    loader = ExperimentNode('module', parent=dataloader)
     loader_args = ExperimentNode('args', parent=dataloader)
     # collater = ExperimentNode('collater', parent=dataloader)
     # collater_class = ExperimentNode('collater', parent=collater)
@@ -216,8 +217,6 @@ def __dataset_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
             docstring='validation dataset name')
         dataset_eval_args = ExperimentNode('args', parent=dataset_eval, required=eval_required, 
             docstring='arguments to be passed to dataset class')
-    dataloader = __dataloader_tree(required=False)
-    dataloader.parent = dataset
     return dataset
 
 
@@ -231,7 +230,7 @@ def __trainer_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
         validation.parent = trainer
         save_epoch = ExperimentNode('save_epoch', parent=trainer, 
             docstring='every `save_epoch` epoch step, we will save the weights')
-    device = ExperimentNode('device', parent=trainer,
+    device = ExperimentNode('device', parent=trainer, required=False,
                             docstring='on which device we should train?')
     if (exp_step == ExperimentType.TRAIN) or (exp_step == ExperimentType.HYPOPT):
         optimizer = __optimizer_tree()
@@ -302,7 +301,7 @@ def __validate_config():
     model.parent = config
     dataset = __dataset_tree(required=True, exp_step=exp_step)
     dataset.parent = config
-    dataloader = __dataloader_tree(required=True, exp_step=exp_step)
+    dataloader = __dataloader_tree(required=False, exp_step=exp_step)
     dataloader.parent = config
     validator = __validator_tree(required=True, parent=config)
     name = ExperimentNode(
@@ -409,19 +408,24 @@ def _check_deprecation(config):
             "'config.dataloader'")
         config.dataloader = config.dataset.pop('dataloader')
     if 'dataloader' in config.dataloader:
-        warnings.warn("'config.dataloader.dataloader' is now changed to "
-            "'config.dataloader.name'")
-        config.dataloader.name = config.dataloader.pop('dataloader')
+        warnings.warn("'config.dataset.dataloader.dataloader' is now changed to "
+            "'config.dataloader.module'")
+        config.dataloader.module = config.dataloader.pop('dataloader')
 
-    if 'augmentations' in config.dataset and 'augmentations' not in config:
+    if 'augmentations' in config.dataset.train and 'augmentations' not in config:
         warnings.warn("'config.dataset.augmentations' is now moved to "
             "'config.augmentations'")
-        config.augmentations = config.dataset.pop('augmentations')
+        config.augmentations = config.dataset.train.pop('augmentations')
 
     if 'scheduler' in config.trainer:
         warnings.warn("'config.trainer.scheduler' is now changed to "
             "'config.trainer.lr_scheduler'")
         config.trainer.lr_scheduler = config.trainer.pop('scheduler')
+    
+    if 'validation' in config.trainer:
+        warnings.warn("'config.trainer.validation' is now changed to "
+            "'config.validator'")
+        config.validator = config.trainer.pop('validation')
     return config
 
 def _check_none_str(config):
@@ -443,6 +447,7 @@ def check_config(config: Union[Path, dict, easydict.EasyDict], experiment_type: 
         config = easydict.EasyDict(config)
     if not isinstance(config, easydict.EasyDict):
         raise TypeError('expects config to be `dict` or `EasyDict`')
+    config = _check_deprecation(copy.deepcopy(config))
     exp_tree = RenderTree(__get_config(experiment_type))
     # >= python3.6
     # requireds : List[Dict[str,bool]] = [{str(field) : __has_attr(config,str(field))} for _, _, field in exp_tree if field.is_required()]

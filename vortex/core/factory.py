@@ -157,7 +157,7 @@ def create_dataloader(dataloader_config : EasyDict,
     else:
         raise RuntimeError("Dataloader module in 'dataloader_config.module' is not set "
             "in dataloader_config ({}).".format(dataloader_config))
-    dataloader_args = dataset_config.dataloader.args
+    dataloader_args = dataloader_config.args
 
     if not dataloader_module in ('DataLoader', 'DefaultLoader'):
         RuntimeError("Dataloader module '{}' is not supported, currently only 'DataLoader'")

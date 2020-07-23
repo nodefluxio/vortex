@@ -98,7 +98,7 @@ class TrainingPipeline(BasePipeline):
 
         self.start_epoch = 0
         state_dict = None
-        if resume or 'checkpoint' in config:
+        if resume or ('checkpoint' in config and config.checkpoint is not None):
             if 'checkpoint' not in config:
                 raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
                     "in the config file. Please specify 'checkpoint' option in the top level "
@@ -117,10 +117,21 @@ class TrainingPipeline(BasePipeline):
                     raise RuntimeError("'network_args' configuration specified in config file ({}) is "
                         "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
                         model_config.model.network_args))
-                if config.dataset.train.dataset != model_config.dataset.train.dataset:
+
+                if 'name' in config.dataset.train:
+                    cfg_dataset_name = config.dataset.train.name
+                elif 'dataset' in config.dataset.train:
+                    cfg_dataset_name = config.dataset.train.dataset
+                else:
+                    raise RuntimeError("dataset name is not found in config. Please specify in "
+                        "'config.dataset.train.name'.")
+                if 'name' in model_config.dataset.train:
+                    model_dataset_name = model_config.dataset.train.name
+                elif 'dataset' in model_config.dataset.train:
+                    model_dataset_name = model_config.dataset.train.dataset
+                if cfg_dataset_name != model_dataset_name:
                     raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
-                        "in model checkpoint ({}).".format(config.dataset.train.dataset, 
-                        model_config.dataset.train.dataset))
+                        "in model checkpoint ({}).".format(cfg_dataset_name, model_dataset_name))
 
                 if ('n_classes' in config.model.network_args and 
                         (config.model.network_args.n_classes != model_config.model.network_args.n_classes)):
@@ -173,8 +184,8 @@ class TrainingPipeline(BasePipeline):
         augment_config = None
         if 'augmentations' in config:
             augment_config = config.augmentations
-        elif 'augmentations' in config.dataset:
-            augment_config = config.dataset.augmentations
+        elif 'augmentations' in config.dataset.train:
+            augment_config = config.dataset.train.augmentations
 
         self.dataloader = create_dataloader(dataloader_config=dataloader_config,
                                             dataset_config=config.dataset,
@@ -194,16 +205,23 @@ class TrainingPipeline(BasePipeline):
 
         # Validation components creation
         try:
+            if 'validator' in config:
+                validator_cfg = config.validator
+            elif 'device' in config.trainer:
+                validator_cfg = config.trainer.validator
+            else:
+                raise RuntimeError("'validator' field not found in config. Please specify properly in main level.")
+
             val_dataset = create_dataset(config.dataset, config.model.preprocess_args, stage='validate')
             ## use same batch-size as training by default
             validation_args = EasyDict({'batch_size' : self.dataloader.batch_size})
-            validation_args.update(config.trainer.validation.args)
+            validation_args.update(validator_cfg.args)
             self.validator = engine.create_validator(
                 self.model_components, 
                 val_dataset, validation_args, 
                 device=self.device
             )
-            self.val_epoch = config.trainer.validation.val_epoch
+            self.val_epoch = validator_cfg.val_epoch
             self.valid_for_validation = True
         except AttributeError as e:
             warnings.warn('validation step not properly configured, will be skipped')
@@ -338,6 +356,7 @@ class TrainingPipeline(BasePipeline):
         check_result = check_config(config, 'train')
         if not check_result.valid:
             raise RuntimeError("invalid config : %s" % str(check_result))
+        self.config = config ## this is just a workaround for backward compatibility
         val_check_result = check_config(config, 'validate')
         if not val_check_result.valid:
             warnings.warn('this config file is not valid for validation, validation step will be "\
@@ -358,7 +377,7 @@ class TrainingPipeline(BasePipeline):
         """
         # Log experiments run on local experiment runs log file
         utc_now = pytz.utc.localize(datetime.utcnow())
-        if not 'pytz_timezone' in config.logging:
+        if not config.logging or (config.logging and not 'pytz_timezone' in config.logging):
             pst_now = utc_now.astimezone(pytz.timezone("Asia/Jakarta"))
         else:
             pst_now = utc_now.astimezone(pytz.timezone(config.logging.pytz_timezone))
