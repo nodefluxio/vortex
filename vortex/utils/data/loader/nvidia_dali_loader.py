@@ -120,6 +120,7 @@ class DALIExternalSourcePipeline(Pipeline):
                        num_threads, 
                        device_id, 
                        dali_augments = None,
+                       normalize = True,
                        seed = 12345):
         super().__init__(
                         batch_size,
@@ -170,7 +171,8 @@ class DALIExternalSourcePipeline(Pipeline):
                                                     'std' : preprocess_args.input_normalization.std,
                                                     'input_size' : preprocess_args.input_size,
                                                     'image_pad_value' : 0,
-                                                    'labels_pad_value' : self.labels_pad_value
+                                                    'labels_pad_value' : self.labels_pad_value,
+                                                    'normalize' : normalize
                                                     }
             }
         ]
@@ -236,6 +238,7 @@ class DALIDataloader():
 
         dali_augments = None
         self.external_augments = None
+        normalize = True
         if self.dataset.stage == 'train' and self.augmentations_list is not None:
             self.external_augments = []
             # Handler if using Nvidia DALI, if DALI augmentations is used in experiment file, it must be in the first order
@@ -256,11 +259,16 @@ class DALIDataloader():
                 else:
                     self.external_augments.append(augments)
 
+            # If there are any external augments follow, do not apply normalization and channel format swap in DALI pipeline
+            if len(self.external_augments)!=0:
+                normalize = False
+
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
                                               batch_size=batch_size,
                                               num_threads=num_thread,
                                               device_id=device_id,
-                                              dali_augments=dali_augments)
+                                              dali_augments=dali_augments,
+                                              normalize=normalize)
         self.labels_pad_value = pipeline.labels_pad_value
         self.original_data_layout = copy.copy(pipeline.original_data_layout)
         self.original_data_layout.remove('images')
@@ -282,6 +290,7 @@ class DALIDataloader():
         
     def __next__(self):
         output = self.dali_pytorch_loader.__next__()[0] # Vortex doesn't support multiple pipelines yet
+        
         # Prepare Pytorch style data loader output
         batch = []
         for i in range(len(output['images'])):
@@ -294,7 +303,7 @@ class DALIDataloader():
             diff_ratio = pre_padded_image_size/padded_image_size
 
             # Prepare labels array
-            labels_dict = dict()
+            aug_labels = dict()
             for layout in self.original_data_layout:
                 label_output=output[layout][i].numpy()
 
@@ -308,13 +317,13 @@ class DALIDataloader():
                 else:
                     # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
                     label_output = self._fix_coordinates(label_output,layout,diff_ratio)
-                    labels_dict[layout] = label_output
+                    aug_labels[layout] = label_output
 
             # Modify labels placeholder with augmented labels
             for label_key in self.data_format:
                 if label_key in self.original_data_layout:
                     label_data_format=self.data_format[label_key]
-                    augmented_label = labels_dict[label_key]
+                    augmented_label = aug_labels[label_key]
 
                     # Refactor reshaped landmarks and apply asymmetric coordinates fixing if needed
                     if label_key == 'landmarks':
@@ -351,6 +360,10 @@ class DALIDataloader():
             if list(self.data_format.keys())==['class_label']:
                 ret_targets = ret_targets.flatten().astype('int')
             batch.append((image,torch.tensor(ret_targets)))
+
+        # Apply external (non-DALI) augments
+        # DO HERE
+        #
 
         if self.collate_fn is None:
             self.collate_fn = torch.utils.data._utils.collate.default_collate

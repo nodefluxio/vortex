@@ -25,38 +25,38 @@ if __name__ == "__main__":
     #     }
     # )
 
-    # Classification
-    collate_fn = None
-    dataset_config = EasyDict(
-        {
-            'train': {
-                'dataset': 'ImageFolder',
-                'args': {
-                    'root': 'tests/test_dataset/classification/train'
-                },
-            }
-        }
-    )
-
-    # # Obj Det with Landmark
-    # collate_fn = 'RetinaFaceCollate'
+    # # Classification
+    # collate_fn = None
     # dataset_config = EasyDict(
     #     {
     #         'train': {
-    #             'dataset': 'FrontalFDDBDataset',
+    #             'dataset': 'ImageFolder',
     #             'args': {
-    #                 'train': True
+    #                 'root': 'tests/test_dataset/classification/train'
     #             },
     #         }
     #     }
     # )
+
+    # Obj Det with Landmark
+    collate_fn = 'RetinaFaceCollate'
+    dataset_config = EasyDict(
+        {
+            'train': {
+                'dataset': 'FrontalFDDBDataset',
+                'args': {
+                    'train': True
+                },
+            }
+        }
+    )
 
     dali_loader = EasyDict({
         'dataloader': 'DALIDataLoader',
         'args': {
             'device_id' : 0,
             'num_thread': 1,
-            'batch_size': 1,
+            'batch_size': 4,
             'shuffle': False,
             },
     })
@@ -71,7 +71,7 @@ if __name__ == "__main__":
 
     aug = [{'module' : 'nvidia_dali','args' : {'transforms' : [
                                                             #    {'transform': 'HorizontalFlip','args':{'p':0.5}},
-                                                            #    {'transform': 'VerticalFlip','args':{'p':0.5}},
+                                                               {'transform': 'VerticalFlip','args':{'p':0.5}},
                                                             #    {'transform': 'RandomBrightnessContrast','args':{
                                                             #        'brightness_limit' : 1,
                                                             #        'contrast_limit' : 1,
@@ -89,10 +89,10 @@ if __name__ == "__main__":
                                                                     
                                                                 # }},
                                                                 # {'transform': 'RandomWater','args':{'p':0.5}},
-                                                                {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
+                                                                # {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
                                                                ]}
-           }
-          
+           },
+          {'module' : 'albumentations','args' : {'transforms' : [{'transform': 'HorizontalFlip','args':{'p':1}}]}}
           ]
     
     # aug = [{'module' : 'albumentations','args' : {'transforms' : [
@@ -117,17 +117,17 @@ if __name__ == "__main__":
 
     for datas in dataloader:
         for i in range(datas[0].shape[0]):
-            vis = datas[0][i].cpu()
+            vis = datas[0][i].cpu().numpy()
 
-            mean=torch.as_tensor(preprocess_args.input_normalization.mean, dtype=torch.float)
-            std=torch.as_tensor(preprocess_args.input_normalization.std, dtype=torch.float)
+            # mean=torch.as_tensor(preprocess_args.input_normalization.mean, dtype=torch.float)
+            # std=torch.as_tensor(preprocess_args.input_normalization.std, dtype=torch.float)
 
-            vis.mul_(std[:,None,None]).add_(mean[:,None,None])
+            # vis.mul_(std[:,None,None]).add_(mean[:,None,None])
 
 
-            vis = vis.mul(preprocess_args.input_normalization.scaler)
+            # vis = vis.mul(preprocess_args.input_normalization.scaler)
 
-            vis = np.transpose(vis.numpy(), (1,2,0)).copy()
+            # vis = np.transpose(vis.numpy(), (1,2,0)).copy()
             # import pdb; pdb.set_trace()
             h,w,c = vis.shape
         
