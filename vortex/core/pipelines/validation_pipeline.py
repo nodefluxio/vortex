@@ -61,9 +61,18 @@ class BaseValidationPipeline(BasePipeline):
                 self.assets_dir.mkdir(exist_ok=True, parents=True)
 
         # Compute devices check
-        if isinstance(backends,str) :
+        if isinstance(backends,str):
             backends = [backends]
-        self.backends = [config.trainer.device] if not len(backends) else backends
+        if len(backends) != 0:
+            self.backends = backends
+        else:
+            if 'device' in config:
+                device = config.device
+            elif 'device' in config.trainer:
+                device = config.trainer.device
+            else:
+                raise RuntimeError("'device' field not found in config. Please specify properly in main level.")
+            self.backends = [device]
 
         # Must be initizalized in sub-class
         self.model = None
