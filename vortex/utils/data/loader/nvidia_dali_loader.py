@@ -16,6 +16,7 @@ from ..dataset.wrapper.default_wrapper import check_and_fix_coordinates
 from ....networks.modules.preprocess.normalizer import to_tensor,normalize
 import cv2
 from PIL import Image
+import ray
 
 
 class DALIIteratorWrapper(object):
@@ -270,9 +271,15 @@ class DALIDataloader():
                 normalize = False
 
                 # Instantiate external augments executor
-                self.external_executor = ExternalAugmentsExecutor(transforms_list = external_augments,
-                                                                data_format = self.data_format,
-                                                                preprocess_args = self.preprocess_args)
+                ray.init()
+                transforms_list_ref = ray.put(external_augments)
+                data_format_ref = ray.put(self.data_format)
+                preprocess_args_ref = ray.put(self.preprocess_args)
+
+                self.external_executors = [ExternalAugmentsExecutor.remote(transforms_list_ref,
+                                                                  data_format_ref,
+                                                                  preprocess_args_ref) for i in range(batch_size)]
+
 
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
                                               batch_size=batch_size,
@@ -372,9 +379,11 @@ class DALIDataloader():
                 ret_targets = ret_targets.flatten().astype('int')
             batch.append((image,torch.tensor(ret_targets)))
 
-        # Apply external (non-DALI) augments
+        # Apply external (non-DALI) augments, utilizing ray
         batch = [(image.cpu(),target) for image,target in batch]
-        batch = [self.external_executor(data) for data in batch]
+        batch_ref = ray.put(batch)
+        batch_futures = [self.external_executors[index].run.remote(batch_ref,index) for index in range(len(batch))]
+        batch = ray.get(batch_futures)
         #
 
         if self.collate_fn is None:
@@ -404,6 +413,7 @@ class DALIDataloader():
         labels[:,1::2] = labels[:,1::2]*diff_ratio[0]
         return labels
 
+@ray.remote
 class ExternalAugmentsExecutor():
     def __init__(self,
                  transforms_list,
@@ -426,7 +436,8 @@ class ExternalAugmentsExecutor():
         self.standard_augments = create_transform(
             'albumentations', **standard_tf_kwargs)
 
-    def __call__(self,data):
+    def run(self,batch,index):
+        data = batch[index]
         image = data[0].numpy()
         target = data[1].numpy()
         # Configured computer vision augment -- START
