@@ -21,10 +21,12 @@ class StandardAugment():
                  mean = [0.,0.,0.],
                  std = [1.,1.,1.],
                  image_pad_value = 0,
-                 labels_pad_value = -99):
+                 labels_pad_value = -99,
+                 normalize = True):
 
         # By default, CropMirrorNormalize divide each pixel by 255, to make it similar with Pytorch Loader behavior
         # in which we can control the scaler, we add additional scaler to reverse the effect
+        self.normalize = normalize
         self.image_normalize = ops.CropMirrorNormalize(
             device='gpu', mean=[value*255 for value in mean], std=[value*255 for value in std],
             output_layout='CHW',
@@ -59,9 +61,10 @@ class StandardAugment():
         # Pad to square
         images = self.image_pad(images)
         
-        # Normalize input
-        images = self.image_normalize(images)
-        images = self.scaler(images)
+        # Normalize input if specified,
+        if self.normalize:
+            images = self.image_normalize(images)
+            images = self.scaler(images)
         
         # Labels padding
         for label_key in data.labels:
