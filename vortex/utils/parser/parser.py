@@ -1,7 +1,6 @@
 import yaml
 import enforce
 import easydict
-import warnings
 
 from .loader import Loader
 
@@ -426,6 +425,13 @@ def _check_deprecation(config):
         config.trainer.scheduler = config.trainer.lr_scheduler
         delattr(config.trainer, 'lr_scheduler')
 
+def _check_none_str(config):
+    assert isinstance(config, dict)
+    for k, v in config.items():
+        if isinstance(v, str) and v.lower() == 'none':
+            config[k] = None
+        elif isinstance(v, dict):
+            config[k] = _check_none_str(v)
     return config
 
 
@@ -468,6 +474,7 @@ def load_config(filename: Union[Path, str]) -> easydict.EasyDict:
         config = yaml.load(f, Loader)
     config = easydict.EasyDict(config)
     config = _check_deprecation(config)
+    config = _check_none_str(config)
     return config
 
 

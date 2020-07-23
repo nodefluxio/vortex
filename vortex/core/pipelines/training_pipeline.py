@@ -363,7 +363,7 @@ class TrainingPipeline(BasePipeline):
         else:
             pst_now = utc_now.astimezone(pytz.timezone(config.logging.pytz_timezone))
         date_time = pst_now.strftime("%m/%d/%Y, %H:%M:%S")
-        logging_provider = 'None' if config.logging == 'None' else config.logging.module
+        logging_provider = None if config.logging == None else config.logging.module
         log_file = Path('experiments/local_runs.log')
         if log_file.exists():
             mode='r+'

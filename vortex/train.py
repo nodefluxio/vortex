@@ -14,7 +14,7 @@ def main(args):
     ckpt_in_cfg = 'checkpoint' in config
     if ckpt_in_cfg:
         config.checkpoint = config.checkpoint.rstrip(',')
-    if args.resume and (not ckpt_in_cfg or (ckpt_in_cfg and config.checkpoint == 'None')):
+    if args.resume and (not ckpt_in_cfg or (ckpt_in_cfg and config.checkpoint == None)):
         ## TODO: point to documentation for resume
         raise RuntimeError("You choose to resume but 'checkpoint' is not specified. "
             "Please specify 'checkpoint' option in your configuration file pointing "
@@ -22,7 +22,7 @@ def main(args):
 
     # Override logger config in experiment file
     if not log_metric:
-        config.logging = 'None'
+        config.logging = None
 
     # create training pipeline
     train_executor = TrainingPipeline(config=config, config_path=args.config, 

@@ -27,7 +27,7 @@ def create_logger(logger: Union[EasyDict], config: Union[EasyDict] = None, *args
     Raises:
         ValueError: logger module not supported
     """
-    if logger == 'None':
+    if logger == None:
         return DummyLogger(
             fields=['__call__',
                     'log_on_hyperparameters',
