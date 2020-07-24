@@ -18,7 +18,7 @@ dataset: {
   },
 }
 dataloader: {
-  module: DataLoader,
+  module: DefaultLoader,
   args: {
     num_workers: 1,
     batch_size: 2,

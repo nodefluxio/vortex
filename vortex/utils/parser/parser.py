@@ -387,6 +387,7 @@ def _check_deprecation(config):
     import warnings
     def _warn_print(message, category, filename, lineno, file=None, line=None):
         print("DeprecationWarning:", message)
+    _orig_show_warning = warnings.showwarning
     warnings.showwarning = _warn_print
 
     if 'dataset' in config and 'train' in config.dataset and 'dataset' in config.dataset.train:
@@ -411,6 +412,10 @@ def _check_deprecation(config):
         warnings.warn("'config.dataset.dataloader.dataloader' is now changed to "
             "'config.dataloader.module'")
         config.dataloader.module = config.dataloader.pop('dataloader')
+    if config.dataloader.module.lower() == 'dataloader':
+        warnings.warn("'DataLoader' module in 'config.dataloader.module' is now "
+            "changed to 'DefaultLoader'")
+        config.dataloader.module = "DefaultLoader"
 
     if 'dataset' in config and 'augmentations' in config.dataset.train and 'augmentations' not in config:
         warnings.warn("'config.dataset.augmentations' is now moved to "
@@ -426,6 +431,7 @@ def _check_deprecation(config):
         warnings.warn("'config.trainer.validation' is now changed to "
             "'config.validator'")
         config.validator = config.trainer.pop('validation')
+    warnings.showwarning = _orig_show_warning
     return config
 
 def _check_none_str(config):
