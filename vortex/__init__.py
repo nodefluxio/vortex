@@ -1,4 +1,5 @@
 import comet_ml
+from vortex import vortex_cli
 from vortex import core
 from vortex import export
 from vortex import exporter

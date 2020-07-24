@@ -154,7 +154,14 @@ class TrainingPipeline(BasePipeline):
 
         # Training components creation
         self.device = config.trainer.device
-        self.model_components = create_model(model_config=config.model, state_dict=state_dict)
+        model_components = create_model(model_config=config.model, state_dict=state_dict)
+        if not isinstance(model_components, EasyDict):
+            model_components = EasyDict(model_components)
+        # not working for easydict
+        # model_components.setdefault('collate_fn',None)
+        if not 'collate_fn' in model_components:
+            model_components.collate_fn = None
+        self.model_components = model_components
         self.model_components.network = self.model_components.network.to(self.device)
         self.criterion = self.model_components.loss.to(self.device)
 

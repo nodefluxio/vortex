@@ -6,6 +6,9 @@ nav:
         - 'Experiment File Configuration' : 'user-guides/experiment_file_config.md'
         - 'HypOpt File Configuration' : 'user-guides/hypopt_file_config.md'
         - 'Pipelines' : 'user-guides/pipelines.md'
+        - 'Custom Models: Classifications' : 'user-guides/alexnet.md'
+        - 'Custom Backbone Module: SqueezeNet' : 'user-guides/squeezenet.md'
+        - 'Custom Models: Object Detection' : 'user-guides/detr.md'
     - Modules :
         - 'Built-in Dataset' : 'modules/builtin_dataset.md'
         - 'Logging Provider' : 'modules/logging_provider.md'

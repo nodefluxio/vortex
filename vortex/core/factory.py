@@ -53,6 +53,9 @@ def create_model(model_config : EasyDict,
         postprocess_args=postprocess_args,
         stage=stage)
 
+    if not isinstance(model_components, EasyDict):
+        model_components = EasyDict(model_components)
+
     if 'init_state_dict' in model_config or state_dict is not None:
         if isinstance(state_dict, Path):
             state_dict = str(state_dict)

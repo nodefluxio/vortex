@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from typing import Tuple, Sequence, Type
+from typing import Tuple, Sequence, Type, Union
 
 supported_feature_type = ['tri_stage_fpn', 'classifier']
 
@@ -13,7 +13,9 @@ class Backbone(nn.Module):
     n_stage = 5
     n_output = 3
 
-    def __init__(self, stages: nn.Sequential, channels: Sequence[int]):
+    def __init__(self, stages: nn.Sequential, channels: Union[Sequence[int]]=None):
+        if channels is None:
+            channels = infer_channels(stages)
         if not len(stages) == len(channels):
             raise RuntimeError(
                 "expects len(stages) == len(channels) got %s and %s" % (len(stages), len(channels)))
@@ -45,7 +47,10 @@ class ClassifierFeature(nn.Module):
     backbone adapter with channels information
     for classifier feature
     """
-    def __init__(self, stages: nn.Sequential, classifier: Type[nn.Module], channels: int):
+    def __init__(self, stages: nn.Sequential, classifier: Type[nn.Module], channels: Union[int]=None):
+        if channels is None:
+            ## get last channel
+            channels = infer_channels(stages)[-1]
         if not isinstance(channels, int):
             raise RuntimeError("expects `channels` for `ClassifierFeature` to have int type, "\
                 "got %s" % type(channels))
@@ -61,3 +66,21 @@ class ClassifierFeature(nn.Module):
         x = self.stages(x)
         x = self.classifier(x)
         return x
+
+def infer_channels(stages: nn.Sequential, test_size=(1,3,224,224)):
+    """
+    Helper function to infer the number of output channels from sequential module
+    Args:
+        stages: torch sequential module
+        test_size: shape for initial input shape
+    Return:
+        channels: list of int, containing inferred output conv channels
+    """
+    channels = []
+    x = torch.rand(test_size)
+    with torch.no_grad():
+        for stage in stages:
+            x = stage(x)
+            channels.append(x.shape)
+    channels = list(map(lambda x: x[1], channels))
+    return channels

@@ -13,6 +13,9 @@ from vortex.utils.parser.parser import load_config, check_config
 
 backbones = [bb[0] for bb in supported_backbone.values() if not 'mobilenetv3' in bb[0]]
 backbones.append("mobilenetv3_large_w1")
+backbones.remove('alexnet') if 'alexnet' in backbones else None
+backbones.remove('squeezenetv1.0') if 'squeezenetv1.0' in backbones else None
+backbones.remove('squeezenetv1.1') if 'squeezenetv1.1' in backbones else None
 tasks = ["detection", "classification"]
 
 @pytest.mark.parametrize(
