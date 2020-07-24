@@ -426,11 +426,14 @@ def _check_deprecation(config):
         warnings.warn("'config.trainer.scheduler' is now changed to "
             "'config.trainer.lr_scheduler'")
         config.trainer.lr_scheduler = config.trainer.pop('scheduler')
-    
+
     if 'trainer' in config and 'validation' in config.trainer:
         warnings.warn("'config.trainer.validation' is now changed to "
             "'config.validator'")
         config.validator = config.trainer.pop('validation')
+    if 'validation' in config:
+        warnings.warn("validation config is now changed to 'config.validator'")
+        config.validator = config.pop('validation')
     warnings.showwarning = _orig_show_warning
     return config
 
