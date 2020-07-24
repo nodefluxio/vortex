@@ -1,5 +1,5 @@
 from easydict import EasyDict
-from typing import Type, Union, List
+from typing import Type, Union, List, Callable
 from pathlib import Path
 import random
 import numpy as np
@@ -11,20 +11,34 @@ from ....networks.modules.preprocess.normalizer import to_tensor,normalize
 import cv2
 from PIL import Image
 import ray
-from .modules.nvidia_dali import DALIIteratorWrapper
-from ..augment.modules.nvidia_dali import DALIExternalSourcePipeline
+from .modules.nvidia_dali import DALIIteratorWrapper,DALIExternalSourcePipeline
 from ..augment import create_transform
-
+from ..dataset.wrapper import BasicDatasetWrapper
 
 class DALIDataloader():
+    """DataLoader for Nvidia DALI augmentation pipeline,
+    to handle non-DALI augmentations, this loader utilize Ray to paralellize augmentation
+    for every sample in a batch
+    """
     def __init__(self,
-                 dataset,
-                 batch_size,
-                 num_thread = 1,
-                 device_id = 0,
-                 collate_fn = None,
-                 shuffle = True
+                 dataset : Type[BasicDatasetWrapper],
+                 batch_size : int,
+                 num_thread : int = 1,
+                 device_id : int = 0,
+                 collate_fn : Type[Callable] = None,
+                 shuffle : bool = True
                  ):
+        """Initialization
+
+        Args:
+            dataset (Type[BasicDatasetWrapper]): dataset object to be adapted into DALI format
+            batch_size (int): How many samples per batch to load
+            num_thread (int, optional): Number of CPU threads used by the pipeline. Defaults to 1.
+            device_id (int, optional): GPU id to be used for pipeline. Defaults to 0.
+            collate_fn (Type[Callable], optional): merges a list of samples to form a mini-batch of Tensor(s). Defaults to None.
+            shuffle (bool, optional): set to True to have the data reshuffled at every epoch. Defaults to True.
+        """
+
         iterator = DALIIteratorWrapper(dataset,
                                        batch_size=batch_size,
                                        shuffle=shuffle,
@@ -212,10 +226,20 @@ class DALIDataloader():
 
 @ray.remote
 class ExternalAugmentsExecutor():
+    """Ray actors to handle augmentation for every sample in a batch
+    """
     def __init__(self,
-                 transforms_list,
-                 data_format,
-                 preprocess_args):
+                 transforms_list : list,
+                 data_format : dict,
+                 preprocess_args : dict):
+        """Initialization
+
+        Args:
+            transforms_list (list): list of augmentation to be applied
+            data_format (dict): dataset data format
+            preprocess_args (dict): preprocess args for input normalization
+        """
+
         self.augments = transforms_list
         self.data_format = data_format
         self.preprocess_args = preprocess_args

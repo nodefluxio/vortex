@@ -52,12 +52,13 @@ class DALIIteratorWrapper(object):
         # Get proper sharded data based on the device_id and total number of GPUs (world size) (For distributed training in future usage)
         self.sharded_idx = list(range(self.dataset_len * device_id //
                                       num_gpus, self.dataset_len * (device_id + 1) // num_gpus))
-        if shuffle:
-            random.shuffle(self.sharded_idx)
+        self.shuffle = shuffle
         self.nrof_sharded_data = len(self.sharded_idx)
 
     def __iter__(self):
         self.i = 0
+        if self.shuffle:
+            random.shuffle(self.sharded_idx)
         return self
 
     def __next__(self):

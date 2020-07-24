@@ -17,6 +17,15 @@ class BasicDatasetWrapper():
                  augmentations: Union[Tuple[str, dict]],
                  dataset_args: Union[EasyDict, dict] = {},
                  ):
+        """A basic form of dataset wrapper, maintain type checking and data format from integrated dataset
+
+        Args:
+            dataset (str): dataset name
+            stage (str): pipeline stage, 'train' or 'validate' to differentiate augmentation process
+            preprocess_args (Union[EasyDict, dict]): data preprocessinga arguments
+            augmentations (Union[Tuple[str, dict]]): augmentations configuration
+            dataset_args (Union[EasyDict, dict], optional): dataset initialization arguments. Defaults to {}.
+        """
         self.stage = stage
         self.preprocess_args = preprocess_args
         self.augmentations_list = augmentations

@@ -26,6 +26,7 @@ from vortex.core.pipelines import (
     IRPredictionPipeline,
     HypOptPipeline
 )
+
 from vortex.core.factory import create_model
 from vortex.utils.parser.parser import load_config
 from vortex.utils.parser.loader import Loader

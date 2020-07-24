@@ -15,14 +15,28 @@ __all__ = ['StandardAugment',
            'RandomRotate']
 
 class StandardAugment():
+    """Standard augmentation which resize the input image into desired size and pad it to square,
+    also additionally normalize the input
+    """
     def __init__(self,
-                 input_size,
-                 scaler = 255,
-                 mean = [0.,0.,0.],
-                 std = [1.,1.,1.],
-                 image_pad_value = 0,
-                 labels_pad_value = -99,
-                 normalize = True):
+                 input_size : int,
+                 scaler : Union[int,float] = 255,
+                 mean : List[float] = [0.,0.,0.],
+                 std : List[float] = [1.,1.,1.],
+                 image_pad_value : Union[int,float] = 0,
+                 labels_pad_value : Union[int,float] = -99,
+                 normalize : bool = True):
+        """Initialization
+
+        Args:
+            input_size (int): Target size of image resize
+            scaler (Union[int,float], optional): The scaling factor applied to the input pixel value. Defaults to 255.
+            mean (List[float], optional): Mean pixel values for image normalization. Defaults to [0.,0.,0.].
+            std (List[float], optional): Standard deviation values for image normalization. Defaults to [1.,1.,1.].
+            image_pad_value (Union[int,float], optional): Values of the color to pad the image to square.. Defaults to 0.
+            labels_pad_value (Union[int,float], optional): Values used to pad the labels information so it have same dimension. Will be deleted on the dataloader. Defaults to -99.
+            normalize (bool, optional): Will apply normalization if set to True. Defaults to True.
+        """
 
         # By default, CropMirrorNormalize divide each pixel by 255, to make it similar with Pytorch Loader behavior
         # in which we can control the scaler, we add additional scaler to reverse the effect
@@ -49,6 +63,19 @@ class StandardAugment():
         self.peek_shape = ops.Shapes(device='gpu')
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
         images = data.images
         
@@ -79,13 +106,35 @@ class StandardAugment():
         return data
 
 class HorizontalFlip():
-    def __init__(self,p=0.5):
+    """Flip image in horizontal axis. Supports coordinates sensitive labels
+    """
+    def __init__(self,
+                 p : float =0.5):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to 0.5.
+        """
         self.flip_coin_hflip = ops.CoinFlip(probability=p)
         self.image_hflip = ops.Flip(device='gpu')
         self.bbox_hflip = ops.BbFlip(device='cpu')
         self.ldmrks_hflip = ops.CoordFlip(layout='xy',device='cpu')
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
+        
         data = EasyDict(data)
         hflip_coin = self.flip_coin_hflip()
         
@@ -112,14 +161,34 @@ class HorizontalFlip():
         return data
 
 class VerticalFlip():
+    """Flip image in vertical axis. Supports coordinates sensitive labels
+    """
+    def __init__(self,
+                 p : float =0.5):
+        """Initialization
 
-    def __init__(self,p=0.5):
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to 0.5.
+        """
         self.flip_coin_vflip = ops.CoinFlip(probability=p)
         self.image_vflip = ops.Flip(device='gpu',horizontal=0)
         self.bbox_vflip = ops.BbFlip(device='cpu',horizontal=0)
         self.ldmrks_vflip = ops.CoordFlip(layout='xy',device='cpu',flip_x=0)
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
         vflip_coin = self.flip_coin_vflip()
         
@@ -146,11 +215,19 @@ class VerticalFlip():
         return data
 
 class RandomBrightnessContrast():
-    
+    """Randomly adjust the brightness and contrast of the image
+    """
     def __init__(self,
-                 p = .5,
+                 p : float = .5,
                  brightness_limit : Union[List,float] = 0.5,
                  contrast_limit : Union[List,float] = 0.5):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to .5.
+            brightness_limit (Union[List,float], optional): Factor range for changing brightness. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+            contrast_limit (Union[List,float], optional): Factor range for changing contrast. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+        """
         brightness_limit = _check_and_convert_limit_value(brightness_limit)
         contrast_limit = _check_and_convert_limit_value(contrast_limit)
         self.brightness_uniform = ops.Uniform(range=brightness_limit)
@@ -161,6 +238,19 @@ class RandomBrightnessContrast():
         self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
 
         brightness_rng = self.brightness_uniform()
@@ -179,11 +269,21 @@ class RandomBrightnessContrast():
     
 
 class RandomJitter():
+    """Perform a random Jitter augmentation. The output image is produced by moving each pixel 
+    by a random amount bounded by half of nDegree parameter (in both x and y dimensions).
+    """
 
     def __init__(self,
-                 p = .5,
-                 nDegree = 2,
-                 fill_value = 0.):
+                 p : float = .5,
+                 nDegree : int = 2,
+                 fill_value : Union[float,int] = 0.):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to .5.
+            nDegree (int, optional): Each pixel is moved by a random amount in range [-nDegree/2, nDegree/2]. Defaults to 2.
+            fill_value (Union[float,int], optional): Color value used for padding pixels. Defaults to 0..
+        """
 
         self.jitter = ops.Jitter(device = 'gpu',
                                  fill_value = 0,
@@ -200,12 +300,21 @@ class RandomJitter():
         return data
 
 class RandomHueSaturationValue():
-    
+    """ Randomly performs HSV manipulation. To change hue, saturation and/or value of the image, pass corresponding coefficients. Keep in mind, that hue has additive delta argument, while for saturation and value they are multiplicative.
+    """
     def __init__(self,
-                 p : .5,
+                 p : float = .5,
                  hue_limit : Union[List,float] = 20.,
                  saturation_limit : Union[List,float] = .5,
                  value_limit : Union[List,float] = .5):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to .5.
+            hue_limit (Union[List,float], optional): Range for changing hue. If provided as a single float, the range will be (-limit, limit). Defaults to 20..
+            saturation_limit (Union[List,float], optional): Factor range for changing saturation. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to .5.
+            value_limit (Union[List,float], optional): Factor range for changing value. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to .5.
+        """
         
         hue_limit = _check_and_convert_limit_value(hue_limit,None,0)
         saturation_limit = _check_and_convert_limit_value(saturation_limit)
@@ -221,6 +330,19 @@ class RandomHueSaturationValue():
         self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
     
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
 
         hue_rng = self.hue_uniform()
@@ -240,16 +362,31 @@ class RandomHueSaturationValue():
         return data
 
 class RandomWater():
+    """Randomly perform a water augmentation (make image appear to be underwater)
+    Currently not support coordinates sensitive labels
+    """
 
     def __init__(self,
-                 p = .5,
-                 ampl_x=10.0,
-                 ampl_y=10.0,
-                 freq_x=0.049087,
-                 freq_y=0.049087,
-                 phase_x=0.0,
-                 phase_y=0.0,
-                 fill_value=0.0):
+                 p : float = .5,
+                 ampl_x : float =10.0,
+                 ampl_y : float =10.0,
+                 freq_x : float =0.049087,
+                 freq_y : float =0.049087,
+                 phase_x : float =0.0,
+                 phase_y : float =0.0,
+                 fill_value : float =0.0):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation. Defaults to .5.
+            ampl_x (float, optional): Amplitude of the wave in x direction.. Defaults to 10.0.
+            ampl_y (float, optional): Amplitude of the wave in y direction.. Defaults to 10.0.
+            freq_x (float, optional): Frequency of the wave in x direction. Defaults to 0.049087.
+            freq_y (float, optional): Frequency of the wave in y direction. Defaults to 0.049087.
+            phase_x (float, optional): Phase of the wave in x direction.. Defaults to 0.0.
+            phase_y (float, optional): Phase of the wave in y direction.. Defaults to 0.0.
+            fill_value (float, optional): Color value used for padding pixels. Defaults to 0.0.
+        """
         
         self.water_aug = ops.Water(device='gpu',
                                    ampl_x=ampl_x,
@@ -264,6 +401,19 @@ class RandomWater():
         self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
 
         aug_images = self.water_aug(data.images)
@@ -276,11 +426,20 @@ class RandomWater():
         return data
 
 class RandomRotate():
+    """Random rotate the image, currently not support coordinates sensitive labels
+    """
 
     def __init__(self,
-                 p = .5,
+                 p : float = .5,
                  angle_limit: Union[List,float] = 45.,
-                 fill_value= 0.):
+                 fill_value : float = 0.):
+        """Initialization
+
+        Args:
+            p (float, optional): Probability to apply this transformation.. Defaults to .5.
+            angle_limit (Union[List,float], optional): Range for changing angle. If provided as a single float, the range will be (-limit, limit). Defaults to 45..
+            fill_value (float, optional): [description]. Defaults to 0..
+        """
 
         angle_limit = _check_and_convert_limit_value(angle_limit,None,0)
 
@@ -294,6 +453,19 @@ class RandomRotate():
         self.bool = ops.Cast(dtype=types.DALIDataType.BOOL)
 
     def __call__(self,**data):
+        """This function will receive keyword args which will be processed as a dict.
+        Inside the dict exist 4 keys():
+            - `images` : DataNode containing images data
+            - `labels` : dictionary which corresponds to dataset.dataformat keys, which 
+                         contain DataNode for each labels data
+            - `additional_info` : dictionary which contain additional_info that also need to 
+                                  be propagated out of the pipeline
+            - `data_layout` : list containing the sequence of pipeline output names, if there is any
+                              additional info want to be delivered out of the pipeline, it's name must
+                              be registered here
+
+        Returned augmentation result must  have the same format as mentioned above
+        """
         data = EasyDict(data)
 
         angle_rng = self.angle_uniform()

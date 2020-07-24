@@ -7,6 +7,9 @@ supported_transforms = [
 ]
 
 class NvidiaDALIWrapper():
+    """Wrapper for Nvidia DALI augmentations, composing several transforms to be initialized
+    in the DALI's pipeline. Cannot be initialized from dataset default wrapper
+    """
     
     def __init__(self,transforms,*args,**kwargs):
         

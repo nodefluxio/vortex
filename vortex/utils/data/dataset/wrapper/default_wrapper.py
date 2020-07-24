@@ -21,15 +21,17 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
     This module is used to build external dataset and act as a dataset iterator
     which also applies preprocess stages for the output of external dataset.
 
+    Automatically read image file using opencv if the provided 'image' data is image path
+
     The image input will automatically be resized to desired `input_size` from
     `preprocess_args` retrieved from config.
+
 
     Args:
         dataset (str): external dataset name to be built. see available (###input context here).
         stage (str): stages in which the dataset be used, valid: `train` and `validate`.
         preprocess_args (EasyDict): pre-process options for input image from config, see (###input context here).
         augments (sequence, or callable): augmentations to be applied to the output of external dataset, see (###input context here).
-        annotation_name (EasyDict): (###unused), see (###input context here).
     """
 
     def __init__(self, dataset: str, stage: str, preprocess_args: Union[EasyDict, dict],
@@ -48,6 +50,9 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
             self.augments = []
             for augment in self.augmentations_list:
                 module_name = augment.module
+                if module_name == 'nvidia_dali':
+                    raise RuntimeError('Nvidia DALI augmentations cannot be used with `PytorchDataLoader`, must be used with \
+                                        `DALIDataLoader`. ')
                 module_args = augment.args
                 if not isinstance(module_args, dict):
                     raise TypeError("expect augmentation module's args value to be dictionary, got %s" % type(module_args))

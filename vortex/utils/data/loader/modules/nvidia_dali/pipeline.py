@@ -4,17 +4,31 @@ import nvidia.dali.types as types
 from ....augment import create_transform
 from easydict import EasyDict
 from nvidia.dali.pipeline import Pipeline
-
-
+from ....augment.nvidia_dali import NvidiaDALIWrapper
+from .wrapper import DALIIteratorWrapper
+from typing import Type
 
 class DALIExternalSourcePipeline(Pipeline):
-    def __init__(self, dataset_iterator, 
-                       batch_size, 
-                       num_threads, 
-                       device_id, 
-                       dali_augments = None,
-                       normalize = True,
-                       seed = 12345):
+    """Nvidia DALI augmentation pipeline
+    """
+    def __init__(self, dataset_iterator : DALIIteratorWrapper, 
+                       batch_size :int , 
+                       device_id : int, 
+                       num_threads : int =1, 
+                       dali_augments : Type[NvidiaDALIWrapper] = None,
+                       normalize : bool = True,
+                       seed : int = -1):
+        """Initialization
+
+        Args:
+            dataset_iterator (DALIIteratorWrapper): DALI-style dataset iterator
+            batch_size (int): How many samples per batch to load
+            device_id (int): GPU id to be used for pipeline
+            num_threads (int): Number of CPU threads used by the pipeline. Defaults to 1.
+            dali_augments (Type[NvidiaDALIWrapper], optional): Nvidia DALI augmentations module. Defaults to None.
+            normalize (bool, optional): Option to apply normalization at the end of pipeline. Defaults to True.
+            seed (int, optional): seed number. Defaults to 12345.
+        """
         super().__init__(
                         batch_size,
                         num_threads,
