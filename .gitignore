@@ -274,5 +274,3 @@ experiments/outputs/*
 *-ubyte.gz
 *.tar.gz
 *cifar-10-batches-py
-
-!tests/test_dataset/obj_det_landmarks/train/data/images/*
