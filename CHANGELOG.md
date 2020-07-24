@@ -31,12 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `checkpoint` field in configuration file to point to the checkpoint model used to resume training if `--resume` flag is given. `init_state_dict` is still possible to be used but will automatically load `state_dict` to model even if `--resume` flag is not defined, but removed from docs.
 - model checkpoint update script in `script/update_model.py`
 - Now possible to access `class_names` and `input_specs` attributes from both `PytorchPredictionPipeline.model` and `IRPredictionPipeline.model`
+- config deprecation checks
+
 
 ### Changed
 
 - reading `class_names` attribute from checkpoint in prediction and export pipeline
 - `class_names` in dataset, prediction, and export is optional. If not specified or `None`, will create a numbered class label `[class_0, class_1, ..., class_n]`
 - `class_names` moved from `PytorchPredictionPipeline.class_names` to `PytorchPredictionPipeline.model.class_names` ( also applied to `IRPredictionPipeline`)
+- None in string to normal python None
+- new config format, as described in [#7](https://github.com/nodefluxio/vortex/issues/7)
 
 ## v0.1.0
 
