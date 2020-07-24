@@ -389,40 +389,40 @@ def _check_deprecation(config):
         print("DeprecationWarning:", message)
     warnings.showwarning = _warn_print
 
-    if 'train' in config.dataset and 'dataset' in config.dataset.train:
+    if 'dataset' in config and 'train' in config.dataset and 'dataset' in config.dataset.train:
         warnings.warn("'config.dataset.train.dataset' is now changed to "
             "'config.dataset.train.name'")
         config.dataset.train.name = config.dataset.train.pop('dataset')
-    if 'eval' in config.dataset and 'dataset' in config.dataset.eval:
+    if 'dataset' in config and 'eval' in config.dataset and 'dataset' in config.dataset.eval:
         warnings.warn("'config.dataset.eval.dataset' is now changed to "
             "'config.dataset.eval.name'",)
         config.dataset.eval.name = config.dataset.eval.pop('dataset')
 
-    if 'device' in config.trainer and 'device' not in config:
+    if 'trainer' in config and 'device' in config.trainer and 'device' not in config:
         warnings.warn("'config.trainer.device' is now moved to "
             "'config.device'")
         config.device = config.trainer.pop('device')
 
-    if 'dataloader' in config.dataset and 'dataloader' not in config:
+    if 'dataset' in config and 'dataloader' in config.dataset and 'dataloader' not in config:
         warnings.warn("'config.dataset.dataloader' is now moved to "
             "'config.dataloader'")
         config.dataloader = config.dataset.pop('dataloader')
-    if 'dataloader' in config.dataloader:
+    if 'dataloader' in config and 'dataloader' in config.dataloader:
         warnings.warn("'config.dataset.dataloader.dataloader' is now changed to "
             "'config.dataloader.module'")
         config.dataloader.module = config.dataloader.pop('dataloader')
 
-    if 'augmentations' in config.dataset.train and 'augmentations' not in config:
+    if 'dataset' in config and 'augmentations' in config.dataset.train and 'augmentations' not in config:
         warnings.warn("'config.dataset.augmentations' is now moved to "
             "'config.augmentations'")
         config.augmentations = config.dataset.train.pop('augmentations')
 
-    if 'scheduler' in config.trainer:
+    if 'trainer' in config and 'scheduler' in config.trainer:
         warnings.warn("'config.trainer.scheduler' is now changed to "
             "'config.trainer.lr_scheduler'")
         config.trainer.lr_scheduler = config.trainer.pop('scheduler')
     
-    if 'validation' in config.trainer:
+    if 'trainer' in config and 'validation' in config.trainer:
         warnings.warn("'config.trainer.validation' is now changed to "
             "'config.validator'")
         config.validator = config.trainer.pop('validation')
