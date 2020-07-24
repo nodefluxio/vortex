@@ -25,6 +25,22 @@ dataloader: {
     shuffle: True,
   },
 }
+augmentations: [{
+  module: albumentations,
+  args: {
+    transforms: [
+      {
+        transform : RandomBrightnessContrast, 
+        args : {
+          p : 0.5, brightness_by_max: False,
+          brightness_limit: 0.1, contrast_limit: 0.1,
+        }
+      },
+      {transform: HueSaturationValue, args: {}},
+      {transform : HorizontalFlip, args : {p : 0.5}},
+    ]
+  }
+}]
 model: {
   name: softmax,
   network_args: {
