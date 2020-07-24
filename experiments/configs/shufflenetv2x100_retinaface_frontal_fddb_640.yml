@@ -9,6 +9,8 @@ logging : {
   pytz_timezone : 'Asia/Jakarta'
 }
 checkpoint: None
+device : 'cuda:0'
+output_directory : experiments/outputs
 model : {
   name : RetinaFace,
   preprocess_args : {
@@ -45,7 +47,7 @@ trainer : {
       weight_decay : 0.0005,
     }
   },
-  scheduler : {
+  lr_scheduler : {
     method : CosineLRScheduler,
     args : {
       t_initial : 100,
@@ -58,18 +60,8 @@ trainer : {
       decay_rate : 0.1,
     }
   },
-  ## optional field for validation step
-  validation : {
-    ## passed to validator class
-    args : {
-      score_threshold : 0.9,
-      iou_threshold : 0.2,
-    },
-    val_epoch : 5,
-  },
   epoch : 100,
   save_epoch : 5,
-  device : 'cuda:0',
   driver : {
     module : DefaultTrainer,
     args : {
@@ -79,7 +71,7 @@ trainer : {
 }
 dataset : {
   train : {
-    dataset : FrontalFDDBDataset,
+    name : FrontalFDDBDataset,
     args : {
       train : True,
       ## TODO : dont use list, support tuple
@@ -87,21 +79,29 @@ dataset : {
     # augments : [ BasicAugment, {} ]
   },
   eval : {
-    dataset : FrontalFDDBDataset,
+    name : FrontalFDDBDataset,
     args : {
       train : False,
     }
   },
-  dataloader : {
-    dataloader : DataLoader,
-    args : {
-      num_workers : 0,
-      batch_size : 8,
-      shuffle : True,
-    },
+}
+dataloader: {
+  module: DefaultLoader,
+  args : {
+    num_workers : 0,
+    batch_size : 8,
+    shuffle : True,
   },
 }
-output_directory : experiments/outputs
+## optional field for validation step
+validator: {
+  ## passed to validator class
+  args: {
+    score_threshold : 0.9,
+    iou_threshold : 0.2,
+  },
+  val_epoch : 5,
+}
 seed : {
   torch : 0,
   cudnn : {

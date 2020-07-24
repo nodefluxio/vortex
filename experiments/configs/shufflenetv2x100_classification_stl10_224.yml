@@ -1,9 +1,11 @@
 experiment_name: shufflenetv2x100_softmax_stl10_224
 logging: None
 checkpoint: None
+device: 'cuda:0'
+output_directory: experiments/outputs
 dataset: {
   train: {
-    dataset: STL10,
+    name: STL10,
     args: {
       root: external/datasets,
       split: train,
@@ -11,20 +13,20 @@ dataset: {
     },
   },
   eval: {
-    dataset: STL10,
+    name: STL10,
     args: {
       root: external/datasets,
       split: test,
       download: True
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 0,
-      batch_size: 128,
-      shuffle: True,
-    },
+}
+dataloader: {
+  module: DefaultLoader,
+  args: {
+    num_workers: 0,
+    batch_size: 128,
+    shuffle: True,
   },
 }
 model: {
@@ -57,7 +59,7 @@ trainer: {
       weight_decay: 0.0005,
     }
   },
-  scheduler : {
+  lr_scheduler : {
     method : CosineLRScheduler,
     args : {
       t_initial : 20,
@@ -70,11 +72,6 @@ trainer: {
       decay_rate : 0.1,
     }
   },
-  validation: {
-    args: {},
-    val_epoch: 4,
-  },
-  device: 'cuda:0',
   driver: {
     module: DefaultTrainer,
     args: {}
@@ -82,7 +79,10 @@ trainer: {
   epoch: 20,
   save_epoch: 5
 }
-output_directory: experiments/outputs
+validator: {
+  args: {},
+  val_epoch: 4,
+}
 exporter : {
   module : onnx,
   args : {

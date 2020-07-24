@@ -1,48 +1,50 @@
 experiment_name: shufflenetv2x100_softmax_cifar100_224
 logging: None
 checkpoint: None
+device: 'cuda:0'
+output_directory: experiments/outputs
 dataset: {
   train: {
-    dataset: CIFAR100,
+    name: CIFAR100,
     args: {
       root: external/datasets,
       train: True,
       download: True
     },
-    augmentations: [{
-      module: albumentations,
-      args: {
-        transforms: [
-          {
-            transform: RandomBrightnessContrast, 
-            args: {
-              p: 0.5, brightness_by_max: False,
-              brightness_limit: 0.1, contrast_limit: 0.1,
-            }
-          },
-          {transform: HueSaturationValue, args: {}},
-          {transform: HorizontalFlip, args: {p: 0.5}},
-        ]
-      }
-    }]
   },
   eval: {
-    dataset: CIFAR100,
+    name: CIFAR100,
     args: {
       root: external/datasets,
       train: False,
       download: True
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 0,
-      batch_size: 32,
-      shuffle: True,
-    },
+}
+dataloader: {
+  module: DefaultLoader,
+  args: {
+    num_workers: 0,
+    batch_size: 32,
+    shuffle: True,
   },
 }
+augmentations: [{
+  module: albumentations,
+  args: {
+    transforms: [
+      {
+        transform: RandomBrightnessContrast, 
+        args: {
+          p: 0.5, brightness_by_max: False,
+          brightness_limit: 0.1, contrast_limit: 0.1,
+        }
+      },
+      {transform: HueSaturationValue, args: {}},
+      {transform: HorizontalFlip, args: {p: 0.5}},
+    ]
+  }
+}]
 model: {
   name: softmax,
   network_args: {
@@ -73,7 +75,7 @@ trainer: {
       weight_decay: 0.0005,
     }
   },
-  scheduler : {
+  lr_scheduler : {
     method : CosineLRScheduler,
     args : {
       t_initial : 10,
@@ -86,11 +88,6 @@ trainer: {
       decay_rate : 0.1,
     }
   },
-  validation: {
-    args: {},
-    val_epoch: 4,
-  },
-  device: 'cuda:0',
   driver: {
     module: DefaultTrainer,
     args: {
@@ -100,7 +97,10 @@ trainer: {
   epoch: 10,
   save_epoch: 5
 }
-output_directory: experiments/outputs
+validator: {
+  args: {},
+  val_epoch: 4,
+}
 exporter : {
   module : onnx,
   args : {
