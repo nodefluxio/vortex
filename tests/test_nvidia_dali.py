@@ -65,6 +65,14 @@ dali_loader = EasyDict({
         },
 })
 
+pytorch_loader = EasyDict({
+    'dataloader': 'PytorchDataLoader',
+    'args': {
+        'batch_size': 4,
+        'shuffle': False,
+    },
+})
+
 transforms = [{'transform': 'HorizontalFlip','args':{'p':1}},
               {'transform': 'VerticalFlip','args':{'p':1}},
               {'transform': 'RandomBrightnessContrast','args':{'p':1,'brightness_limit' : .2,'contrast_limit' : .2}},
@@ -97,3 +105,48 @@ def test_dali(dataset_config,transform):
             fetched_data = data
             break
     
+def test_neg_dali_aug_and_pytorch_data_loader():
+
+    class_dataset_config.dataloader = pytorch_loader
+    augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}})]
+    class_dataset_config.train.augmentations = augmentations
+    
+    # Expect RuntimeError if nvidia dali augmentation module used with pytorch dataloader
+    with pytest.raises(RuntimeError):
+        dataloader = create_dataloader(dataset_config=class_dataset_config,
+                                        preprocess_config = preprocess_args,
+                                        collate_fn=class_dataset_config.collate_fn)
+
+def test_dali_loader_with_no_dali_aug():
+
+    class_dataset_config.dataloader = dali_loader
+    augmentations = [EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}})]
+    class_dataset_config.train.augmentations = augmentations
+    
+    dataloader = create_dataloader(dataset_config=class_dataset_config,
+                                    preprocess_config = preprocess_args,
+                                    collate_fn=class_dataset_config.collate_fn)
+
+def test_dali_loader_with_additional_external_aug():
+
+    class_dataset_config.dataloader = dali_loader
+    augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}}),
+                     EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}})]
+    class_dataset_config.train.augmentations = augmentations
+    
+    dataloader = create_dataloader(dataset_config=class_dataset_config,
+                                    preprocess_config = preprocess_args,
+                                    collate_fn=class_dataset_config.collate_fn)
+
+def test_neg_dali_aug_not_the_first_aug():
+
+    class_dataset_config.dataloader = dali_loader
+    augmentations = [EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}}),
+                     EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}})]
+    class_dataset_config.train.augmentations = augmentations
+    
+    # Expect RuntimeError if dali augmentations is not in the first order of the augmentation list
+    with pytest.raises(RuntimeError):
+        dataloader = create_dataloader(dataset_config=class_dataset_config,
+                                        preprocess_config = preprocess_args,
+                                        collate_fn=class_dataset_config.collate_fn)

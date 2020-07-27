@@ -81,7 +81,7 @@ class DALIDataloader():
                 normalize = False
 
                 # Instantiate external augments executor
-                ray.init()
+                ray.init(ignore_reinit_error=True)
                 transforms_list_ref = ray.put(external_augments)
                 data_format_ref = ray.put(self.data_format)
                 preprocess_args_ref = ray.put(self.preprocess_args)
