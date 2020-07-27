@@ -225,8 +225,8 @@ class RandomBrightnessContrast():
 
         Args:
             p (float, optional): Probability to apply this transformation. Defaults to .5.
-            brightness_limit (Union[List,float], optional): Factor range for changing brightness. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
-            contrast_limit (Union[List,float], optional): Factor range for changing contrast. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+            brightness_limit (Union[List,float], optional): Factor multiplier range for changing brightness in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+            contrast_limit (Union[List,float], optional): Factor multiplier range for changing contrast in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
         """
         brightness_limit = _check_and_convert_limit_value(brightness_limit)
         contrast_limit = _check_and_convert_limit_value(contrast_limit)
@@ -311,9 +311,9 @@ class RandomHueSaturationValue():
 
         Args:
             p (float, optional): Probability to apply this transformation. Defaults to .5.
-            hue_limit (Union[List,float], optional): Range for changing hue. If provided as a single float, the range will be (-limit, limit). Defaults to 20..
-            saturation_limit (Union[List,float], optional): Factor range for changing saturation. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to .5.
-            value_limit (Union[List,float], optional): Factor range for changing value. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to .5.
+            hue_limit (Union[List,float], optional): Range for changing hue in [min,max] value format. If provided as a single float, the range will be (-limit, limit). Defaults to 20..
+            saturation_limit (Union[List,float], optional): Factor multiplier range for changing saturation in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+            value_limit (Union[List,float], optional): Factor multiplier range for changing value in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
         """
         
         hue_limit = _check_and_convert_limit_value(hue_limit,None,0)
@@ -437,7 +437,7 @@ class RandomRotate():
 
         Args:
             p (float, optional): Probability to apply this transformation.. Defaults to .5.
-            angle_limit (Union[List,float], optional): Range for changing angle. If provided as a single float, the range will be (-limit, limit). Defaults to 45..
+            angle_limit (Union[List,float], optional): Range for changing angle in [min,max] value format. If provided as a single float, the range will be (-limit, limit). Defaults to 45..
             fill_value (float, optional): [description]. Defaults to 0..
         """
 

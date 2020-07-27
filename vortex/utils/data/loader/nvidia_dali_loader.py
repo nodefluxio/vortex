@@ -22,7 +22,7 @@ class DALIDataloader():
     """
     def __init__(self,
                  dataset : Type[BasicDatasetWrapper],
-                 batch_size : int,
+                 batch_size : int = 1,
                  num_thread : int = 1,
                  device_id : int = 0,
                  collate_fn : Type[Callable] = None,
