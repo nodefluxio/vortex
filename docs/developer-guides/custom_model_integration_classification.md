@@ -1,10 +1,7 @@
-```python
-%matplotlib inline
-```
-
 Integrating Custom Classification Model to Vortex
 =================================================
-This tutorial shows how to create custom model and integrate to `vortex`.
+
+This tutorial shows how to develop your own model and integrate it to `vortex`.
 The tutorial consists of 5 steps:
 
 1. Define model architecture
@@ -23,12 +20,14 @@ import vortex.networks as networks
 import vortex.networks.modules as vortex_modules
 ```
 
+---
+
 1. Model Architecture
 ---------------------
 
 We first define our model, in this case we will define AlexNet model
 that can be integrated to `vortex`. In order to do that, our model needs
-olny to have `task` and `output_format` member variables.
+only to have `task` and `output_format` member variables.
 
 For the sake of simplicity, we will reuse `AlexNet` from `torchvision` by
 instantiate `torchvision`'s `AlexNet` and add the required member variable
@@ -59,6 +58,7 @@ The code will looks like:
        )
 ```
 
+---
 
 2. Create PostProcess module
 ----------------------------
@@ -83,6 +83,8 @@ class AlexNetPostProcess(nn.Module):
         return torch.stack((cls_label.float(), conf_label), dim=1)
 ```
 
+---
+
 3. Defining Loss Function
 -------------------------
 
@@ -104,6 +106,8 @@ class ClassificationLoss(nn.Module):
             target = target.unsqueeze(0)
         return self.loss_fn(input, target)
 ```
+
+---
 
 4. Registering our model to vortex
 ----------------------------------
@@ -189,6 +193,8 @@ def create_model_components(
     return components
 ```
 
+---
+
 5. Integration with vortex CLI
 ----------------------------
 
@@ -213,9 +219,9 @@ it is unavailable from `vortex` command-line, to properly run experiments
 with our custom model registered we need to invoke python, for example
 ```Shell
 # run hyperparam optimization experiment
-python alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
+python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
 ```
 ```Shell
 # run training experiment
-python alexnet.py train --config cifar10.yml
+python3 alexnet.py train --config cifar10.yml
 ```
