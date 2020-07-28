@@ -101,7 +101,8 @@ def calculate_models_params_and_flops():
                                                    preprocess_args=model_cfg['preprocess_args'],
                                                    network_args=model_cfg['network_args'],
                                                    loss_args=model_cfg['loss_args'],
-                                                   postprocess_args=model_cfg['postprocess_args'])
+                                                   postprocess_args=model_cfg['postprocess_args'],
+                                                   stage='validate')
         network=model_components.network
         model_macs, model_params = profile(network, inputs=(input, ),verbose=False)
         if 'backbone' in model_cfg.network_args:
