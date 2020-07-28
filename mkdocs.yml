@@ -9,6 +9,7 @@ nav:
     - Developer Guides :
         - 'Custom Backbone Integration' : 'developer-guides/custom_backbone_integration.md'
         - 'Custom Model Integration : Classification' : 'developer-guides/custom_model_integration_classification.md'
+        - 'Custom Model Integration : Detection' : 'developer-guides/custom_model_integration_detection.md'
     - Modules :
         - 'Built-in Dataset' : 'modules/builtin_dataset.md'
         - 'Logging Provider' : 'modules/logging_provider.md'
