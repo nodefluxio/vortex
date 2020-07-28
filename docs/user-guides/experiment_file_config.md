@@ -52,6 +52,20 @@ output_directory: experiments/outputs
 
 ---
 
+## Device
+
+Flagged with `device` key (str) in the experiment file. This configuration set device to run experiment. E.g. :
+
+```yaml
+device: 'cuda:0'
+```
+
+Arguments :
+
+- `device` (str) : set the device to run the experiment in pipelines, whether using CPU `cpu` or cuda GPU `cuda`. To use specific GPU device, append `:{i}` to `cuda`, E.g. `cuda:0` for GPU index 0, `cuda:1` for GPU index 1
+
+---
+
 ## Reproducibility and cuDNN auto-tune
 
 **THIS CONFIGURATION IS OPTIONAL (MAY IMPACT TRAINING PERFORMANCE)**
@@ -93,12 +107,12 @@ seed: {
 
 ## Dataset
 
-Flagged with `dataset` key (dict) in the experiment file. This is the configurations of the dataset, augmentations, and dataloader which will be used in the training. E.g. :
+Flagged with `dataset` key (dict) in the experiment file. This is the configurations of the dataset to be used in the pipeline, which includes the dataset name for `train` and `eval` dataset. E.g. :
 
 ```yaml
 dataset: {
     train: {
-        dataset: VOC0712DetectionDataset,
+        name: VOC0712DetectionDataset,
         args: {
             image_set: train,
         },
@@ -126,19 +140,11 @@ dataset: {
         ]
     },
     eval: {
-        dataset: VOC0712DetectionDataset,
+        name: VOC0712DetectionDataset,
         args: {
             image_set: val
         }
     },
-    dataloader: {
-        dataloader: DataLoader,
-        args: {
-            num_workers: 0,
-            batch_size: 16,
-            shuffle: True,
-        },
-    }
 }
 ```
 
@@ -153,10 +159,29 @@ Arguments :
         - `module` (str) : selected augmentation module, see [augmentation module section](../modules/augmentation.md) for supported augmentation modules
         - `args` (dict) : the corresponding arguments for selected `module`
 
+---
+
+## Dataloader
+
+Flagged with `dataloader` key (dict) in the experiment file. This is the configurations of dataloader to be used in the training. E.g. :
+
+```yaml
+dataloader: {
+        module: PytorchDataLoader,
+        args: {
+            num_workers: 0,
+            batch_size: 16,
+            shuffle: True,
+        },
+    }
+```
+
+Arguments :
+
 - `dataloader` (dict) : denotes the configuration of the dataset iterator
 
-    - `dataloader` (str) : specify the dataloader module which will be used, supported data loader modules is provided at [data loader module section](../modules/data_loader.md)
-    - `args` (dict) : the corresponding arguments for selected `dataloader`
+    - `module` (str) : specify the dataloader module to be used, supported data loader modules is provided at [data loader module section](../modules/data_loader.md)
+    - `args` (dict) : the corresponding arguments for selected `module`
 
 ---
 
@@ -174,7 +199,7 @@ trainer: {
             weight_decay: 0.0005
         }
     },
-    scheduler: {
+    lr_scheduler: {
         method: CosineLRScheduler,
         args: {
             t_initial: 200,
@@ -196,7 +221,6 @@ trainer: {
     },
     epoch: 200,
     save_epoch: 1,
-    device: 'cuda:0',
     driver: {
         module: DefaultTrainer,
         args: {
@@ -213,7 +237,7 @@ Arguments :
     - `method` (str) : optimization method identifier, currently support all optimizers supported by Pytorch listed in [this link](https://pytorch.org/docs/stable/optim.html#algorithms)
     - `args` (dict) : the corresponding arguments to the respective optimizer `method`
 
-- `scheduler` (dict) : methods to adjust the learning rate based on the number of epochs
+- `lr_scheduler` (dict) : methods to adjust the learning rate based on the number of epochs
 
     - `method` (str) : scheduler method identifier, supported scheduler methods is provided at [scheduler section](../modules/scheduler.md)
     - `args` (dict) : the corresponding arguments to the respective scheduler `method`
@@ -236,7 +260,6 @@ Arguments :
 
 - `epoch` (int) : number of dataset iteration (epoch) being done on the training dataset. 1 epoch is 1 dataset iteration
 - `save_epoch` (int) : number of epoch before a model checkpoint being saved for backup
-- `device` (str) : set the training device, whether using CPU : `cpu` or cuda GPU : `cuda`. you can add `:{i}` to `cuda` to point for specific GPU index `{i}`, E.g. `cuda:0` for GPU index 0, `cuda:1` for GPU index 1
 - `driver` (dict) : the mechanism on how a training is done in a loop ( iterated over `n` epochs ). Sub-arguments :
 
     - `module` (str) : training driver identifier. Supported training driver methods is provided at [training driver section](../modules/train_driver.md)
