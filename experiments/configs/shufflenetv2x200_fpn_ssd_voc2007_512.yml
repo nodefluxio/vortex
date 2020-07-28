@@ -65,6 +65,25 @@ dataset : {
       image_set : train,
       ## TODO : dont use list, support tuple
     },
+    augmentations : [{
+      module : albumentations,
+      args : {
+        transforms : [
+          {compose : OneOf, args : {
+            transforms : [{transform : RandomBrightnessContrast, args : {p : 0.5}},
+                          {transform : RandomSnow, args : {p : 0.5}}
+            ],
+            p : 0.5}},
+          {transform : HorizontalFlip, args : {p : 0.5}},
+          {transform : RandomScale, args : {scale_limit : 0.3, p : 0.5,}}
+        ],
+        bbox_params : {
+          min_visibility : 0.0,
+          min_area : 0.0
+        },
+        visual_debug : False
+      }
+    }]
   },
   eval : {
     name: VOC2007DetectionDataset,
@@ -74,32 +93,13 @@ dataset : {
   },
 }
 dataloader : {
-  module : DefaultLoader,
+  module : PytorchDataLoader,
   args : {
     num_workers : 0,
     batch_size : 4,
     shuffle : True,
   },
 }
-augmentations : [{
-  module : albumentations,
-  args : {
-    transforms : [
-      {compose : OneOf, args : {
-        transforms : [{transform : RandomBrightnessContrast, args : {p : 0.5}},
-                      {transform : RandomSnow, args : {p : 0.5}}
-        ],
-        p : 0.5}},
-      {transform : HorizontalFlip, args : {p : 0.5}},
-      {transform : RandomScale, args : {scale_limit : 0.3, p : 0.5,}}
-    ],
-    bbox_params : {
-      min_visibility : 0.0,
-      min_area : 0.0
-    },
-    visual_debug : False
-  }
-}]
 ## optional field for validation step
 validator: {
   ## passed to validator class

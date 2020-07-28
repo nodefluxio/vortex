@@ -22,7 +22,7 @@ dataset: {
   },
 }
 dataloader: {
-  module: DefaultLoader,
+  module: PytorchDataLoader,
   args: {
     num_workers: 4,
     batch_size: 256,

@@ -11,6 +11,22 @@ dataset: {
       train: True,
       download: True
     },
+    augmentations: [{
+      module: albumentations,
+      args: {
+        transforms: [
+          {
+            transform: RandomBrightnessContrast, 
+            args: {
+              p: 0.5, brightness_by_max: False,
+              brightness_limit: 0.1, contrast_limit: 0.1,
+            }
+          },
+          {transform: HueSaturationValue, args: {}},
+          {transform: HorizontalFlip, args: {p: 0.5}},
+        ]
+      }
+    }]
   },
   eval: {
     name: CIFAR100,
@@ -22,29 +38,13 @@ dataset: {
   },
 }
 dataloader: {
-  module: DefaultLoader,
+  module: PytorchDataLoader,
   args: {
     num_workers: 0,
     batch_size: 32,
     shuffle: True,
   },
 }
-augmentations: [{
-  module: albumentations,
-  args: {
-    transforms: [
-      {
-        transform: RandomBrightnessContrast, 
-        args: {
-          p: 0.5, brightness_by_max: False,
-          brightness_limit: 0.1, contrast_limit: 0.1,
-        }
-      },
-      {transform: HueSaturationValue, args: {}},
-      {transform: HorizontalFlip, args: {p: 0.5}},
-    ]
-  }
-}]
 model: {
   name: softmax,
   network_args: {

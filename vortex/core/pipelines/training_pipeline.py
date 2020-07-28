@@ -181,16 +181,9 @@ class TrainingPipeline(BasePipeline):
         else:
             raise RuntimeError("Dataloader config field not found in config.")
 
-        augment_config = None
-        if 'augmentations' in config:
-            augment_config = config.augmentations
-        elif 'augmentations' in config.dataset.train:
-            augment_config = config.dataset.train.augmentations
-
         self.dataloader = create_dataloader(dataloader_config=dataloader_config,
                                             dataset_config=config.dataset,
                                             preprocess_config=config.model.preprocess_args,
-                                            train_augment_config=augment_config,
                                             collate_fn=self.model_components.collate_fn,
                                             stage='train')
         self.trainer = engine.create_trainer(

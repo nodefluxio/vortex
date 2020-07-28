@@ -208,6 +208,8 @@ def __dataset_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
             docstring='train dataset name')
         dataset_train_args = ExperimentNode('args', parent=dataset_train, required=train_required, 
             docstring='arguments to be passed to dataset class')
+        dataset_train_augs = ExperimentNode('augmentations', parent=dataset_train, required=False, 
+            docstring='augmentations for train dataset')
     if add_eval:
         dataset_eval = ExperimentNode('eval', parent=dataset, required=eval_required, 
             docstring='validation dataset')
@@ -412,15 +414,10 @@ def _check_deprecation(config):
         warnings.warn("'config.dataset.dataloader.dataloader' is now changed to "
             "'config.dataloader.module'")
         config.dataloader.module = config.dataloader.pop('dataloader')
-    if config.dataloader.module.lower() == 'dataloader':
+    if 'dataloader' in config and config.dataloader.module.lower() == 'dataloader':
         warnings.warn("'DataLoader' module in 'config.dataloader.module' is now "
-            "changed to 'DefaultLoader'")
-        config.dataloader.module = "DefaultLoader"
-
-    if 'dataset' in config and 'augmentations' in config.dataset.train and 'augmentations' not in config:
-        warnings.warn("'config.dataset.augmentations' is now moved to "
-            "'config.augmentations'")
-        config.augmentations = config.dataset.train.pop('augmentations')
+            "changed to 'PytorchDataLoader'")
+        config.dataloader.module = "PytorchDataLoader"
 
     if 'trainer' in config and 'scheduler' in config.trainer:
         warnings.warn("'config.trainer.scheduler' is now changed to "

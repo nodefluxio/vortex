@@ -94,9 +94,9 @@ def create_runtime_model(model_path : Union[str, Path],
 
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
-                   stage : str,
-                   train_augment_config: EasyDict = None):
+                   stage : str):
     dataset_config = deepcopy(dataset_config)
+    augmentations = []
     if stage == 'train' :
         if 'name' in dataset_config.train:
             dataset = dataset_config.train.name
@@ -106,10 +106,8 @@ def create_dataset(dataset_config : EasyDict,
             raise RuntimeError("Dataset name in 'dataset_config.train.name' is not set")
         dataset_args = dataset_config.train.args
 
-        if train_augment_config is None:
-            augmentations = []
-        else:
-            augmentations = train_augment_config
+        if 'augmentations' in dataset_config.train:
+            augmentations = dataset_config.train.augmentations
     elif stage == 'validate':
         if 'name' in dataset_config.eval:
             dataset = dataset_config.eval.name
@@ -118,7 +116,6 @@ def create_dataset(dataset_config : EasyDict,
         else:
             raise RuntimeError("Dataset name in 'dataset_config.eval.name' is not set "
                 "in dataset_config ({}).".format(dataset_config))
-        augmentations = []
         dataset_args = dataset_config.eval.args
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
@@ -130,7 +127,6 @@ def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str,
-                      train_augment_config: EasyDict = None,
                       collate_fn : Union[Callable,str,None] = None):
 
     dataloader_config = deepcopy(dataloader_config)
@@ -138,7 +134,7 @@ def create_dataloader(dataloader_config : EasyDict,
     preprocess_config = deepcopy(preprocess_config)
 
     dataset = create_dataset(dataset_config=dataset_config, preprocess_config=preprocess_config, 
-                             train_augment_config=train_augment_config, stage=stage)
+                             stage=stage)
     if isinstance(collate_fn, str):
         try:
             collater_args = dataloader_config.collater.args
@@ -159,8 +155,8 @@ def create_dataloader(dataloader_config : EasyDict,
             "in dataloader_config ({}).".format(dataloader_config))
     dataloader_args = dataloader_config.args
 
-    if not dataloader_module in ('DataLoader', 'DefaultLoader'):
-        RuntimeError("Dataloader module '{}' is not supported, currently only 'DataLoader'")
+    if not dataloader_module in ('DataLoader', 'PytorchDataLoader'):
+        RuntimeError("Dataloader module '{}' is not supported, currently only 'PytorchDataLoader'")
     return DataLoader(dataset, collate_fn=collate_fn, **dataloader_args)
 
 def create_experiment_logger(config : EasyDict):

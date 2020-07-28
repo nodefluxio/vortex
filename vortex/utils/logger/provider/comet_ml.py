@@ -21,10 +21,7 @@ class CometMLLogger(ExperimentLogger):
         if config is not None:
             hyper_params['model'] = config.model
             hyper_params['trainer'] = config.trainer
-            if  'augmentations' in config:
-                hyper_params['augmentations'] = config.augmentations
-            elif 'augmentations' in config.dataset.train:
-                hyper_params['augmentations'] = config.dataset.train.augmentations
+            hyper_params['augmentations'] = config.dataset.train.augmentations
         self.experiment.log_parameters(flatten(hyper_params, reducer='path'))
 
     def log_on_step_update(self,metrics_log : dict):
