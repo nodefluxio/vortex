@@ -1,7 +1,3 @@
-```python
-%matplotlib inline
-```
-
 Integrating Custom Detection Model to Vortex
 =================================================
 This tutorial shows how to create custom detection model and integrate to `vortex`.
@@ -37,6 +33,8 @@ ONNXPipeline = vortex.core.pipelines.IRPredictionPipeline
 TorchScriptPipeline = vortex.core.pipelines.IRPredictionPipeline
 np.set_printoptions(precision=2, suppress=True)
 ```
+
+---
 
 1. Model Architecture
 ---------------------
@@ -169,6 +167,8 @@ def box_cxcywh_to_xyxy(x):
     return torch.stack(b, dim=1)
 ```
 
+---
+
 2. Create PostProcess module
 ----------------------------
 
@@ -235,6 +235,8 @@ class DETRPostProcess(nn.Module):
             results.append(result)
         return tuple(results)
 ```
+
+---
 
 3. Registering our model to vortex
 ----------------------------------
@@ -319,6 +321,8 @@ def create_model_components(
     return components
 ```
 
+---
+
 4. Integration with vortex CLI
 ------------------------------
 
@@ -332,6 +336,8 @@ our entry-point (see `cli.py`)
 def cli():
     vortex.vortex_cli.main()
 ```
+
+---
 
 5. Demo program
 ---------------

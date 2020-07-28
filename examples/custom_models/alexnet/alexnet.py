@@ -1,7 +1,7 @@
 """
 Integrating Custom Classification Model to Vortex
 =================================================
-This tutorial shows how to create custom model and integrate to `vortex`.
+This tutorial shows how to develop your own model and integrate it to `vortex`.
 The tutorial consists of 5 steps:
 
 1. Define model architecture
@@ -25,7 +25,7 @@ import vortex.networks.modules as vortex_modules
 # 
 # We first define our model, in this case we will define AlexNet model
 # that can be integrated to `vortex`. In order to do that, our model needs
-# olny to have `task` and `output_format` member variables.
+# only to have `task` and `output_format` member variables.
 #
 # For the sake of simplicity, we will reuse `AlexNet` from `torchvision` by
 # instantiate `torchvision`'s `AlexNet` and add the required member variable
@@ -206,9 +206,9 @@ if __name__=='__main__':
 # with our custom model registered we need to invoke python, for example
 # ```Shell
 # # run hyperparam optimization experiment
-# python alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
+# python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
 # ```
 # ```Shell
 # # run training experiment
-# python alexnet.py train --config cifar10.yml
+# python3 alexnet.py train --config cifar10.yml
 # ```

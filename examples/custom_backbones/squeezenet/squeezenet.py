@@ -1,8 +1,8 @@
 """
 Implements Custom Backbone Module in Vortex
 ===========================================
-This tutorial shows how to create custom backbone module and integrate to `vortex`.
-The tutorial consists of 5 steps:
+This tutorial shows how to develop your own backbone module and integrate it to `vortex`.
+The tutorial consists of 4 steps:
 
 1. Vortex Backbone Module
 2. Registering *builder* function
@@ -49,7 +49,7 @@ import vortex.networks.modules as vortex_modules
 # ```
 # get_backbone(model_name, pretrained, feature_type, **kwargs) -> Backbone
 # ```
-# where `model_name` is `str` representing the requested model, 
+# where `model_name` is `str` representing the identifier of requested backbone model, 
 # `pretrained` may be `str` or path-like depending on the caller, 
 # and `feature_type` is `str` for customization point if necessary.
 #
@@ -68,19 +68,19 @@ def get_backbone(model_name, pretrained=False, feature_type='tri_stage_fpn', n_c
 # 3. Pretrained weights and module restructure *hack*
 # ---------------------------------------------------
 # 
-# Often times, we do not want to develop from scratch but use existing
+# In many cases, we do not want to develop from scratch but use existing
 # module instead. But, this raises an issue since not all existing module
 # are the same structure and dynamic nature of pytorch scripts make us
 # difficult to reuse module and pretrained weights.
 # 
-# To be able reuse pretrained weights, we could first load the original
+# To be able to reuse pretrained weights, we could first load the original
 # structure of the network and then load the `state_dict` and then
 # restructure filter parts of the network to `nn.Sequential` 
 # (as required by `Backbone`). We do this *hack* on our *builder* function.
 # 
 # Since we know that available pretrained model is trained on ImageNet, and
-# we want to use pretrained weights, let's set number of classes to 1000
-# before loading the model.
+# we want to use pretrained weights, let's set the initial number of classes 
+# to 1000 before loading the model.
 
     # we use `n_classes` but torch vision uses `num_classes`
     kwargs.update({'num_classes': n_classes})
@@ -97,11 +97,11 @@ def get_backbone(model_name, pretrained=False, feature_type='tri_stage_fpn', n_c
         raise RuntimeError("model f{model_name} not supported")
 
 ######################################################################
-# Upon instantiate model, the next step is to prepare feature extractor.
+# After the model initialization, the next step is to prepare feature extractor.
 # We can use `feature_type` as customization point if specific feature
 # extractor are required, for example, you want to return feature from
 # activation input instead of activation output, etc. Current 
-# implementation needs `'tri_stage_fpn'` # and `'classifier'` 
+# implementation needs `'tri_stage_fpn'` and `'classifier'` 
 # to be defined. For `'tri_stage_fpn'` we need to split
 # the `feature` to five stages. For `'classifier'`, we need to
 # provide both `feature` and `classifier`.
@@ -182,5 +182,5 @@ if __name__=='__main__':
 # it is unavailable from `vortex` command-line, to properly run experiments
 # with our custom model registered we need to invoke python, for example
 # ```Shell
-# python squeezenet.py train --config cifar10.yml
+# python3 squeezenet.py train --config cifar10.yml
 # ```

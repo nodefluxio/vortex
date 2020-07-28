@@ -6,9 +6,10 @@ nav:
         - 'Experiment File Configuration' : 'user-guides/experiment_file_config.md'
         - 'HypOpt File Configuration' : 'user-guides/hypopt_file_config.md'
         - 'Pipelines' : 'user-guides/pipelines.md'
-        - 'Custom Models: Classifications' : 'user-guides/alexnet.md'
-        - 'Custom Backbone Module: SqueezeNet' : 'user-guides/squeezenet.md'
-        - 'Custom Models: Object Detection' : 'user-guides/detr.md'
+    - Developer Guides :
+        - 'Custom Backbone Integration' : 'developer-guides/custom_backbone_integration.md'
+        - 'Custom Model Integration : Classification' : 'developer-guides/custom_model_integration_classification.md'
+        - 'Custom Model Integration : Detection' : 'developer-guides/custom_model_integration_detection.md'
     - Modules :
         - 'Built-in Dataset' : 'modules/builtin_dataset.md'
         - 'Logging Provider' : 'modules/logging_provider.md'
