@@ -229,7 +229,7 @@ class PytorchValidationPipeline(BaseValidationPipeline):
         else:
             filename = weights
         warnings.warn('loading state dict from : %s' % str(filename))
-        self.model = create_model(config.model,state_dict=filename)
+        self.model = create_model(config.model,state_dict=filename,stage='validate')
         self.filename_suffix = '_validation_{}'.format('_'.join(self.backends))
 
 class IRValidationPipeline(BaseValidationPipeline):

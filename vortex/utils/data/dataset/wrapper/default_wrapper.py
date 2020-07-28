@@ -1,73 +1,58 @@
 from pathlib import Path
 from easydict import EasyDict
-from collections import namedtuple
-from multipledispatch import dispatch
 from typing import Dict, List, Union, Callable, Tuple
 
 import cv2
 import torch
-import random
 import numpy as np
+# import torchvision.transforms.functional as tf
+from .....networks.modules.preprocess.normalizer import to_tensor,normalize
 import albumentations.core.composition as albumentations_compose
 import albumentations.augmentations.transforms as albumentations_tf
-from vortex.networks.modules.preprocess.normalizer import to_tensor,normalize
 from PIL import Image
-
-import os
-import sys
 import warnings
 
-from ..augment import create_transform
-from .dataset import get_base_dataset
+from ...augment import create_transform
+from .basic_wrapper import BasicDatasetWrapper
 
-KNOWN_DATA_FORMAT = ['class_label', 'bounding_box', 'landmarks']
-
-
-class DatasetWrapper:
+class DefaultDatasetWrapper(BasicDatasetWrapper):
     """ Intermediate wrapper for external dataset.
 
     This module is used to build external dataset and act as a dataset iterator
     which also applies preprocess stages for the output of external dataset.
 
+    Automatically read image file using opencv if the provided 'image' data is image path
+
     The image input will automatically be resized to desired `input_size` from
     `preprocess_args` retrieved from config.
+
 
     Args:
         dataset (str): external dataset name to be built. see available (###input context here).
         stage (str): stages in which the dataset be used, valid: `train` and `validate`.
         preprocess_args (EasyDict): pre-process options for input image from config, see (###input context here).
         augments (sequence, or callable): augmentations to be applied to the output of external dataset, see (###input context here).
-        annotation_name (EasyDict): (###unused), see (###input context here).
     """
 
     def __init__(self, dataset: str, stage: str, preprocess_args: Union[EasyDict, dict],
                  augmentations: Union[Tuple[str, dict], List, Callable] = None,
-                 dataset_args: Union[EasyDict, dict] = {}, annotation_name='bboxes'):
-
-        self.stage = stage
-        self.preprocess_args = preprocess_args
-        self.dataset = get_base_dataset(dataset, dataset_args=dataset_args)
-        if not 'data_format' in self.dataset.__dict__.keys():
-            raise RuntimeError("expects dataset `{}` to have `data_format` field : dict<str,dict> "
-                "explaining data format (e.g. bounding_box, class_label, landmarks etc)".format(dataset))
-        ## make class_names optional
-        # if not 'class_names' in self.dataset.__dict__.keys():
-        #     raise RuntimeError("expects dataset `{}` to have `class_names` field : list<str>, explaining "
-        #         "class string names which also map to its index positioning in the list. E.g. "
-        #         "self.class_names = ['cat','dog'] means class_label = 0 is 'cat' ".format(dataset))
-        self.class_names = None if not hasattr(self.dataset, 'class_names') else self.dataset.class_names
-        self.data_format = EasyDict(self.dataset.data_format)
-        # Data format standard check
-        self.data_format = check_data_format_standard(self.data_format)
-
+                 dataset_args: Union[EasyDict, dict] = {}):
+        super().__init__(dataset=dataset,
+                         stage=stage,
+                         preprocess_args=preprocess_args,
+                         augmentations=augmentations,
+                         dataset_args=dataset_args
+                         )
         # Configured computer vision augmentation initialization
         self.augments = None
-        if stage == 'train' and augmentations is not None:
+
+        if stage == 'train' and self.augmentations_list is not None:
             self.augments = []
-            if not isinstance(augmentations, List):
-                raise TypeError('expect augmentations config type as a list, got %s' % type(augmentations))
-            for augment in augmentations:
+            for augment in self.augmentations_list:
                 module_name = augment.module
+                if module_name == 'nvidia_dali':
+                    raise RuntimeError('Nvidia DALI augmentations cannot be used with `PytorchDataLoader`, must be used with \
+                                        `DALIDataLoader`. ')
                 module_args = augment.args
                 if not isinstance(module_args, dict):
                     raise TypeError("expect augmentation module's args value to be dictionary, got %s" % type(module_args))
@@ -75,6 +60,7 @@ class DatasetWrapper:
                 tf_kwargs['data_format'] = self.data_format
                 augments = create_transform(module_name, **tf_kwargs)
                 self.augments.append(augments)
+
         # Standardized computer vision augmentation initialization, longest resize and pad to square
         standard_tf_kwargs = EasyDict()
         standard_tf_kwargs.data_format = self.data_format
@@ -88,23 +74,10 @@ class DatasetWrapper:
         self.standard_augments = create_transform(
             'albumentations', **standard_tf_kwargs)
 
-        self.preprocess_args = preprocess_args
-        self.annotation_name = annotation_name
-        if self.stage == 'train':
-            assert hasattr(self.preprocess_args, "input_size"), "at stage 'train', 'input_size' is mandatory for preprocess, please specify 'input_size' at 'preprocess_args'"
-            assert hasattr(self.preprocess_args, "input_normalization"), "at stage 'train', 'input_normalization' is mandatory for preprocess, please specify 'input_normalization' at 'preprocess_args'"
-            assert all([key in self.preprocess_args.input_normalization.keys() for key in ['std', 'mean']]), "at stage 'train', please specify 'mean' and 'std' for 'input_normalization'"
-            assert isinstance(self.preprocess_args.input_size, int)
-
-    def __len__(self):
-        return len(self.dataset)
-
     def __getitem__(self, index: int):
-        image, target = self.dataset[index]
+        image, target = super().__getitem__(index)
         # Currently support decoding image file provided it's string path using OpenCV (BGR format), for future roadmap if using another decoder
         if isinstance(image, str):
-            if not Path(image).is_file():
-                raise RuntimeError("Image file at '%s' not found!! Please check!" % (image))
             image = cv2.imread(image)
 
         # If dataset is PIL Image, convert to numpy array, support for torchvision dataset
@@ -116,19 +89,6 @@ class DatasetWrapper:
             pass
         else:
             raise RuntimeError("Unknown return format of %s" % type(image))
-
-        # Support if provided target only an int, convert to np.array
-        # Classification case doesn't need any array slicing so constructed np array only array of 1 is enough
-        if isinstance(target, int):
-            target = np.array([target])
-
-            if self.dataset.data_format['class_label'] is not None:
-                warnings.warn("'int' type target should be paired with 'class_label' data_format with value None. Updating config..")
-                self.dataset.data_format['class_label']=None
-
-        # Target must be numpy array
-        if not isinstance(target, np.ndarray):
-            raise RuntimeError("Unknown target return of %s" % type(target))
 
         # Configured computer vision augment -- START
         if self.stage == 'train' and self.augments is not None:
@@ -169,76 +129,6 @@ class DatasetWrapper:
 
         data = image, target
         return data
-
-
-def check_data_format_standard(data_format: EasyDict):
-    def _convert_indices_to_list(indices: EasyDict):
-        '''
-        Convert 'indices' in dictionary dict with 'start' and 'end' keys to list of int
-        '''
-        converted_indices = [*range(indices.start, indices.end+1)]
-        return converted_indices
-    if data_format:
-        # Check if data_format keys is acceptable
-        if not all([key in KNOWN_DATA_FORMAT for key in data_format]):
-            raise RuntimeError("Unknown data format found! Please check! Known data format = %s, found %s" % (
-                KNOWN_DATA_FORMAT, data_format.keys()))
-        for key in data_format:
-            # Check if data_format key value is None other than 'class_label'
-            if data_format[key] is None and key != 'class_label':
-                raise RuntimeError("Only 'class_label' data format can contain None value, found '%s' contain None" % key)
-            if data_format[key] is not None:
-                # Check if 'indices' exist in each data_format
-                if 'indices' not in data_format[key]:
-                    raise RuntimeError("'indices' key not found in '%s', please check!, found %s" % (key, data_format[key].keys()))
-                # Check if data_format 'indices' type must be a list or a dict
-                if type(data_format[key].indices) not in [list, EasyDict]:
-                    raise RuntimeError("Expected '%s' 'indices' value type as list or dict, found %s" % (key, type(
-                        data_format[key].indices)))
-                # If 'indices' is dict, check for 'start' and 'end' keys
-                if isinstance(data_format[key].indices, EasyDict):
-                    # Convert 'indices' to list of int
-                    if 'start' in data_format[key].indices and 'end' in data_format[key].indices:
-                        data_format[key].indices = _convert_indices_to_list(
-                            data_format[key].indices)
-                    else:
-                        raise RuntimeError("Expected '%s' 'indices' in dictionary type contain 'start' and 'end' keys, found %s please check!!" % (key, data_format[key].indices.keys()))
-            # Bounding box data format standard checking
-            if key == 'bounding_box':
-                # Assume one class object detection if 'class_label' not found
-                if 'class_label' not in data_format:
-                    data_format.class_label = None
-                # Check 'indices' length, must exactly 4 represent x,y,w,h
-                if len(data_format.bounding_box.indices) != 4:
-                    raise RuntimeError("'bounding_box' 'indices' data format must have length of 4!, found %s length of %i" % (
-                        data_format.bounding_box.indices, len(data_format.bounding_box.indices)))
-
-            # Landmarks data format standard checking
-            if key == 'landmarks':
-                # Check 'indices' length, must be in even number
-                if len(data_format.landmarks.indices) % 2 != 0:
-                    raise RuntimeError("'landmarks' 'indices' length must be an even number to be sliced equally into x,y coords! Found length of the 'indices' equal to %i ! Please check !" % (
-                        len(data_format.landmarks.indices)))
-                # Check 'asymm_pairs' format
-                if 'asymm_pairs' in data_format.landmarks:
-                    # Check type
-                    if not isinstance(data_format.landmarks.asymm_pairs, list):
-                        raise RuntimeError("'landmarks' 'asymm_pairs' value type must be a list!, found %s" % type(
-                            data_format.landmarks.asymm_pairs))
-                    # Check if 'asymm_pairs' contain empty list
-                    if len(data_format.landmarks.asymm_pairs) == 0:
-                        raise RuntimeError("'landmarks' 'asymm_pairs' contain 0 pairs! Please check!")
-                    # Check pairs type inside the list
-                    for pair in data_format.landmarks.asymm_pairs:
-                        if not isinstance(pair, list):
-                            raise RuntimeError("'landmarks' 'asymm_pairs' pairs value type inside the list must be a list!, found %s" % type(pair))
-                        if len(pair) != 2 or not all([isinstance(value, int) for value in pair]):
-                            raise RuntimeError("'landmarks' 'asymm_pairs' pairs value type inside the list must be list of int with the length of 2!, found %s" % pair)
-
-        return data_format
-    else:
-        raise RuntimeError('Empty data_format dictionary! Please check!')
-
 
 def check_and_fix_coordinates(image: np.ndarray, target: np.ndarray, data_format: EasyDict):
     # Check bounding box coordinates
@@ -417,22 +307,3 @@ def check_and_fix_coordinates(image: np.ndarray, target: np.ndarray, data_format
             # cv2.waitKey(0)
             # # VIZ DEBUG
     return image, target
-
-
-# def create_dataset(dataset: str, stage: str, preprocess_args=None,
-#                    dataset_args=None, augmentations=None):
-#     """ Create external dataset with `DatasetWrapper` module.
-
-#     Args:
-#         dataset (str): external dataset name, see available (###input context here).
-#         stage (str): stages in which the dataset be used, valid: `train` and `validation`.
-#         dataset_args (dict): additional argument for dataset object building.
-#         augmentations: augmentation config.
-#         preprocess_args: preprocess arguments from config.
-
-#     Returns:
-#         DatasetWrapper: external dataset that built with `DatasetWrapper` module.
-#     """
-
-#     return DatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_args,
-#                           augmentations=augmentations, dataset_args=dataset_args)

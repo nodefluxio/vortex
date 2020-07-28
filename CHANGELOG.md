@@ -32,12 +32,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - model checkpoint update script in `script/update_model.py`
 - Now possible to access `class_names` and `input_specs` attributes from both `PytorchPredictionPipeline.model` and `IRPredictionPipeline.model`
 - Support for adding external model from user space
+- Added `DALIDataLoader` and `nvidia_dali` augmentation module
+  - `nvidia_dali` augmentation module must be used with `DALIDataLoader`
+  - `DALIDataLoader` can use other augmentation module, however if `nvidia_dali` augmentation module if specified in the experiment file, it must be in the first order
+  - `DALIDataLoader` utilize `ray` library to paralelize external module augmentation for each batch sample
 
 ### Changed
 
 - reading `class_names` attribute from checkpoint in prediction and export pipeline
 - `class_names` in dataset, prediction, and export is optional. If not specified or `None`, will create a numbered class label `[class_0, class_1, ..., class_n]`
 - `class_names` moved from `PytorchPredictionPipeline.class_names` to `PytorchPredictionPipeline.model.class_names` ( also applied to `IRPredictionPipeline`)
+- Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
 
 ## v0.1.0
 

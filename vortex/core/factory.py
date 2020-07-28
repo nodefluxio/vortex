@@ -1,7 +1,6 @@
 import os
 import sys
 import logging
-import warnings
 import torch
 
 from copy import deepcopy
@@ -9,10 +8,10 @@ from pathlib import Path
 from easydict import EasyDict
 from typing import Union, Callable, Type
 from collections import OrderedDict
-from torch.utils.data.dataloader import DataLoader
 
 from vortex.networks.models import create_model_components
-from vortex.utils.data.dataset.wrapper import DatasetWrapper
+from vortex.utils.data.loader import create_loader,wrapper_format
+from vortex.utils.data.dataset.wrapper import BasicDatasetWrapper,DefaultDatasetWrapper
 from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
@@ -97,8 +96,10 @@ def create_runtime_model(model_path : Union[str, Path],
 
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
-                   stage : str):
+                   stage : str,
+                   wrapper_format : str = 'default'):
     dataset_config = deepcopy(dataset_config)
+    
     if stage == 'train' :
         dataset = dataset_config.train.dataset
         try:
@@ -113,18 +114,34 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
-    return DatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+    if wrapper_format=='default':
+        return DefaultDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
                           augmentations=augmentations, dataset_args=dataset_args)
+    elif wrapper_format=='basic':
+        return BasicDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+                          augmentations=augmentations, dataset_args=dataset_args)
+    else:
+        raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
 def create_dataloader(dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
-                      stage : str,
+                      stage : str = 'train',
                       collate_fn : Union[Callable,str,None] = None ):
 
     dataset_config = deepcopy(dataset_config)
     preprocess_config = deepcopy(preprocess_config)
 
-    dataset = create_dataset(dataset_config=dataset_config, stage='train', preprocess_config=preprocess_config)
+    dataloader_module = dataset_config.dataloader.dataloader
+
+    # For backward compatibility purpose
+    if dataloader_module=='DataLoader':
+        dataloader_module='PytorchDataLoader'
+    dataloader_module_args = dataset_config.dataloader.args
+
+    dataset = create_dataset(dataset_config=dataset_config, 
+                             stage=stage, 
+                             preprocess_config=preprocess_config,
+                             wrapper_format=wrapper_format[dataloader_module])
     if isinstance(collate_fn,str):
         collater_args = {}
         try:
@@ -137,11 +154,7 @@ def create_dataloader(dataset_config : EasyDict,
         pass
     else :
         raise TypeError('Unknown type of "collate_fn", should be in the type of string, Callable, or None. Got {}'%type(collate_fn))
-    dataloader_module = dataset_config.dataloader
-    dataloader_module_args = dataset_config.dataloader.args
-    if not dataloader_module == 'DataLoader':
-        RuntimeError("dataloader %s not supported, currently only support pytorch DataLoader")
-    dataloader = DataLoader(dataset, collate_fn=collate_fn, **dataloader_module_args)
+    dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_module_args)
     return dataloader
 
 def create_experiment_logger(config : EasyDict):

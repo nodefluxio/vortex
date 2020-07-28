@@ -283,7 +283,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             weights = Path(experiment_directory) / ('{}.pth'.format(config.experiment_name))
             if not os.path.isfile(weights):
                 raise RuntimeError("Default weight in {} is not exist, please provide weight "
-                    "path using '--weights' argument.".format(str(filename)))
+                    "path using '--weights' argument.".format(str(weights)))
         ckpt = torch.load(weights)
         state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
