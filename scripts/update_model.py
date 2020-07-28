@@ -14,7 +14,7 @@ def update_checkpoints(config, model_paths, override=False):
     assert isinstance(model_paths, list) and isinstance(model_paths[0], str)
     assert isinstance(config, (str, edict))
 
-    model_components = create_model(model_config=config.model)
+    model_components = create_model(model_config=config.model,stage='validate')
     trainer = engine.create_trainer(
         config.trainer, experiment_logger=None,
         criterion=model_components.loss,

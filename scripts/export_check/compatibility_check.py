@@ -231,7 +231,7 @@ def export_check(model_name : str, model_arg : dict, export_arg : dict, suffix :
     output_directory = Path(test_output_directory)
     output_directory.mkdir(exist_ok=True,parents=True)
     model_config = create_model_cfg(model_name, model_arg)
-    model_components = create_model(model_config)
+    model_components = create_model(model_config,stage='validate')
     ## TODO : remove
     if model_name in tmp_output_format :
         predictor_args['metainfo'] = tmp_output_format[model_name]
@@ -258,7 +258,7 @@ def eval_check(runtime : str, model_name : str, model_arg : dict, export_arg : d
     output_directory = Path(test_output_directory)
     output_directory.mkdir(exist_ok=True,parents=True)
     model_config = create_model_cfg(model_name, model_arg)
-    model_components = create_model(model_config)
+    model_components = create_model(model_config,stage='validate')
     experiment_name = get_test_experiment_name(model_name, model_arg.network_args.backbone, suffix)
     onnx_model_path = output_directory / '{}.onnx'.format(experiment_name)
     pth_path = output_directory / '{}.pth'.format(experiment_name)

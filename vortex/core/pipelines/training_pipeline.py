@@ -164,13 +164,23 @@ class TrainingPipeline(BasePipeline):
             self.experiment_logger=None
 
         # Training components creation
+
         if 'device' in config:
             self.device = config.device
         elif 'device' in config.trainer:
             self.device = config.trainer.device
         else:
             raise RuntimeError("'device' field not found in config. Please specify properly in main level.")
-        self.model_components = create_model(model_config=config.model, state_dict=state_dict)
+
+        model_components = create_model(model_config=config.model, state_dict=state_dict)
+        if not isinstance(model_components, EasyDict):
+            model_components = EasyDict(model_components)
+        # not working for easydict
+        # model_components.setdefault('collate_fn',None)
+        if not 'collate_fn' in model_components:
+            model_components.collate_fn = None
+        self.model_components = model_components
+
         self.model_components.network = self.model_components.network.to(self.device)
         self.criterion = self.model_components.loss.to(self.device)
 
@@ -411,7 +421,6 @@ class TrainingPipeline(BasePipeline):
             checkpoint["class_names"] = self.dataloader.dataset.class_names
         if self.trainer.scheduler is not None:
             checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
-
         filedir = self.run_directory
         if filename is None:
             filename = "{}.pth".format(self.config.experiment_name)

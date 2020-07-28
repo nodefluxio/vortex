@@ -26,6 +26,7 @@ from vortex.core.pipelines import (
     IRPredictionPipeline,
     HypOptPipeline
 )
+
 from vortex.core.factory import create_model
 from vortex.utils.parser.parser import load_config
 from vortex.utils.parser.loader import Loader
@@ -671,5 +672,5 @@ class TestHypOptPipeline:
         assert 'best_trial' in trial_result.keys()
         assert dump_report_path.exists()
     
-    #TODO add test_validation_obj
+    # TODO add test_validation_obj
         

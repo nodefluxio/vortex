@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - model checkpoint update script in `script/update_model.py`
 - Now possible to access `class_names` and `input_specs` attributes from both `PytorchPredictionPipeline.model` and `IRPredictionPipeline.model`
 - config deprecation checks for new config format
+- Support for adding external model from user space
+- Added `DALIDataLoader` and `nvidia_dali` augmentation module
+  - `nvidia_dali` augmentation module must be used with `DALIDataLoader`
+  - `DALIDataLoader` can use other augmentation module, however if `nvidia_dali` augmentation module if specified in the experiment file, it must be in the first order
+  - `DALIDataLoader` utilize `ray` library to paralelize external module augmentation for each batch sample
 
 
 ### Changed
@@ -48,6 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - change default dataloader module name from `DataLoader` to `PytorchDataLoader` in `config.dataloader.module`.
   - change `scheduler` to `lr_scheduler` in `config.trainer`.
   - change field `validation` to `validator` and move it from `config.trainer` to main `config`.
+- Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
+
 
 ## v0.1.0
 

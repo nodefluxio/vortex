@@ -7,7 +7,7 @@ dataset: {
   train: {
     name: ImageFolder,
     args: {
-      root: tests/test_dataset/train
+      root: tests/test_dataset/classification/train
     },
     augmentations: [{
       module: albumentations,
@@ -29,7 +29,7 @@ dataset: {
   eval: {
     name: ImageFolder,
     args: {
-      root: tests/test_dataset/val
+      root: tests/test_dataset/classification/val
     }
   },
 }

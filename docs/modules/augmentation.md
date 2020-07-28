@@ -82,3 +82,209 @@ Arguments :
 - `visual_debug` (bool) : used for visualization debugging. It uses ‘cv2.imshow’ to visualize every augmentations result. Disable it for training, default `False`
 
 ---
+
+## Nvidia DALI
+
+You can utilized integrated [Nvidia DALI](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/index.html) image augmentation library in Vortex. However, due to the low level nature of DALI's ops, we provide several high level transformation module that automatically handle label's transformation for several ops that's label sensitive.
+
+Similar like [`albumentations`](#albumentations) module, you can utilize Nvidia DALI augmentation by specifying the following configurations
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: HorizontalFlip, args: { p: 0.5 } },
+            { transform: RandomBrightnessContrast, args: { brightness_limit: 0.2, contrast_limit : 0.1, p: 0.5 } }
+        ]
+    }
+    }
+]
+```
+
+Arguments :
+
+- `transforms` (list[dict]) : list of augmentation transformation or compose to be sequentially added. Each member of the list is a dictionary with a sub-arguments shown below :
+
+    - `transform` (str) : denotes a transform function to be used. Supported transforms can be read in the following section
+    - `args` (dict) : the corresponding arguments for selected `transform`
+
+### Supported Augmentations
+
+The supported Nvidia DALI transforms listed in here :
+
+#### Horizontal Flip
+
+Flip image in horizontal axis. Supports coordinates sensitive labels
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: HorizontalFlip, args: { p: 0.5 } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+
+#### Vertical Flip
+
+Flip image in vertical axis. Supports coordinates sensitive labels
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: VerticalFlip, args: { p: 0.5 } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+
+#### Random Brightness Contrast
+
+Apply random brightness and contrast adjustment of the image
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: RandomBrightnessContrast, args: { p: 0.5 ,
+                                                           brightness_limit: 0.5,
+                                                           contrast_limit: 0.5
+                                                         } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+- `brightness_limit` (float,list) : Factor multiplier range for changing brightness in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5. 
+- `contrast_limit` (float,list) : Factor multiplier range for changing contrast in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+
+#### Random Jitter
+
+Perform a random Jitter augmentation. The output image is produced by moving each pixel by a random amount bounded by half of `nDegree` parameter (in both x and y dimensions).
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: RandomJitter, args: { p: 0.5 ,
+                                               nDegree: 2,
+                                             } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+- `nDegree` (int) : Each pixel is moved by a random amount in range [-nDegree/2, nDegree/2]. Defaults to 2.
+
+#### Random Hue Saturation Value
+Apply random HSV manipulation. To change hue, saturation and/or value of the image, pass corresponding coefficients. Keep in mind, that hue has additive delta argument, while for saturation and value they are multiplicative.
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: RandomHueSaturationValue, args: { p: 0.5 ,
+                                                           hue_limit: 20,
+                                                           saturation_limit: 0.5,
+                                                           value_limit: 0.5
+                                                         } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+- `hue_limit` (float,list) : Range for changing hue in [min,max] value format. If provided as a single float, the range will be (-limit, limit). Defaults to 20..
+- `saturation_limit` (float,list) : Factor multiplier range for changing saturation in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+- `value_limit` (float,list) : Factor multiplier range for changing value in [min,max] value format. If provided as a single float, the range will be 1 + (-limit, limit). Defaults to 0.5.
+
+#### Random Water
+Apply random water augmentation (make image appear to be underwater). Can not support coordinates sensitive labels
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: RandomWater, args: { p: 0.5 ,
+                                              ampl_x: 10.0,
+                                              ampl_y: 10.0,
+                                              freq_x: 0.049087,
+                                              freq_y: 0.049087,
+                                              phase_x: 0.0,
+                                              phase_y: 0.0,
+                                            } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+- `ampl_x` (float): Amplitude of the wave in x direction. Defaults to 10.0.
+- `ampl_y` (float): Amplitude of the wave in y direction. Defaults to 10.0.
+- `freq_x` (float): Frequency of the wave in x direction. Defaults to 0.049087.
+- `freq_y` (float): Frequency of the wave in y direction. Defaults to 0.049087.
+- `phase_x` (float): Phase of the wave in x direction. Defaults to 0.0.
+- `phase_y` (float): Phase of the wave in y direction. Defaults to 0.0.
+
+#### Random Rotate
+Apply random rotation to the image, currently not support coordinates sensitive labels
+
+```yaml
+augmentations: [
+    {
+    module: nvidia_dali,
+    args: {
+        transforms: [
+            { transform: RandomRotate, args: { p: 0.5 ,
+                                               angle_limit: 45.,
+                                            } },
+        ]
+    }
+    }
+]
+```
+
+Arguments : 
+
+- `p` (float) : probability of applying the transform. Default: 0.5.
+- `angle_limit` (float,list) : Range for changing angle in [min,max] value format. If provided as a single float, the range will be (-limit, limit). Defaults to 45..

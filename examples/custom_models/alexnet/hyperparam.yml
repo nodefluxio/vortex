@@ -1,0 +1,59 @@
+## study name is mandatory
+study_name: learning_rate_search
+## parameters to optimize, mandatory
+parameters: [
+  trainer.optimizer.args.lr : {
+    suggestion: suggest_discrete_uniform,
+    args: {
+      low: 0.0001,
+      high: 0.1,
+      q: 0.0001,
+    }
+  },
+  trainer.scheduler.args.warmup_t: {
+    suggestion: suggest_int,
+    args: {
+      low: 2,
+      high: 7,
+    }
+  },
+]
+objective: {
+  ## run optimization on training experiment, maximize accuracy
+  module: TrainObjective,
+  args: {
+    metric_type: val, ## [val, loss]
+    metric_name: accuracy,
+    ## final objective value is the reduced validation metrics
+    # reduction is based on numpy function (e.g. np.average, np.max, etc.)
+    reduction: average,
+    reduction_args: {
+      weights: [1, 2, 3, 4, 5]
+    }
+  }
+}
+## configuration for optuna study, mandatory field
+study: {
+  n_trials: 20,
+  direction: maximize,
+  ## optional
+  pruner: {
+    method: MedianPruner,
+    args: {},
+  },
+  sampler : {
+    method : TPESampler,
+    # method : CmaEsSampler,
+    args : {},
+  },
+  ## optional args will be forwarded to optuna
+  args : {}
+}
+## param to be added to config, mandatory but can be empty
+additional_config: {}
+## param to override but not to be optimized, this field is mandatory but can be empty
+override: {
+  ## train for 10 epoch and evaluate every 2 epoch, resulting 5 validation metrics
+  trainer.epoch: 10,
+  trainer.validation.val_epoch: 2,
+}

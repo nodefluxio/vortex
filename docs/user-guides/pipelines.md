@@ -310,7 +310,7 @@ optional arguments:
                         runtime backend device
   -v, --verbose         verbose prediction output
   --quiet
-  --batch-size BATCH_SIZE
+  -b BATCH_SIZE, --batch-size BATCH_SIZE
                         batch size for validation; NOTE : passed value should
                         be matched with exported model batch size
 ```
