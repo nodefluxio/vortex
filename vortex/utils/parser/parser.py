@@ -72,9 +72,6 @@ def __model_tree(required: bool = True, exp_step: ExperimentType = ExperimentTyp
                            docstring='model and loss definition')
     model_name = ExperimentNode('name', parent=model)
     network_args = ExperimentNode('network_args', parent=model)
-    head_name = ExperimentNode('backbone', parent=network_args)
-    num_class = ExperimentNode('n_classes', parent=network_args, required=False)
-    pretrained = ExperimentNode('pretrained_backbone', parent=network_args, required=False)
     preprocess_args = ExperimentNode('preprocess_args', parent=model)
     input_size = ExperimentNode('input_size', parent=preprocess_args)
     input_normalization = ExperimentNode(

@@ -48,7 +48,7 @@ def add_parser(parent_parser,subparsers = None):
     parser.add_argument("-r",'--runtime', type=str, default=['cpu'], nargs="*", help='runtime backend device')
     parser.add_argument("-v","--verbose", dest='debug', action='store_true', help='verbose prediction output')
     parser.add_argument("--quiet", dest='debug', action='store_false')
-    parser.add_argument("--batch-size", default=1, type=int, help='batch size for validation; NOTE : passed value should be matched with exported model batch size')
+    parser.add_argument("-b","--batch-size", default=1, type=int, help='batch size for validation; NOTE : passed value should be matched with exported model batch size')
 
 
 if __name__ == '__main__':

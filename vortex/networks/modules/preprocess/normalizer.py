@@ -4,6 +4,14 @@ import torch.nn as nn
 from typing import Type, List, Tuple, Dict, Union
 import numpy as np
 
+def flip(img: torch.Tensor, dim: int=-1):
+    """
+    Reverse order
+    """
+    assert img.dim() in {4,3}, "only supports 4D or 3D tensor"
+    assert img.size(dim) == 3, "only supports 3 color channels with HWC format"
+    return img.flip(dim)
+
 def to_tensor(img: torch.Tensor,scaler : int = 255):
     """Convert a torch.ByteTensor with range of value of [0,255] and NHWC layout to 
     torch.FloatTensor with NCHW layout with scaling option
@@ -70,8 +78,30 @@ class Normalize(nn.Module):
         x = normalize(x, self.mean, self.std)
         return x
 
+class FlipNormalize(nn.Module):
+    """ Exportable input tensor normalizer.
+    """
+    __constants__ = ["mean", "std","scaler"]
 
-def get_preprocess(*args, **kwargs):
+    def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], scaler = 255, flip_dim=-1):
+        super(FlipNormalize, self).__init__()
+        self.register_buffer("mean", torch.as_tensor(mean, dtype=torch.float))
+        self.register_buffer("std", torch.as_tensor(std, dtype=torch.float))
+        self.register_buffer("scaler", torch.as_tensor(scaler, dtype=torch.int))
+        self.flip_dim = flip_dim
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        x = flip(input,self.flip_dim)
+        x = to_tensor(x,self.scaler)
+        x = normalize(x, self.mean, self.std)
+        return x
+
+preproc_map = dict(
+    normalizer=Normalize,
+    flip_normalizer=FlipNormalize,
+)
+
+def get_preprocess(preprocess: str, **kwargs):
     """ 
     :type *args:
     :param *args: postional arguments to be forwarded to `Normalize`
@@ -83,4 +113,11 @@ def get_preprocess(*args, **kwargs):
 
     :rtype: Normalize
     """
-    return Normalize(*args, **kwargs)
+    assert preprocess in preproc_map, "unsupported preproc f{preprocess}"
+    normalizer = preproc_map[preprocess]
+    normalization_args = {}
+    if 'input_normalization' in kwargs:
+        normalization_args = kwargs['input_normalization']
+    else:
+        normalization_args = kwargs
+    return normalizer(**normalization_args)

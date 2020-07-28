@@ -1,3 +1,8 @@
+import importlib
+import inspect
+from typing import Union
+from types import ModuleType
+
 supported_transforms = {}
 ALL_TRANSFORMS = []
 
@@ -7,12 +12,22 @@ _REQUIRED_ATTRIBUTES = [
 ]
 
 
-def register_module(module: str):
+def register_module(module: Union[str,ModuleType]):
+    """
+    register a loader module to vortex registry
+    Args:
+        module: str or module-type to be registered
+    """
     global supported_transforms, ALL_TRANSFORMS
     # TODO : consider to check module existence before importing
-    exec('from . import %s' % module)
-    module = eval('%s' % module)
-    module_attributes = module.__dict__.keys()
+    if isinstance(module, str):
+        # when string is passed, assume it's relative
+        module = importlib.import_module(f'.{module}',__package__)
+    elif inspect.ismodule(module):
+        module = module
+    else:
+        raise ValueError("unsupported type of `module`")
+    module_attributes = dir(module)
     for attribute in _REQUIRED_ATTRIBUTES:
         if not attribute in module_attributes:
             raise RuntimeError("dear maintainer, your module(s) is supposed to have the following attribute(s) : %s; but %s is missing" % (
@@ -32,4 +47,14 @@ def create_transform(transform: str, *args, **kwargs):
 
 
 # for maintainer, register your module here :
-register_module('albumentations')
+# example:
+# ```
+# from .my_module import my_augmentation
+# register_module(my_augmentation)
+# ```
+from . import albumentations
+register_module(module=albumentations)
+# register_module('albumentations') # still valid
+
+from . import nvidia_dali
+register_module(module=nvidia_dali)

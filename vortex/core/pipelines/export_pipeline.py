@@ -4,6 +4,7 @@ from pathlib import Path
 
 import os
 import torch
+import warnings
 
 from vortex.utils.common import check_and_create_output_dir
 from vortex.core.factory import create_model,create_dataset,create_exporter
@@ -48,7 +49,7 @@ class GraphExportPipeline(BasePipeline):
             weights = self.experiment_directory / '{}.pth'.format(self.experiment_name)
             if not os.path.isfile(weights):
                 raise RuntimeError("Default weight in {} is not exist, please provide weight "
-                    "path using '--weights' argument.".format(str(filename)))
+                    "path using '--weights' argument.".format(str(weights)))
         ckpt = torch.load(weights)
         state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
