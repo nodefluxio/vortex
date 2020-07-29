@@ -1,6 +1,6 @@
 # Learning Rates Scheduler
 
-This section listed all available `scheduler` configuration. Part of [`trainer` configurations](../user-guides/experiment_file_config.md#trainer) in experiment file.
+This section listed all available `lr_scheduler` configuration. Part of [`trainer` configurations](../user-guides/experiment_file_config.md#trainer) in experiment file.
 
 ---
 
@@ -8,8 +8,8 @@ This section listed all available `scheduler` configuration. Part of [`trainer` 
 
 The following example configuration uses the Pytorch `StepLR` scheduler. You can use the other scheduler by following similar fashion. List of Pytorch supported scheduler can be found in [this link](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
 
-```yanml
-scheduler: {
+```yaml
+lr_scheduler: {
     method: StepLR,
     args: {
         step_size: 50,
@@ -30,7 +30,7 @@ Reference :
 - [allennlp/cosine.py](https://github.com/allenai/allennlp/blob/master/allennlp/training/learning_rate_schedulers/cosine.py)
 
 ```yaml
-scheduler: {
+lr_scheduler: {
     method: CosineLRScheduler,
     args: {
         t_initial: 200,
@@ -67,7 +67,7 @@ Reference :
 - [Stochastic Gradient Descent with Hyperbolic-Tangent Decay on Classification](https://arxiv.org/abs/1806.01593)
 
 ```yaml
- scheduler: {
+lr_scheduler: {
     method: TanhLRScheduler,
     args: {
         t_initial: 200,
@@ -108,7 +108,7 @@ Reference :
 - [DeNA/PyTorch_YOLOv3: Implementation of YOLOv3 in PyTorch](https://github.com/DeNA/PyTorch_YOLOv3)
 
 ```yaml
-scheduler: {
+lr_scheduler: {
     method: StepLRWithBurnIn,
     args: {
         burn_in: 5,
