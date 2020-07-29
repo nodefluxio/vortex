@@ -143,7 +143,7 @@ def create_dataloader(dataloader_config : EasyDict,
     dataset_config = deepcopy(dataset_config)
     preprocess_config = deepcopy(preprocess_config)
 
-    dataloader_module = dataloader_config.dataloader
+    dataloader_module = dataloader_config.module
     # For backward compatibility purpose
     if dataloader_module == 'DataLoader':
         dataloader_module = 'PytorchDataLoader'
