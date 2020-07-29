@@ -67,10 +67,6 @@ trainer: {
       lr: 0.001
     }
   },
-  validation: {
-    args: {},
-    val_epoch: 2,
-  },
   driver: {
     module: DefaultTrainer,
     args: {
@@ -79,6 +75,10 @@ trainer: {
   },
   epoch: 3,
   save_epoch: 1
+}
+validator: {
+  args: {},
+  val_epoch: 2,
 }
 exporter : [
   {

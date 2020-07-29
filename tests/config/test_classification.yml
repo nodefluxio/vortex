@@ -1,25 +1,27 @@
 experiment_name: shufflenetv2_x1.0_softmax
 logging: None
+output_directory : experiments/outputs
+device: 'cpu'
 dataset: {
   train: {
-    dataset: ImageFolder,
+    name: ImageFolder,
     args: {
       root: external/datasets/cat_dog
     },
   },
   eval: {
-    dataset: ImageFolder,
+    name: ImageFolder,
     args: {
       root: external/datasets/cat_dog
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 0,
-      batch_size: 4,
-      shuffle: True,
-    },
+}
+dataloader: {
+  module: PytorchDataLoader,
+  args: {
+    num_workers: 0,
+    batch_size: 4,
+    shuffle: True,
   },
 }
 model: {
@@ -51,11 +53,6 @@ trainer: {
       weight_decay: 0.0005,
     }
   },
-  validation : {
-    args: {},
-    val_epoch : 1,
-  },
-  device: 'cpu',
   driver: {
     module : DefaultTrainer,
     args : {}
@@ -63,4 +60,7 @@ trainer: {
   epoch: 5,
   save_epoch: 1
 }
-output_directory : experiments/outputs
+validator: {
+  args: {},
+  val_epoch : 1,
+}
