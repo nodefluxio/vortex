@@ -1,25 +1,44 @@
 experiment_name: test_classification_pipelines
 logging: None
+checkpoint: None
+device: 'cpu'
+output_directory: tests/output_test
 dataset: {
   train: {
-    dataset: ImageFolder,
+    name: ImageFolder,
     args: {
       root: tests/test_dataset/classification/train
     },
+    augmentations: [{
+      module: albumentations,
+      args: {
+        transforms: [
+          {
+            transform : RandomBrightnessContrast, 
+            args : {
+              p : 0.5, brightness_by_max: False,
+              brightness_limit: 0.1, contrast_limit: 0.1,
+            }
+          },
+          {transform: HueSaturationValue, args: {}},
+          {transform : HorizontalFlip, args : {p : 0.5}},
+        ]
+      }
+    }]
   },
   eval: {
-    dataset: ImageFolder,
+    name: ImageFolder,
     args: {
       root: tests/test_dataset/classification/val
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 1,
-      batch_size: 2,
-      shuffle: True,
-    },
+}
+dataloader: {
+  module: PytorchDataLoader,
+  args: {
+    num_workers: 1,
+    batch_size: 2,
+    shuffle: True,
   },
 }
 model: {
@@ -48,11 +67,6 @@ trainer: {
       lr: 0.001
     }
   },
-  validation: {
-    args: {},
-    val_epoch: 2,
-  },
-  device: 'cpu',
   driver: {
     module: DefaultTrainer,
     args: {
@@ -62,7 +76,10 @@ trainer: {
   epoch: 3,
   save_epoch: 1
 }
-output_directory: tests/output_test
+validator: {
+  args: {},
+  val_epoch: 2,
+}
 exporter : [
   {
     module : onnx,

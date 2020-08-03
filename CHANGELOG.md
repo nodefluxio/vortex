@@ -31,18 +31,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `checkpoint` field in configuration file to point to the checkpoint model used to resume training if `--resume` flag is given. `init_state_dict` is still possible to be used but will automatically load `state_dict` to model even if `--resume` flag is not defined, but removed from docs.
 - model checkpoint update script in `script/update_model.py`
 - Now possible to access `class_names` and `input_specs` attributes from both `PytorchPredictionPipeline.model` and `IRPredictionPipeline.model`
+- config deprecation checks for new config format
 - Support for adding external model from user space
 - Added `DALIDataLoader` and `nvidia_dali` augmentation module
   - `nvidia_dali` augmentation module must be used with `DALIDataLoader`
   - `DALIDataLoader` can use other augmentation module, however if `nvidia_dali` augmentation module if specified in the experiment file, it must be in the first order
   - `DALIDataLoader` utilize `ray` library to paralelize external module augmentation for each batch sample
 
+
 ### Changed
 
 - reading `class_names` attribute from checkpoint in prediction and export pipeline
 - `class_names` in dataset, prediction, and export is optional. If not specified or `None`, will create a numbered class label `[class_0, class_1, ..., class_n]`
 - `class_names` moved from `PytorchPredictionPipeline.class_names` to `PytorchPredictionPipeline.model.class_names` ( also applied to `IRPredictionPipeline`)
+- None in string to normal python None
+- new config format, as described in [#7](https://github.com/nodefluxio/vortex/issues/7).
+  - change dataset name field `dataset` to `name` in `config.dataset.train` and `config.dataset.eval`.
+  - move `device` from `config.trainer` to main `config`.
+  - move `dataloader` field from `config.dataset` to main `config`.
+  - change dataloader module from `dataloader` to `module` in `config.dataloader`.
+  - change default dataloader module name from `DataLoader` to `PytorchDataLoader` in `config.dataloader.module`.
+  - change `scheduler` to `lr_scheduler` in `config.trainer`.
+  - change field `validation` to `validator` and move it from `config.trainer` to main `config`.
 - Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
+
 
 ## v0.1.0
 

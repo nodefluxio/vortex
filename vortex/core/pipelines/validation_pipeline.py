@@ -61,9 +61,18 @@ class BaseValidationPipeline(BasePipeline):
                 self.assets_dir.mkdir(exist_ok=True, parents=True)
 
         # Compute devices check
-        if isinstance(backends,str) :
+        if isinstance(backends,str):
             backends = [backends]
-        self.backends = [config.trainer.device] if not len(backends) else backends
+        if len(backends) != 0:
+            self.backends = backends
+        else:
+            if 'device' in config:
+                device = config.device
+            elif 'device' in config.trainer:
+                device = config.trainer.device
+            else:
+                raise RuntimeError("'device' field not found in config. Please specify properly in main level.")
+            self.backends = [device]
 
         # Must be initizalized in sub-class
         self.model = None
@@ -72,10 +81,23 @@ class BaseValidationPipeline(BasePipeline):
         # Dataset initialization
         # TODO selection to validate also on training data
         self.dataset = create_dataset(config.dataset, config.model.preprocess_args,stage='validate')
-        self.dataset_info = ('eval',config.dataset.eval.dataset)
+        if 'name' in config.dataset.eval:
+            dataset_name = config.dataset.eval.name
+        elif 'dataset' in config.dataset.eval:
+            dataset_name = config.dataset.eval.dataset
+        else:
+            raise RuntimeError("Dataset name in 'config.dataset.eval.name' is not set "
+                "in config.dataset ({}).".format(config.dataset.eval))
+        self.dataset_info = ('eval', dataset_name)
 
         # Validator arguments
-        self.validation_args = config.trainer.validation.args
+        if 'validator' in config:
+            validator_cfg = config.validator
+        elif 'validation' in config.trainer:
+            validator_cfg = config.trainer.validation
+        else:
+            raise RuntimeError("Validator config in 'config.validator' is not set.")
+        self.validation_args = validator_cfg.args
         self.val_experiment_name = self.experiment_name
 
     def run(self,

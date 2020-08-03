@@ -1,6 +1,6 @@
 # Data Loader
 
-This section listed all available `dataloader` modules configurations. Part of [`dataset.dataloader` configurations](../user-guides/experiment_file_config.md#dataset) in experiment file.
+This section listed all available [`dataloader`](../user-guides/experiment_file_config.md#data-loader) modules configurations.
 
 Vortex data loader module will normalize and resize the input image following `preprocess_args` configuration in [`model`](../user-guides/experiment_file_config.md#model) section. The resize function, will resize the image by the value provided in `input_size` configuration and pad the image to square by adding black pixel (0,0,0). However the padding implementation will be different depends on the dataloader module (this is subject to change in the future)
 
@@ -16,7 +16,7 @@ Cannot be used with `nvidia_dali` augmentation module
 
 ```yaml
 dataloader: {
-    dataloader: PytorchDataLoader,
+    module: PytorchDataLoader,
     args: {
         num_workers: 0,
         batch_size: 16,
@@ -45,7 +45,7 @@ Can be used with `nvidia_dali` augmentation module by specifying the module in t
 
 ```yaml
 dataloader: {
-    dataloader: DALIDataLoader,
+    module: DALIDataLoader,
     args: {
         num_thread: 1,
         device_id: 0,

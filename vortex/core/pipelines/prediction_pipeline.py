@@ -275,7 +275,13 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # Set compute device
         if device is None:
-            device = config.trainer.device
+            if 'device' in config:
+                device = config.device
+            elif 'device' in config.trainer:
+                device = config.trainer.device
+            else:
+                raise RuntimeError("'device' argument is not configured and not found in 'config.device'. "
+                    "Please specify either one.")
         device = torch.device(device)
 
         # Initialize model
@@ -314,25 +320,32 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
         if 'class_names' in ckpt:
             cls_names = ckpt['class_names']
         else:
-            from vortex.utils.data.dataset.dataset import all_datasets
-            dataset_available = False
-            for datasets in all_datasets.values():
-                if config.dataset.train.dataset in datasets:
-                    dataset_available = True
-                    break
+            dataset_name = None
+            if 'name' in config.dataset.train:
+                dataset_name = config.dataset.train.name
+            elif 'dataset' in config.dataset.train:
+                dataset_name = config.dataset.train.dataset
 
-            if dataset_available:
-                # Initialize dataset to get class_names
-                warnings.warn("'class_names' is not available in your model checkpoint, please "
-                    "update your model using 'scripts/update_model.py' script. \nCreating dataset "
-                    "to get 'class_names'")
-                dataset = create_dataset(config.dataset, stage='train', 
-                    preprocess_config=config.model.preprocess_args)
-                if hasattr(dataset.dataset, 'class_names'):
-                    cls_names = dataset.dataset.class_names
-                else:
-                    warnings.warn("'class_names' is not available in dataset, setting "
-                        "'class_names' to None.")
+            if dataset_name:
+                from vortex.utils.data.dataset.dataset import all_datasets
+                dataset_available = False
+                for datasets in all_datasets.values():
+                    if dataset_name in datasets:
+                        dataset_available = True
+                        break
+
+                if dataset_available:
+                    # Initialize dataset to get class_names
+                    warnings.warn("'class_names' is not available in your model checkpoint, please "
+                        "update your model using 'scripts/update_model.py' script. \nCreating dataset "
+                        "to get 'class_names'")
+                    dataset = create_dataset(config.dataset, stage='train', 
+                        preprocess_config=config.model.preprocess_args)
+                    if hasattr(dataset.dataset, 'class_names'):
+                        cls_names = dataset.dataset.class_names
+                    else:
+                        warnings.warn("'class_names' is not available in dataset, setting "
+                            "'class_names' to None.")
             else:
                 warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
                     config.dataset))

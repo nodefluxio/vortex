@@ -52,6 +52,20 @@ output_directory: experiments/outputs
 
 ---
 
+## Device
+
+Flagged with `device` key (str) in the experiment file. This configuration set device to run experiment. E.g. :
+
+```yaml
+device: 'cuda:0'
+```
+
+Arguments :
+
+- `device` (str) : set the device to run the experiment in pipelines, whether using CPU `cpu` or cuda GPU `cuda`. To use specific GPU device, append `:{i}` to `cuda`, E.g. `cuda:0` for GPU index 0, `cuda:1` for GPU index 1
+
+---
+
 ## Reproducibility and cuDNN auto-tune
 
 **THIS CONFIGURATION IS OPTIONAL (MAY IMPACT TRAINING PERFORMANCE)**
@@ -93,12 +107,12 @@ seed: {
 
 ## Dataset
 
-Flagged with `dataset` key (dict) in the experiment file. This is the configurations of the dataset, augmentations, and dataloader which will be used in the training. E.g. :
+Flagged with `dataset` key (dict) in the experiment file. This is the configurations of the dataset to be used in the pipeline, which includes the dataset name for `train` and `eval` dataset. E.g. :
 
 ```yaml
 dataset: {
     train: {
-        dataset: VOC0712DetectionDataset,
+        name: VOC0712DetectionDataset,
         args: {
             image_set: train,
         },
@@ -126,19 +140,11 @@ dataset: {
         ]
     },
     eval: {
-        dataset: VOC0712DetectionDataset,
+        name: VOC0712DetectionDataset,
         args: {
             image_set: val
         }
     },
-    dataloader: {
-        dataloader: DataLoader,
-        args: {
-            num_workers: 0,
-            batch_size: 16,
-            shuffle: True,
-        },
-    }
 }
 ```
 
@@ -153,16 +159,35 @@ Arguments :
         - `module` (str) : selected augmentation module, see [augmentation module section](../modules/augmentation.md) for supported augmentation modules
         - `args` (dict) : the corresponding arguments for selected `module`
 
+---
+
+## Data Loader
+
+Flagged with `dataloader` key (dict) in the experiment file. This is the configurations of dataloader to be used in the training. E.g. :
+
+```yaml
+dataloader: {
+    module: PytorchDataLoader,
+    args: {
+        num_workers: 0,
+        batch_size: 16,
+        shuffle: True,
+    },
+}
+```
+
+Arguments :
+
 - `dataloader` (dict) : denotes the configuration of the dataset iterator
 
-    - `dataloader` (str) : specify the dataloader module which will be used, supported data loader modules is provided at [data loader module section](../modules/data_loader.md)
-    - `args` (dict) : the corresponding arguments for selected `dataloader`
+    - `module` (str) : specify the dataloader module to be used, supported data loader modules is provided at [data loader module section](../modules/data_loader.md)
+    - `args` (dict) : the corresponding arguments for selected `module`
 
 ---
 
 ## Trainer
 
-Flagged with `trainer` key (dict) in the experiment file. This configuration set how we train, validate on training, and several other configurations related to training iterations. E.g. :
+Flagged with `trainer` key (dict) in the experiment file. This configuration set how we train and several other configurations related to training iterations. E.g. :
 
 ```yaml
 trainer: {
@@ -174,7 +199,7 @@ trainer: {
             weight_decay: 0.0005
         }
     },
-    scheduler: {
+    lr_scheduler: {
         method: CosineLRScheduler,
         args: {
             t_initial: 200,
@@ -187,16 +212,8 @@ trainer: {
             decay_rate: 0.1
         }
     },
-    validation: {
-        args: {
-            score_threshold: 0.9,
-            iou_threshold: 0.2,
-        },
-        val_epoch: 10
-    },
     epoch: 200,
     save_epoch: 1,
-    device: 'cuda:0',
     driver: {
         module: DefaultTrainer,
         args: {
@@ -213,34 +230,49 @@ Arguments :
     - `method` (str) : optimization method identifier, currently support all optimizers supported by Pytorch listed in [this link](https://pytorch.org/docs/stable/optim.html#algorithms)
     - `args` (dict) : the corresponding arguments to the respective optimizer `method`
 
-- `scheduler` (dict) : methods to adjust the learning rate based on the number of epochs
+- `lr_scheduler` (dict) : methods to adjust the learning rate based on the number of epochs
 
-    - `method` (str) : scheduler method identifier, supported scheduler methods is provided at [scheduler section](../modules/scheduler.md)
+    - `method` (str) : scheduler method identifier, supported scheduler methods is provided at [learning rate scheduler section](../modules/scheduler.md)
     - `args` (dict) : the corresponding arguments to the respective scheduler `method`
-
-- `validation` (dict) (Optional) : additional parameter for validation process inside the training loop, if not provided in-loop validation process will be skipped. Sub-arguments :
-
-    - `args` (dict) : additional arguments for model postprocessing. Dependent on the described model's task.
-
-        - For detection :
-
-            - `score_threshold` (float) : threshold applied to the model’s predicted object confidence score. Only objects with prediction scores higher than this threshold will be considered true objects, else considered as background.
-
-            - `iou_threshold` (float) : threshold for non-maxima suppression (NMS) intersection over union (IoU)
-
-        - For classification :
-
-            No additional arguments for this task, you can leave `args` with empty dict `{}`
-    
-    - `val_epoch` (int) : periodic number of epoch when the validation process will be executed in the training loop
 
 - `epoch` (int) : number of dataset iteration (epoch) being done on the training dataset. 1 epoch is 1 dataset iteration
 - `save_epoch` (int) : number of epoch before a model checkpoint being saved for backup
-- `device` (str) : set the training device, whether using CPU : `cpu` or cuda GPU : `cuda`. you can add `:{i}` to `cuda` to point for specific GPU index `{i}`, E.g. `cuda:0` for GPU index 0, `cuda:1` for GPU index 1
 - `driver` (dict) : the mechanism on how a training is done in a loop ( iterated over `n` epochs ). Sub-arguments :
 
     - `module` (str) : training driver identifier. Supported training driver methods is provided at [training driver section](../modules/train_driver.md)
     - `args` (dict) : the corresponding arguments to the respective training driver `module`
+
+---
+
+## Validator
+
+Flagged with `validator` key (dict) in the experiment file. This configuration set the validation process in the training iteration. E.g. :
+
+```yaml
+validator: {
+    args: {
+        score_threshold: 0.9,
+        iou_threshold: 0.2,
+    },
+    val_epoch: 10
+}
+```
+
+Arguments :
+
+- `args` (dict) : additional arguments needed for validation process, including but not limited to arguments for model postprocessing which dependent on the model itself. For example :
+
+    - For several detection models ( if needed ):
+
+        - `score_threshold` (float) : threshold applied to the model’s predicted object confidence score. Only objects with prediction scores higher than this threshold will be considered true objects, else considered as background.
+
+        - `iou_threshold` (float) : threshold for non-maxima suppression (NMS) intersection over union (IoU)
+
+    - For classification :
+
+        No additional arguments for this task, you can leave `args` with empty dict `{}`
+
+- `val_epoch` (int) : periodic number of epoch when the validation process will be executed in the training loop
 
 ---
 
@@ -300,6 +332,8 @@ Flagged with `checkpoint` key (str) in the experiment file. This configuration d
 ```yaml
 checkpoint: experiments/outputs/shufflenetv2x100_fpn_ssd_voc2007_512/16575bd31b364539817177ca14147b5d/shufflenetv2x100_fpn_ssd_voc2007_512-epoch-10.pth
 ```
+
+---
 
 ## Graph Exporter
 

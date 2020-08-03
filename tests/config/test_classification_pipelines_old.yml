@@ -1,27 +1,25 @@
 experiment_name: test_classification_pipelines
 logging: None
-output_directory: tests/output_test
-device: 'cpu'
 dataset: {
   train: {
-    name: ImageFolder,
+    dataset: ImageFolder,
     args: {
-      root: tests/test_dataset/classification/train
+      root: tests/test_dataset/train
     },
   },
   eval: {
-    name: ImageFolder,
+    dataset: ImageFolder,
     args: {
-      root: tests/test_dataset/classification/val
+      root: tests/test_dataset/val
     }
   },
-}
-dataloader: {
-  module: PytorchDataLoader,
-  args: {
-    num_workers: 1,
-    batch_size: 2,
-    shuffle: True,
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 1,
+      batch_size: 2,
+      shuffle: True,
+    },
   },
 }
 model: {
@@ -50,19 +48,21 @@ trainer: {
       lr: 0.001
     }
   },
+  validation: {
+    args: {},
+    val_epoch: 2,
+  },
+  device: 'cpu',
   driver: {
     module: DefaultTrainer,
     args: {
       accumulation_step : 1,
     }
   },
-  epoch: 5,
+  epoch: 3,
   save_epoch: 1
 }
-validator: {
-  args: {},
-  val_epoch: 2,
-}
+output_directory: tests/output_test
 exporter : [
   {
     module : onnx,
@@ -73,9 +73,9 @@ exporter : [
   {
     module : onnx,
     args : {
-      n_batch : 4,
+      n_batch : 2,
       opset_version : 11,
-      filename : test_classification_pipelines_bs4
+      filename : test_classification_pipelines_bs2
     },
   },
   {
@@ -85,8 +85,8 @@ exporter : [
   {
     module: torchscript,
     args: {
-      n_batch : 4,
-      filename : test_classification_pipelines_bs4
+      n_batch : 2,
+      filename : test_classification_pipelines_bs2
     },
   }
 ]

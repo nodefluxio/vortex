@@ -16,7 +16,7 @@ from vortex.utils.logger.base_logger import ExperimentLogger
 class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']
     def __init__(self, model: Type[nn.Module], optimizer: Union[Type[optim.Optimizer], Tuple[str, Dict], Dict[str,Any]], 
-                 scheduler: Union[Type[optim.lr_scheduler._LRScheduler], Tuple[str, Dict[str, Any], Dict[str,Any]]], 
+                 scheduler: Union[Type[optim.lr_scheduler._LRScheduler], Tuple[str, Dict[str, Any]], Dict[str,Any]], 
                  criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,check_annotations: bool = True):
 
         self.model = model

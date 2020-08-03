@@ -66,8 +66,8 @@ def test_predictor(task):
     x = torch.randint(0, 256, size=(1, s, s, 3))
     args = {}
     if task == 'detection':
-        args["score_threshold"] = torch.tensor([config.trainer.validation.args["score_threshold"]], dtype=torch.float32)
-        args["iou_threshold"] = torch.tensor([config.trainer.validation.args["iou_threshold"]], dtype=torch.float32)
+        args["score_threshold"] = torch.tensor([config.validator.args["score_threshold"]], dtype=torch.float32)
+        args["iou_threshold"] = torch.tensor([config.validator.args["iou_threshold"]], dtype=torch.float32)
     
     with torch.no_grad():
         out = predictor(x, **args)

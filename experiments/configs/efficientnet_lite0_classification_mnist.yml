@@ -1,9 +1,11 @@
 experiment_name: efficientnet_lite0_softmax_mnist
 logging: None
 checkpoint: None
+device: 'cuda:0'
+output_directory: experiments/outputs
 dataset: {
   train: {
-    dataset: MNIST,
+    name: MNIST,
     args: {
       root: external/datasets,
       train: True,
@@ -11,20 +13,20 @@ dataset: {
     },
   },
   eval: {
-    dataset: MNIST,
+    name: MNIST,
     args: {
       root: external/datasets,
       train: False,
       download: True
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 4,
-      batch_size: 256,
-      shuffle: True,
-    },
+}
+dataloader: {
+  module: PytorchDataLoader,
+  args: {
+    num_workers: 4,
+    batch_size: 256,
+    shuffle: True,
   },
 }
 model: {
@@ -54,11 +56,6 @@ trainer: {
       lr: 0.001
     }
   },
-  validation: {
-    args: {},
-    val_epoch: 5,
-  },
-  device: 'cuda:0',
   driver: {
     module: DefaultTrainer,
     args: {
@@ -68,7 +65,10 @@ trainer: {
   epoch: 20,
   save_epoch: 5
 }
-output_directory: experiments/outputs
+validator: {
+  args: {},
+  val_epoch: 5,
+}
 exporter : [
   {
     module : onnx,

@@ -1,25 +1,27 @@
 experiment_name: shufflenetv2_x1.0_yolov3
 logging: None
+output_directory : experiments/outputs
+device: 'cuda:0'
 dataset: {
   train: {
-    dataset: VOC2007DetectionDataset,
+    name: VOC2007DetectionDataset,
     args: {
       image_set : train,
     }
   },
   eval: {
-    dataset: VOC2007DetectionDataset,
+    name: VOC2007DetectionDataset,
     args: {
       image_set: val
     }
   },
-  dataloader: {
-    dataloader: DataLoader,
-    args: {
-      num_workers: 8,
-      batch_size: 4,
-      shuffle: True,
-    }
+}
+dataloader: {
+  module: PytorchDataLoader,
+  args: {
+    num_workers: 8,
+    batch_size: 4,
+    shuffle: True,
   }
 }
 model: {
@@ -61,15 +63,7 @@ trainer: {
       weight_decay: 0.0005,
     }
   },
-  validation : {
-    ## passed to validator class
-    args : {
-      score_threshold : 0.06,
-      iou_threshold : 0.2,
-    },
-    val_epoch : 5,
-  },
-  scheduler: {
+  lr_scheduler: {
     method: CosineLRScheduler,
     args: {
       t_initial: 200,
@@ -84,11 +78,16 @@ trainer: {
   },
   epoch: 1,
   save_epoch: 1,
-  device: 'cuda:0',
   driver: {
     module : DefaultTrainer,
     args : {}
   },
 }
-
-output_directory : experiments/outputs
+validator: {
+  ## passed to validator class
+  args : {
+    score_threshold : 0.06,
+    iou_threshold : 0.2,
+  },
+  val_epoch : 5,
+}

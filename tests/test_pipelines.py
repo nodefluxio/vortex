@@ -33,6 +33,7 @@ from vortex.utils.parser.loader import Loader
 
 
 config_path = "tests/config/test_classification_pipelines.yml"
+config_old_path = "tests/config/test_classification_pipelines_old.yml"
 hypopt_train_obj_path = "tests/config/test_hypopt_train_objective.yml"
 onnx_model_path = "tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx"
 pt_model_path = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pt"
@@ -64,7 +65,7 @@ train_info_sch = InfoPlaceHolder()
 class TestTrainingPipeline():
 
     cfg_scheduler = deepcopy(config)
-    cfg_scheduler.trainer.scheduler = {
+    cfg_scheduler.trainer.lr_scheduler = {
         'method': 'StepLR',
         'args': {'step_size': 1}
     }
@@ -84,6 +85,25 @@ class TestTrainingPipeline():
         else:
             cfg = config
             info_holder = train_info
+
+        ## test device
+        for device in ("cpu", "cuda:0"):
+            orig_cfg_dev = deepcopy(cfg)
+            orig_cfg_dev.device = device
+            old_cfg_dev = deepcopy(cfg)
+            old_cfg_dev.trainer.device = device
+            old_cfg_dev.pop('device', None)
+
+            for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+                train_executor = TrainingPipeline(config=cfg_dev, config_path=config_path, hypopt=False)
+                assert train_executor.device == device
+                model_device = list(train_executor.model_components.network.parameters())[0].device
+                assert model_device == torch.device(device)
+                loss_param = list(train_executor.criterion.parameters())
+                if len(loss_param):
+                    loss_device = loss_param[0].device
+                    assert loss_device == torch.device(device)
+
         train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False)
         info_holder.run_directory = train_executor.run_directory
 
@@ -105,7 +125,7 @@ class TestTrainingPipeline():
         assert isinstance(epoch_losses,list)
         assert len(epoch_losses) == config.trainer.epoch
         assert isinstance(val_metrics,list)
-        assert len(val_metrics) == int(config.trainer.epoch/config.trainer.validation.val_epoch)
+        assert len(val_metrics) == int(config.trainer.epoch/config.validator.val_epoch)
         assert isinstance(learning_rates,list)
         assert len(learning_rates) == config.trainer.epoch
 
@@ -156,7 +176,7 @@ class TestTrainingPipeline():
         assert isinstance(epoch_losses,list)
         assert len(epoch_losses) == config.trainer.epoch
         assert isinstance(val_metrics,list)
-        assert len(val_metrics) == int(config.trainer.epoch/config.trainer.validation.val_epoch)
+        assert len(val_metrics) == int(config.trainer.epoch/config.validator.val_epoch)
         assert isinstance(learning_rates,list)
         assert len(learning_rates) == config.trainer.epoch
 
@@ -215,7 +235,7 @@ class TestTrainingPipeline():
         assert isinstance(epoch_losses,list)
         assert len(epoch_losses) == rest_of_epoch
         assert isinstance(val_metrics,list)
-        assert len(val_metrics) == int(rest_of_epoch/config.trainer.validation.val_epoch)
+        assert len(val_metrics) == int(rest_of_epoch/config.validator.val_epoch)
         assert isinstance(learning_rates,list)
         assert len(learning_rates) == rest_of_epoch
 
@@ -292,6 +312,17 @@ def test_create_model():
 
 
 def test_validation_pipeline():
+    ## test device and old config
+    for device in ("cpu", "cuda:0"):
+        orig_cfg_dev = deepcopy(config)
+        orig_cfg_dev.device = device
+        old_cfg_dev = deepcopy(config)
+        old_cfg_dev.trainer.device = device
+        old_cfg_dev.pop('device', None)
+
+        for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+            predictor = PytorchValidationPipeline(config=cfg_dev, weights=None, backends=[device])
+            assert torch.device(predictor.backends[0]) == torch.device(device)
 
     # Instantiate Validation
     validation_executor = PytorchValidationPipeline(config=config,
@@ -347,13 +378,26 @@ class TestPredictionPipeline():
         assert isinstance(vortex_predictor.model.class_names, list)
 
     def test_input_from_image_path(self):
+        ## test device and old config
+        for device in ("cpu", "cuda:0"):
+            orig_cfg_dev = deepcopy(config)
+            orig_cfg_dev.device = device
+            old_cfg_dev = deepcopy(config)
+            old_cfg_dev.trainer.device = device
+            old_cfg_dev.pop('device', None)
+
+            for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+                predictor = PytorchPredictionPipeline(config=cfg_dev, weights=None, device=device)
+                model_device = list(predictor.model.parameters())[0].device
+                assert model_device == torch.device(device)
+
         # Instantiate predictor
-        kwargs = {}
         vortex_predictor = PytorchPredictionPipeline(config = config,
                                         weights = None,
                                         device = 'cpu')
 
         def _test(predictor):
+            kwargs = {}
             results = predictor.run(images = ['tests/images/cat.jpg'],
                                     visualize = True,
                                     dump_visual = True,

@@ -99,17 +99,27 @@ def create_dataset(dataset_config : EasyDict,
                    stage : str,
                    wrapper_format : str = 'default'):
     dataset_config = deepcopy(dataset_config)
-    
+    augmentations = []
+
     if stage == 'train' :
-        dataset = dataset_config.train.dataset
-        try:
-            augmentations = dataset_config.train.augmentations
-        except:
-            augmentations = []
+        if 'name' in dataset_config.train:
+            dataset = dataset_config.train.name
+        elif 'dataset' in dataset_config.train:
+            dataset = dataset_config.train.dataset
+        else:
+            raise RuntimeError("Dataset name in 'dataset_config.train.name' is not set")
         dataset_args = dataset_config.train.args
+
+        if 'augmentations' in dataset_config.train:
+            augmentations = dataset_config.train.augmentations
     elif stage == 'validate':
-        dataset = dataset_config.eval.dataset
-        augmentations = []
+        if 'name' in dataset_config.eval:
+            dataset = dataset_config.eval.name
+        elif 'dataset' in dataset_config.eval:
+            dataset = dataset_config.eval.dataset
+        else:
+            raise RuntimeError("Dataset name in 'dataset_config.eval.name' is not set "
+                "in dataset_config ({}).".format(dataset_config))
         dataset_args = dataset_config.eval.args
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
@@ -123,20 +133,21 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
-def create_dataloader(dataset_config : EasyDict, 
+def create_dataloader(dataloader_config : EasyDict,
+                      dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
-                      collate_fn : Union[Callable,str,None] = None ):
+                      collate_fn : Union[Callable,str,None] = None):
 
+    dataloader_config = deepcopy(dataloader_config)
     dataset_config = deepcopy(dataset_config)
     preprocess_config = deepcopy(preprocess_config)
 
-    dataloader_module = dataset_config.dataloader.dataloader
-
+    dataloader_module = dataloader_config.module
     # For backward compatibility purpose
-    if dataloader_module=='DataLoader':
-        dataloader_module='PytorchDataLoader'
-    dataloader_module_args = dataset_config.dataloader.args
+    if dataloader_module == 'DataLoader':
+        dataloader_module = 'PytorchDataLoader'
+    dataloader_args = dataloader_config.args
 
     dataset = create_dataset(dataset_config=dataset_config, 
                              stage=stage, 
@@ -145,16 +156,25 @@ def create_dataloader(dataset_config : EasyDict,
     if isinstance(collate_fn,str):
         collater_args = {}
         try:
-            collater_args = config.dataset.dataloader.collater.args
+            collater_args = dataloader_config.collater.args
         except:
-            pass
+            collater_args = {}
         collater_args['dataformat'] = dataset.data_format
         collate_fn = create_collater(collate_fn, **collater_args)
-    elif hasattr(collate_fn,'__call__') or collate_fn is None:
-        pass
-    else :
-        raise TypeError('Unknown type of "collate_fn", should be in the type of string, Callable, or None. Got {}'%type(collate_fn))
-    dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_module_args)
+
+    elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
+        raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "
+            "Callable, or None. Got {}".format(type(collate_fn)))
+
+    if 'module' in dataloader_config:
+        dataloader_module = dataloader_config.module
+    elif 'dataloader' in dataloader_config:
+        dataloader_module = dataloader_config.dataloader
+    else:
+        raise RuntimeError("Dataloader module in 'config.dataloader.module' is not set "
+            "in config.dataloader ({}).".format(dataloader_config))
+
+    dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_args)
     return dataloader
 
 def create_experiment_logger(config : EasyDict):

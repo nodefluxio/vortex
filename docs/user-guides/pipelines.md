@@ -72,7 +72,7 @@ This pipeline handle the evaluation of the Vortex model (Pytorch state dict `.pt
 To run this pipeline, make sure you've already prepared :
 
 - **Validation dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets
-- **Experiment file** : see [this section](experiment_file_config.md) to create one. Must be valid for validation, make sure [`dataset.eval`](experiment_file_config.md#dataset) and [`trainer.validation`](experiment_file_config.md#trainer) is set
+- **Experiment file** : see [this section](experiment_file_config.md) to create one. Must be valid for validation, make sure [`dataset.eval`](experiment_file_config.md#dataset) and [`validator`](experiment_file_config.md#trainer) is set
 - **Vortex model's file** `*.pth` : obtained from [training pipeline](#training-pipeline) which corresponds to the previous mentioned experiment file
 
 You only need to run this command from the command line interface :
@@ -284,7 +284,7 @@ This pipeline handle the evaluation of the IR model (`*.pt` or `*.onnx`) in term
 To run this pipeline, make sure you've already prepared :
 
 - **Validation dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets
-- **Experiment file** : see [this section](experiment_file_config.md) to create one. Must be valid for validation, make sure [`dataset.eval`](experiment_file_config.md#dataset) and [`trainer.validation`](experiment_file_config.md#trainer) is set
+- **Experiment file** : see [this section](experiment_file_config.md) to create one. Must be valid for validation, make sure [`dataset.eval`](experiment_file_config.md#dataset) and [`validator`](experiment_file_config.md#trainer) is set
 - **IR model file** `*.pt` or `*.onnx` : obtained from [graph export pipeline](#graph-export-pipeline)
 - **IR runtime library and environment** : make sure runtime library and environment is installed (currently runtime library installed together with vortex)
 
