@@ -17,13 +17,14 @@ from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
 from vortex_runtime import model_runtime_map
 from vortex_runtime.basic_runtime import BaseRuntime
+from vortex.exporter.base_exporter import BaseExporter
 
 __all__ = ['create_model',
            'create_runtime_model',
         #    'create_dataset',
            'create_dataloader',
         #    'create_experiment_logger',
-           'create_exporter'
+        #    'create_exporter'
 ]
 
 def create_model(model_config : EasyDict,
@@ -371,7 +372,7 @@ def create_experiment_logger(config : EasyDict):
 def create_exporter(config: Union[EasyDict,dict], 
                     experiment_name: str, 
                     image_size: int, 
-                    output_directory: Union[Path,str]='.'):
+                    output_directory: Union[Path,str]='.') -> Type[BaseExporter]:
     from vortex.exporter.onnx import OnnxExporter
     from vortex.exporter.torchscript import TorchScriptExporter
     module_map = {

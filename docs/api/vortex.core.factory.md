@@ -180,34 +180,11 @@ print(prediction_results)
 
 ---
 
-### create_dataset
-
-
-
-None
-
-
-
-```python
-def create_dataset(
-      dataset_config : easydict.EasyDict,
-      preprocess_config : easydict.EasyDict,
-      stage : str,
-      wrapper_format : str = 'default',
-)
-```
-
-
-
----
-
----
-
 ### create_dataloader
 
 
 
-None
+Function to create iterable data loader object
 
 
 
@@ -223,22 +200,83 @@ def create_dataloader(
 
 
 
----
+**Arguments**:
 
----
+- `dataloader_config` _EasyDict_ - Experiment file configuration at `dataloader` section, as EasyDict object
+- `dataset_config` _EasyDict_ - Experiment file configuration at `dataset` section, as EasyDict object
+- `preprocess_config` _EasyDict_ - Experiment file configuration at `model.preprocess_args` section, as EasyDict object
+- `stage` _str, optional_ - Specify the experiment stage, either 'train' or 'validate'. Defaults to 'train'.
+- `collate_fn` _Union[Callable,str,None], optional_ - Collate function to reformat batch data serving. Defaults to None.
 
-### create_experiment_logger
+
+**Returns**:
+
+- `Type[Iterable]` - Iterable dataloader object which served batch of data in every iteration
 
 
+**Raises**:
 
-None
+- `TypeError` - Raises if provided `collate_fn` type is neither 'str' (registered in Vortex), Callable (custom function), or None
+- `RuntimeError` - Raises if specified 'dataloader' module is not registered
+
+
+**Examples**:
 
 
 
 ```python
-def create_experiment_logger(
-      config : easydict.EasyDict,
-)
+from vortex.core.factory import create_dataloader
+from easydict import EasyDict
+
+dataloader_config = EasyDict({
+    'module': 'PytorchDataLoader',
+    'args': {
+    'num_workers': 1,
+    'batch_size': 4,
+    'shuffle': True,
+    },
+})
+
+dataset_config = EasyDict({
+    'train': {
+        'dataset': 'ImageFolder',
+        'args': {
+            'root': 'tests/test_dataset/classification/train'
+        },
+        'augmentations': [{
+            'module': 'albumentations',
+            'args': {
+                'transforms': [
+                {
+                    'transform' : 'RandomBrightnessContrast', 
+                    'args' : {
+                        'p' : 0.5, 'brightness_by_max': False,
+                        'brightness_limit': 0.1, 'contrast_limit': 0.1,
+                    }
+                },
+                {'transform': 'HueSaturationValue', 'args': {}},
+                {'transform' : 'HorizontalFlip', 'args' : {'p' : 0.5}},
+                ]
+            }
+        }]
+    },
+})
+
+preprocess_config = EasyDict({
+    'input_size' : 224,
+    'input_normalization' : {
+        'mean' : [0.5,0.5,0.5],
+        'std' : [0.5, 0.5, 0.5],
+        'scaler' : 255
+    },
+})
+
+dataloader = create_dataloader(dataloader_config=dataloader_config,
+                                dataset_config=dataset_config,
+                                preprocess_config = preprocess_config,
+                                collate_fn=None)
+for data in dataloader:
+    images,labels = data
 ```
 
 
