@@ -47,7 +47,6 @@ def create_model(model_config : EasyDict,
         - `network` : Pytorch model's object which inherit `torch.nn.Module` class.
         - `preprocess` : model's preprocessing module
         - `postprocess` : model's postprocessing module
-        - `task` : model's described task. E.g. : 'classification' or 'detection'
         - `loss` : if provided, module for model's loss function
         - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format into desirable format that can be accepted by `loss` components
 
@@ -78,6 +77,7 @@ def create_model(model_config : EasyDict,
         model_components = create_model(
             model_config = model_config
         )
+        print(model_components.keys())
         ```
     """
 
