@@ -283,28 +283,5 @@ for data in dataloader:
 
 ---
 
----
-
-### create_exporter
-
-
-
-None
-
-
-
-```python
-def create_exporter(
-      config : dict,
-      experiment_name : str,
-      image_size : int,
-      output_directory : typing.Union[pathlib.Path, str] = '.',
-)
-```
-
-
-
----
-
 
 
