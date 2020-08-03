@@ -38,3 +38,4 @@ def create_collater(collater : str, *args, **kwargs) :
 register_module('darknet')
 register_module('ssd')
 register_module('retinaface')
+register_module('detr')

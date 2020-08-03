@@ -28,6 +28,12 @@ class DefaultTrainer(BaseTrainer):
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
+            elif isinstance(targets, (list, tuple)):
+                if isinstance(targets[0], dict):
+                    targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
+                elif isinstance(targets[0], torch.Tensor):
+                    targets = [t.to(device) for t in targets]
+
             preds = self.model(inputs)
             batch_loss = self.criterion(preds, targets)
             batch_loss.backward()
