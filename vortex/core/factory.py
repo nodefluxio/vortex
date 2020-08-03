@@ -6,7 +6,7 @@ import torch
 from copy import deepcopy
 from pathlib import Path
 from easydict import EasyDict
-from typing import Union, Callable, Type
+from typing import Union, Callable, Type, Iterable
 from collections import OrderedDict
 
 from vortex.networks.models import create_model_components
@@ -16,13 +16,14 @@ from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
 from vortex_runtime import model_runtime_map
+from vortex_runtime.basic_runtime import BaseRuntime
 
 __all__ = ['create_model',
-        #    'create_runtime_model',
+           'create_runtime_model',
         #    'create_dataset',
-        #    'create_dataloader',
+           'create_dataloader',
         #    'create_experiment_logger',
-        #    'create_exporter'
+           'create_exporter'
 ]
 
 def create_model(model_config : EasyDict,
@@ -141,7 +142,60 @@ def create_runtime_model(model_path : Union[str, Path],
                          runtime: str, 
                          output_name=["output"], 
                          *args, 
-                         **kwargs):
+                         **kwargs) -> Type[BaseRuntime]:
+    """Functions to create runtime model, currently the usage of this created object must be used together
+    with IRPredictionPipeline to create prediction.
+
+    Args:
+        model_path (Union[str, Path]): Path to Intermediate Representation (IR) model file
+        runtime (str): Backend runtime to be used, e.g. : 'cpu' or 'cuda' (Depends on available runtime options)
+        output_name (list, optional): Runtime output(s) variable name. Defaults to ["output"].
+
+    Raises:
+        RuntimeError: Raises if selected `runtime` is not available
+
+    Returns:
+        Type[BaseRuntime]: Runtime model objects based on IR file model's type and selected `runtime`
+
+    Example:
+        ```python
+        from vortex.core.factory import create_runtime_model
+        import numpy as np
+        import cv2
+
+        model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx'
+
+        runtime_model = create_runtime_model(
+            model_path = model_path,
+            runtime = 'cpu'
+        )
+
+        print(type(runtime_model))
+
+        ## Get model's input specifications and additional inferencing parameters
+
+        print(runtime_model.input_specs)
+
+        # Inferencing example
+
+        input_shape = runtime_model.input_specs['input']['shape']
+        batch_imgs = np.array([cv2.resize(cv2.imread('tests/images/cat.jpg'),(input_shape[2],input_shape[1]))])
+
+        ## Make sure the shape of input data is equal to input specifications
+        assert batch_imgs.shape == tuple(input_shape)
+
+        from vortex.core.pipelines import IRPredictionPipeline
+
+        ## Additional parameters can be inspected from input_specs,
+        ## E.g. `score_threshold` or `iou_threshold` for object detection
+        additional_input_parameters = {}
+
+        prediction_results = IRPredictionPipeline._runtime_predict(model=runtime_model,
+                                                                image=batch_imgs,
+                                                                **additional_input_parameters)
+        print(prediction_results)
+        ```
+    """
 
     model_type = Path(model_path).name.rsplit('.', 1)[1]
     runtime_map = model_runtime_map[model_type]
@@ -196,7 +250,79 @@ def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
-                      collate_fn : Union[Callable,str,None] = None):
+                      collate_fn : Union[Callable,str,None] = None) -> Type[Iterable]:
+    """Function to create iterable data loader object
+
+    Args:
+        dataloader_config (EasyDict): Experiment file configuration at `dataloader` section, as EasyDict object
+        dataset_config (EasyDict): Experiment file configuration at `dataset` section, as EasyDict object
+        preprocess_config (EasyDict): Experiment file configuration at `model.preprocess_args` section, as EasyDict object
+        stage (str, optional): Specify the experiment stage, either 'train' or 'validate'. Defaults to 'train'.
+        collate_fn (Union[Callable,str,None], optional): Collate function to reformat batch data serving. Defaults to None.
+
+    Raises:
+        TypeError: Raises if provided `collate_fn` type is neither 'str' (registered in Vortex), Callable (custom function), or None
+        RuntimeError: Raises if specified 'dataloader' module is not registered
+
+    Returns:
+        Type[Iterable]: Iterable dataloader object which served batch of data in every iteration
+
+    Example:
+        ```python
+        from vortex.core.factory import create_dataloader
+        from easydict import EasyDict
+
+        dataloader_config = EasyDict({
+            'module': 'PytorchDataLoader',
+            'args': {
+            'num_workers': 1,
+            'batch_size': 4,
+            'shuffle': True,
+            },
+        })
+
+        dataset_config = EasyDict({
+            'train': {
+                'dataset': 'ImageFolder',
+                'args': {
+                    'root': 'tests/test_dataset/classification/train'
+                },
+                'augmentations': [{
+                    'module': 'albumentations',
+                    'args': {
+                        'transforms': [
+                        {
+                            'transform' : 'RandomBrightnessContrast', 
+                            'args' : {
+                                'p' : 0.5, 'brightness_by_max': False,
+                                'brightness_limit': 0.1, 'contrast_limit': 0.1,
+                            }
+                        },
+                        {'transform': 'HueSaturationValue', 'args': {}},
+                        {'transform' : 'HorizontalFlip', 'args' : {'p' : 0.5}},
+                        ]
+                    }
+                }]
+            },
+        })
+
+        preprocess_config = EasyDict({
+            'input_size' : 224,
+            'input_normalization' : {
+                'mean' : [0.5,0.5,0.5],
+                'std' : [0.5, 0.5, 0.5],
+                'scaler' : 255
+            },
+        })
+
+        dataloader = create_dataloader(dataloader_config=dataloader_config,
+                                        dataset_config=dataset_config,
+                                        preprocess_config = preprocess_config,
+                                        collate_fn=None)
+        for data in dataloader:
+            images,labels = data
+        ```
+    """
 
     dataloader_config = deepcopy(dataloader_config)
     dataset_config = deepcopy(dataset_config)
