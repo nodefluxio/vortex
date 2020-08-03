@@ -111,3 +111,4 @@ def check_model_components_keys(stage: str, model_name: str,
 register_module('yolov3')
 register_module('fpn_ssd')
 register_module('retinaface')
+register_module('detr')

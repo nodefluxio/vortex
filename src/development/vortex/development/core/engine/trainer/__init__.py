@@ -29,9 +29,9 @@ def create_trainer(trainer_config: Union[dict, EasyDict], **kwargs):
         optimizer = deepcopy(trainer_config.optimizer)
     else:
         optimizer = kwargs.pop('optimizer')
-    if hasattr(trainer_config, 'scheduler'):
+    if hasattr(trainer_config, 'scheduler') and trainer_config.scheduler != {}:
         scheduler = deepcopy(trainer_config.scheduler)
-    elif hasattr(trainer_config, 'lr_scheduler'):
+    elif hasattr(trainer_config, 'lr_scheduler') and trainer_config.lr_scheduler != {}:
         scheduler = deepcopy(trainer_config.lr_scheduler)
     else:
         scheduler = None
