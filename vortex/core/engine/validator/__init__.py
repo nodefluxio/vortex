@@ -34,7 +34,8 @@ def infer_runtime_task(rt: BaseRuntime) :
     with validator output_format requirements
     """
     task = 'unknown'
-    result_fmt = rt.result_type._fields
+    # result_fmt = rt.result_type._fields
+    result_fmt = rt.output_fields
     task_requirements = {
         task : validator_type.__output_format__
             for task, validator_type in task_validator_map.items()
