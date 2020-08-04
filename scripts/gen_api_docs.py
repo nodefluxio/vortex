@@ -8,7 +8,7 @@ from docstring_parser import parse
 import docstring_parser
 
 PUBLIC_API_PACKAGE_LIST = [
-    # 'vortex.core.pipelines',
+    'vortex.core.pipelines',
     'vortex.core.factory'
     ]
 
