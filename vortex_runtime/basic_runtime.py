@@ -97,12 +97,10 @@ class BaseRuntime:
         results = []
         for output in outputs:
             result = OrderedDict()
-
             for key in self.output_fields:
                 result[key] = np.take(
                                 output, axis=int(self.output_format[key]['axis']),
                                 indices=self.output_format[key]['indices'],
                             ) if all(output.shape) else None 
-
             results.append(result)
         return results
