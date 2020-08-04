@@ -10,7 +10,7 @@ from vortex.networks.models import create_model_components
 from vortex.predictor import create_predictor
 from vortex_runtime.torchscript import TorchScriptRuntime
 from vortex_runtime.torchscript import TorchScriptRuntimeCpu, TorchScriptRuntimeCuda
-
+from collections import OrderedDict
 
 project_dir = Path(__file__).parents[1]
 output_dir = os.path.join(project_dir, "tmp", "torchscript")
@@ -116,8 +116,7 @@ def test_torchscript(model_name, device):
     result = runtime(img, **kwargs)
     assert isinstance(result, list)
     if len(result):
-        assert isinstance(result[0], tuple)
-        assert getattr(result[0], "_fields", None) is not None
+        assert isinstance(result[0], OrderedDict)
 
     os.remove(output_path)
 

@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 from collections import namedtuple, OrderedDict
 from typing import Union, List, Dict, Tuple, Any
+import warnings
 
 class BaseRuntime:
     """
@@ -37,8 +38,8 @@ class BaseRuntime:
             and 'indices' in value and 'axis' in value \
                 for key, value in self.output_format.items()
         )
-        output_fields = sorted(self.output_format.keys())
-        self.result_type = namedtuple('Result', [*output_fields])
+        self.output_fields = sorted(self.output_format.keys())
+        # self.result_type = namedtuple('Result', [*output_fields])
         assert len(input_specs), "input specs can't be empty"
         assert all(isinstance(spec, (OrderedDict,dict)) and \
             'shape' in spec and 'type' in spec and \
@@ -84,16 +85,32 @@ class BaseRuntime:
         return np.stack(batch_image)
 
     def __call__(self, *args, **kwargs):
-        outputs = self.predict(*args, **kwargs)
+        predict_args = {}
+        for name, value in kwargs.items() :
+            if not name in self.input_specs :
+                warnings.warn('additional input arguments {} ignored'.format(name))
+                continue
+            ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
+            dtype = self.input_specs[name]['type'].replace('tensor(','').replace(')','')
+            predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
+                else np.asarray(value, dtype=dtype)
+        outputs = self.predict(*args, **predict_args)
         results = []
         for output in outputs:
-            result = {
-                key: np.take(
-                    output, axis=int(fmt['axis']),
-                    indices=fmt['indices'],
-                ) if all(output.shape) else None 
-                for key, fmt in self.output_format.items()
-            }
-            result = self.result_type(**result)
+            result = OrderedDict()
+            # for key, fmt in self.output_format.items():
+            for key in self.output_fields:
+                result[key] = np.take(
+                                output, axis=int(self.output_format[key]['axis']),
+                                indices=self.output_format[key]['indices'],
+                            ) if all(output.shape) else None 
+            # result = {
+            #     key: np.take(
+            #         output, axis=int(fmt['axis']),
+            #         indices=fmt['indices'],
+            #     ) if all(output.shape) else None 
+            #     for key, fmt in self.output_format.items()
+            # }
+            # result = self.result_type(**result)
             results.append(result)
         return results

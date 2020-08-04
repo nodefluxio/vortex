@@ -486,18 +486,18 @@ class IRPredictionPipeline(BasePredictionPipeline):
         """
 
         # runtime prediction as static method, can be reused in another pipeline/engine, e.g. Validator
-        predict_args = {}
-        for name, value in kwargs.items() :
-            if not name in model.input_specs :
-                warnings.warn('additional input arguments {} ignored'.format(name))
-                continue
-            ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
-            dtype = model.input_specs[name]['type'].replace('tensor(','').replace(')','')
-            predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
-                else np.asarray(value, dtype=dtype)
-        results = model(image, **predict_args)
+        # predict_args = {}
+        # for name, value in kwargs.items() :
+        #     if not name in model.input_specs :
+        #         warnings.warn('additional input arguments {} ignored'.format(name))
+        #         continue
+        #     ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
+        #     dtype = model.input_specs[name]['type'].replace('tensor(','').replace(')','')
+        #     predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
+        #         else np.asarray(value, dtype=dtype)
+        results = model(image, **kwargs)
         ## convert to dict for visualization
-        results = [result._asdict() for result in results]
+        # results = [result._asdict() for result in results]
         return results
 
     def _run_inference(self,

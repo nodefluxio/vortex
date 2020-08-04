@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - change `scheduler` to `lr_scheduler` in `config.trainer`.
   - change field `validation` to `validator` and move it from `config.trainer` to main `config`.
 - Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
+- Change output type of BaseRuntime `__call__` method to list of orderedDict
 
 
 ## v0.1.0
