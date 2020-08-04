@@ -38,9 +38,8 @@ def main(args):
     visualization = results.visualization
 
     # Convert class index to class names,obtain results
-
     try :
-        class_names = [[vortex_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
+        class_names = [[vortex_ir_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
     except :
         class_names = None
     print('Prediction : {}'.format(prediction))
