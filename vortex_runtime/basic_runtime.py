@@ -39,7 +39,6 @@ class BaseRuntime:
                 for key, value in self.output_format.items()
         )
         self.output_fields = sorted(self.output_format.keys())
-        # self.result_type = namedtuple('Result', [*output_fields])
         assert len(input_specs), "input specs can't be empty"
         assert all(isinstance(spec, (OrderedDict,dict)) and \
             'shape' in spec and 'type' in spec and \
@@ -98,19 +97,12 @@ class BaseRuntime:
         results = []
         for output in outputs:
             result = OrderedDict()
-            # for key, fmt in self.output_format.items():
+
             for key in self.output_fields:
                 result[key] = np.take(
                                 output, axis=int(self.output_format[key]['axis']),
                                 indices=self.output_format[key]['indices'],
                             ) if all(output.shape) else None 
-            # result = {
-            #     key: np.take(
-            #         output, axis=int(fmt['axis']),
-            #         indices=fmt['indices'],
-            #     ) if all(output.shape) else None 
-            #     for key, fmt in self.output_format.items()
-            # }
-            # result = self.result_type(**result)
+
             results.append(result)
         return results

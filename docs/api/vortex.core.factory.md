@@ -99,7 +99,7 @@ print(model_components.keys())
 
 
 
-Functions to create runtime model, currently the usage of this created object must be used together
+Functions to create runtime model
 
 
 
@@ -162,15 +162,14 @@ batch_imgs = np.array([cv2.resize(cv2.imread('tests/images/cat.jpg'),(input_shap
 ## Make sure the shape of input data is equal to input specifications
 assert batch_imgs.shape == tuple(input_shape)
 
-from vortex.core.pipelines import IRPredictionPipeline
-
 ## Additional parameters can be inspected from input_specs,
 ## E.g. `score_threshold` or `iou_threshold` for object detection
 additional_input_parameters = {}
 
-prediction_results = IRPredictionPipeline._runtime_predict(model=runtime_model,
-                                                        image=batch_imgs,
-                                                        **additional_input_parameters)
+## Inference is done by utilizing __call__ method
+prediction_results = runtime_model(batch_imgs,
+                                    **additional_input_parameters)
+
 print(prediction_results)
 ```
 

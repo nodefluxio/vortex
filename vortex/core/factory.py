@@ -144,8 +144,7 @@ def create_runtime_model(model_path : Union[str, Path],
                          output_name=["output"], 
                          *args, 
                          **kwargs) -> Type[BaseRuntime]:
-    """Functions to create runtime model, currently the usage of this created object must be used together
-    with IRPredictionPipeline to create prediction.
+    """Functions to create runtime model
 
     Args:
         model_path (Union[str, Path]): Path to Intermediate Representation (IR) model file
@@ -185,15 +184,14 @@ def create_runtime_model(model_path : Union[str, Path],
         ## Make sure the shape of input data is equal to input specifications
         assert batch_imgs.shape == tuple(input_shape)
 
-        from vortex.core.pipelines import IRPredictionPipeline
-
         ## Additional parameters can be inspected from input_specs,
         ## E.g. `score_threshold` or `iou_threshold` for object detection
         additional_input_parameters = {}
 
-        prediction_results = IRPredictionPipeline._runtime_predict(model=runtime_model,
-                                                                image=batch_imgs,
-                                                                **additional_input_parameters)
+        ## Inference is done by utilizing __call__ method
+        prediction_results = runtime_model(batch_imgs,
+                                            **additional_input_parameters)
+
         print(prediction_results)
         ```
     """
