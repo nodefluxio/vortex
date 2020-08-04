@@ -17,7 +17,6 @@ def get_prediction_results(results : np.ndarray, output_format : Dict[str,Union[
             output_format[k].indices = [x for x in range(indices['start'], indices['end'])]
 
     output_fields = sorted(output_format.keys())
-    # result_type = namedtuple('Result', [*output_fields])
 
     final_results = []
     for result in results:
@@ -29,17 +28,6 @@ def get_prediction_results(results : np.ndarray, output_format : Dict[str,Union[
                                     axis=output_format[key].axis
                                 ) if all(result.shape) else None 
 
-        # temp_result = {
-        #     key : (
-        #         np.take(
-        #             result, 
-        #             indices=output_format[key].indices, 
-        #             axis=output_format[key].axis
-        #         ) if all(result.shape) else None 
-        #     )
-        #     for key in output_format.keys()
-        #  }
-        # temp_result = result_type(**temp_result)
         final_results.append(temp_result)
-    # results = [result._asdict() for result in final_results]
+
     return final_results

@@ -351,9 +351,6 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
                     config.dataset))
         self.model.class_names = cls_names
 
-        # Configure input size for image
-        # self.input_size = config.model.preprocess_args.input_size
-
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
                        **kwargs) -> List:
@@ -443,63 +440,6 @@ class IRPredictionPipeline(BasePredictionPipeline):
             model_type = 'torchscript'
         self.output_file_prefix = '{}_ir_prediction'.format(model_type)
 
-        # Obtain class_names
-        # self.class_names = self.model.class_names
-
-
-        # # Obtain input size
-        # self.input_shape = self.model.input_specs['input']['shape']
-    
-    @staticmethod
-    def _runtime_predict(model, 
-                        image: np.ndarray, 
-                        **kwargs) -> List:
-        """Function to wrap Vortex runtime inference process
-
-        Args:
-            model : Vortex runtime object
-            image (np.ndarray): array of batched input image(s) with dimension of 4 (n,h,w,c)
-            kwargs (optional) : this kwargs is placement for additional input parameters specific to \
-                                models'task
-
-        Returns:
-            List: list of prediction results
-
-        Example:
-            ```python
-            from vortex.core.factory import create_runtime_model
-            from vortex.core.pipelines import IRPredictionPipeline
-            import cv2
-
-            model_file = 'experiments/outputs/example/example_bs2.pt' # Model file with extension '.onnx' or '.pt'
-            runtime = 'cpu'
-            model = create_runtime_model(model_file, runtime)
-
-            batch_imgs = np.array([cv2.imread('image1.jpg'),cv2.imread('image2.jpg')])
-
-            results = IRPredictionPipeline._runtime_predict(model, 
-                                                           batch_imgs,
-                                                           score_threshold=0.9,
-                                                           iou_threshold=0.2
-                                                           )
-            ```
-        """
-
-        # runtime prediction as static method, can be reused in another pipeline/engine, e.g. Validator
-        # predict_args = {}
-        # for name, value in kwargs.items() :
-        #     if not name in model.input_specs :
-        #         warnings.warn('additional input arguments {} ignored'.format(name))
-        #         continue
-        #     ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
-        #     dtype = model.input_specs[name]['type'].replace('tensor(','').replace(')','')
-        #     predict_args[name] = np.array([value], dtype=dtype) if isinstance(value, (float,int)) \
-        #         else np.asarray(value, dtype=dtype)
-        results = model(image, **kwargs)
-        ## convert to dict for visualization
-        # results = [result._asdict() for result in results]
-        return results
-
     def _run_inference(self,
                        batch_imgs : List[np.ndarray],
                        **kwargs) -> List:
@@ -521,7 +461,6 @@ class IRPredictionPipeline(BasePredictionPipeline):
         # TODO add resize with pad in runtime
         # Resize input
         batch_imgs = type(self.model).resize_batch([mat.copy() for mat in batch_imgs], input_shape)
-
-        results = type(self)._runtime_predict(self.model, batch_imgs, **kwargs)
+        results = self.model(batch_imgs, **kwargs)
 
         return results
