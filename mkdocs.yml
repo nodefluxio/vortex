@@ -22,6 +22,7 @@ nav:
         - 'Graph Exporter' : 'modules/exporter.md'
     - API :
         - 'vortex.core.pipelines' : 'api/vortex.core.pipelines.md'
+        - 'vortex.core.factory' : 'api/vortex.core.factory.md'
     - Repository : 'https://github.com/nodefluxio/vortex'
 markdown_extensions:
     - attr_list

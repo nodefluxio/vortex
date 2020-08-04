@@ -6,7 +6,7 @@ import torch
 from copy import deepcopy
 from pathlib import Path
 from easydict import EasyDict
-from typing import Union, Callable, Type
+from typing import Union, Callable, Type, Iterable
 from collections import OrderedDict
 
 from vortex.networks.models import create_model_components
@@ -16,12 +16,73 @@ from vortex.utils.data.collater import create_collater
 from vortex.utils.logger.base_logger import ExperimentLogger
 from vortex.utils.logger import create_logger
 from vortex_runtime import model_runtime_map
+from vortex_runtime.basic_runtime import BaseRuntime
+from vortex.exporter.base_exporter import BaseExporter
 
-__all__ = ['create_model','create_runtime_model','create_dataset','create_dataloader','create_experiment_logger','create_exporter']
+__all__ = ['create_model',
+           'create_runtime_model',
+        #    'create_dataset',
+           'create_dataloader',
+        #    'create_experiment_logger',
+        #    'create_exporter'
+]
 
 def create_model(model_config : EasyDict,
-                 state_dict : Union[str, dict, Path] = None, ## path to model or the actual state_dict
+                 state_dict : Union[str, dict, Path] = None,
                  stage : str = 'train') -> EasyDict:
+    """Function to create model and it's signature components. E.g. loss function, collate function, etc
+
+    Args:
+        model_config (EasyDict): Experiment file configuration at `model` section, as EasyDict object
+        state_dict (Union[str, dict, Path], optional): [description]. `model` Pytorch state dictionary or commonly known as weight, can be provided as the path to the file, or the returned dictionary object from `torch.load`. If this param is provided, it will override checkpoint specified in the experiment file. Defaults to None.
+        stage (str, optional): If set to 'train', this will enforce that the model must have `loss` and `collate_fn` attributes, hence it will make sure model can be used for training stage. If set to 'validate' it will ignore those requirements but cannot be used in training pipeline, but may still valid for other pipelines. Defaults to 'train'.
+
+    Raises:
+        TypeError: Raises if the provided `stage` not in 'train' or 'validate'
+
+    Returns:
+        EasyDict: The dictionary containing the model's components
+        
+    Example:
+        The dictionary returned will contain several keys :
+        
+        - `network` : Pytorch model's object which inherit `torch.nn.Module` class.
+        - `preprocess` : model's preprocessing module
+        - `postprocess` : model's postprocessing module
+        - `loss` : if provided, module for model's loss function
+        - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format into desirable format that can be accepted by `loss` components
+
+        ```python
+        from vortex.core.factory import create_model
+        from easydict import EasyDict
+
+        model_config = EasyDict({
+            'name': 'softmax',
+            'network_args': {
+                'backbone': 'efficientnet_b0',
+                'n_classes': 10,
+                'pretrained_backbone': True,
+            },
+            'preprocess_args': {
+                'input_size': 32,
+                'input_normalization': {
+                'mean': [0.4914, 0.4822, 0.4465],
+                'std': [0.2023, 0.1994, 0.2010],
+                'scaler': 255,
+                }
+            },
+            'loss_args': {
+                'reduction': 'mean'
+            }
+        })
+
+        model_components = create_model(
+            model_config = model_config
+        )
+        print(model_components.keys())
+        ```
+    """
+
     if stage not in ['train','validate']:
         raise TypeError('Unknown model "stage" argument, got {}, expected "train" or "validate"'%stage)
 
@@ -82,7 +143,60 @@ def create_runtime_model(model_path : Union[str, Path],
                          runtime: str, 
                          output_name=["output"], 
                          *args, 
-                         **kwargs):
+                         **kwargs) -> Type[BaseRuntime]:
+    """Functions to create runtime model, currently the usage of this created object must be used together
+    with IRPredictionPipeline to create prediction.
+
+    Args:
+        model_path (Union[str, Path]): Path to Intermediate Representation (IR) model file
+        runtime (str): Backend runtime to be used, e.g. : 'cpu' or 'cuda' (Depends on available runtime options)
+        output_name (list, optional): Runtime output(s) variable name. Defaults to ["output"].
+
+    Raises:
+        RuntimeError: Raises if selected `runtime` is not available
+
+    Returns:
+        Type[BaseRuntime]: Runtime model objects based on IR file model's type and selected `runtime`
+
+    Example:
+        ```python
+        from vortex.core.factory import create_runtime_model
+        import numpy as np
+        import cv2
+
+        model_path = 'tests/output_test/test_classification_pipelines/test_classification_pipelines.onnx'
+
+        runtime_model = create_runtime_model(
+            model_path = model_path,
+            runtime = 'cpu'
+        )
+
+        print(type(runtime_model))
+
+        ## Get model's input specifications and additional inferencing parameters
+
+        print(runtime_model.input_specs)
+
+        # Inferencing example
+
+        input_shape = runtime_model.input_specs['input']['shape']
+        batch_imgs = np.array([cv2.resize(cv2.imread('tests/images/cat.jpg'),(input_shape[2],input_shape[1]))])
+
+        ## Make sure the shape of input data is equal to input specifications
+        assert batch_imgs.shape == tuple(input_shape)
+
+        from vortex.core.pipelines import IRPredictionPipeline
+
+        ## Additional parameters can be inspected from input_specs,
+        ## E.g. `score_threshold` or `iou_threshold` for object detection
+        additional_input_parameters = {}
+
+        prediction_results = IRPredictionPipeline._runtime_predict(model=runtime_model,
+                                                                image=batch_imgs,
+                                                                **additional_input_parameters)
+        print(prediction_results)
+        ```
+    """
 
     model_type = Path(model_path).name.rsplit('.', 1)[1]
     runtime_map = model_runtime_map[model_type]
@@ -137,7 +251,79 @@ def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
-                      collate_fn : Union[Callable,str,None] = None):
+                      collate_fn : Union[Callable,str,None] = None) -> Type[Iterable]:
+    """Function to create iterable data loader object
+
+    Args:
+        dataloader_config (EasyDict): Experiment file configuration at `dataloader` section, as EasyDict object
+        dataset_config (EasyDict): Experiment file configuration at `dataset` section, as EasyDict object
+        preprocess_config (EasyDict): Experiment file configuration at `model.preprocess_args` section, as EasyDict object
+        stage (str, optional): Specify the experiment stage, either 'train' or 'validate'. Defaults to 'train'.
+        collate_fn (Union[Callable,str,None], optional): Collate function to reformat batch data serving. Defaults to None.
+
+    Raises:
+        TypeError: Raises if provided `collate_fn` type is neither 'str' (registered in Vortex), Callable (custom function), or None
+        RuntimeError: Raises if specified 'dataloader' module is not registered
+
+    Returns:
+        Type[Iterable]: Iterable dataloader object which served batch of data in every iteration
+
+    Example:
+        ```python
+        from vortex.core.factory import create_dataloader
+        from easydict import EasyDict
+
+        dataloader_config = EasyDict({
+            'module': 'PytorchDataLoader',
+            'args': {
+            'num_workers': 1,
+            'batch_size': 4,
+            'shuffle': True,
+            },
+        })
+
+        dataset_config = EasyDict({
+            'train': {
+                'dataset': 'ImageFolder',
+                'args': {
+                    'root': 'tests/test_dataset/classification/train'
+                },
+                'augmentations': [{
+                    'module': 'albumentations',
+                    'args': {
+                        'transforms': [
+                        {
+                            'transform' : 'RandomBrightnessContrast', 
+                            'args' : {
+                                'p' : 0.5, 'brightness_by_max': False,
+                                'brightness_limit': 0.1, 'contrast_limit': 0.1,
+                            }
+                        },
+                        {'transform': 'HueSaturationValue', 'args': {}},
+                        {'transform' : 'HorizontalFlip', 'args' : {'p' : 0.5}},
+                        ]
+                    }
+                }]
+            },
+        })
+
+        preprocess_config = EasyDict({
+            'input_size' : 224,
+            'input_normalization' : {
+                'mean' : [0.5,0.5,0.5],
+                'std' : [0.5, 0.5, 0.5],
+                'scaler' : 255
+            },
+        })
+
+        dataloader = create_dataloader(dataloader_config=dataloader_config,
+                                        dataset_config=dataset_config,
+                                        preprocess_config = preprocess_config,
+                                        collate_fn=None)
+        for data in dataloader:
+            images,labels = data
+        ```
+    """
 
     dataloader_config = deepcopy(dataloader_config)
     dataset_config = deepcopy(dataset_config)
@@ -186,7 +372,7 @@ def create_experiment_logger(config : EasyDict):
 def create_exporter(config: Union[EasyDict,dict], 
                     experiment_name: str, 
                     image_size: int, 
-                    output_directory: Union[Path,str]='.'):
+                    output_directory: Union[Path,str]='.') -> Type[BaseExporter]:
     from vortex.exporter.onnx import OnnxExporter
     from vortex.exporter.torchscript import TorchScriptExporter
     module_map = {
