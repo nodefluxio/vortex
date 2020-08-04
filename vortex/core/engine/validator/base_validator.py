@@ -23,7 +23,7 @@ from vortex.predictor.utils import get_prediction_results
 from vortex.utils.profiler.speed import TimeData
 from vortex.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.core.factory import create_runtime_model
-from vortex.core.pipelines.prediction_pipeline import IRPredictionPipeline
+# from vortex.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex_runtime.basic_runtime import BaseRuntime
 
@@ -324,7 +324,8 @@ class BaseValidator:
         image_dim = len(image.shape)
         image = image[np.newaxis,:] \
             if (input_dim - image_dim) else image
-        return IRPredictionPipeline._runtime_predict(predictor, image, *args, **kwargs)
+        result = predictor(image,*args, **kwargs)
+        return result
     
     def format_output(self, results) :
         """
