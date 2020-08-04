@@ -28,12 +28,16 @@ from vortex.predictor.base_module import BasePredictor, create_predictor
 from vortex.predictor.utils import get_prediction_results
 
 from .base_validator import BaseValidator
+from vortex_runtime.basic_runtime import BaseRuntime
 
 class BoundingBoxValidator(BaseValidator):
     __output_format__ = ['bounding_box', 'class_label', 'class_confidence']
     ## model output format requirements
-    def __init__(self, predictor: BasePredictor, dataset, score_threshold: float,
-                 iou_threshold: float, metric_type: str='voc', *args, **kwargs):
+    def __init__(self, 
+                 predictor: Union[BasePredictor,BaseRuntime], 
+                 dataset, 
+                 metric_type: str='voc', 
+                 *args, **kwargs):
         
         super(BoundingBoxValidator, self).__init__(predictor, dataset, *args, **kwargs)
 
@@ -45,8 +49,11 @@ class BoundingBoxValidator(BaseValidator):
             raise RuntimeError("expects dataset to return `label` of type np.ndarray or " \
                 "torch.Tensor, got %s" % type(lbl))
 
-        self.score_threshold = np.array([score_threshold], dtype=np.float32)
-        self.iou_threshold = np.array([iou_threshold], dtype=np.float32)
+        # self.score_threshold = np.array([score_threshold], dtype=np.float32)
+        # self.iou_threshold = np.array([iou_threshold], dtype=np.float32)
+        for key in self.prediction_args:
+            if isinstance(self.prediction_args[key],float) or isinstance(self.prediction_args[key],int):
+                self.prediction_args[key] = np.array([self.prediction_args[key]], dtype=np.float32)
         self.metric_type = metric_type
         assert metric_type in ['voc'], "unsupported metric type : {}, available 'voc'".format(metric_type)
 
@@ -60,10 +67,12 @@ class BoundingBoxValidator(BaseValidator):
         """
         args = super(type(self),self).validation_args()
         args.update(dict(
-            metric_type=self.metric_type,
-            iou_threshold=self.iou_threshold.item(),
-            score_threshold=self.score_threshold.item(),
+            metric_type=self.metric_type
         ))
+        for key in self.prediction_args:
+            args.update(dict(
+                key=self.prediction_args[key].item()
+            ))
         return args
     
     def eval_init(self, *args, **kwargs):
@@ -72,8 +81,7 @@ class BoundingBoxValidator(BaseValidator):
     
     def predict(self, image, *args, **kwargs):
         results = super(type(self),self).predict(
-            image=image, score_threshold=self.score_threshold, 
-            iou_threshold=self.iou_threshold
+            image=image, **self.prediction_args
         )
         return results
     

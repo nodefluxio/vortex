@@ -1,7 +1,8 @@
 from setuptools import setup, Extension, distutils, find_packages
+from vortex import __version__
 
 # Package Information
-version = open('version.txt', 'r').read().strip()
+version = __version__
 package_name = 'visual-cortex'
 
 # Requirements
