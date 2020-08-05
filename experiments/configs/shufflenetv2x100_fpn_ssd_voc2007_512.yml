@@ -8,9 +8,9 @@ model : {
   preprocess_args : {
     input_size : 512,
     input_normalization : {
-      mean : [0.5, 0.5, 0.5],
-      std : [0.5, 0.5, 0.5],
-      scaler: 255,
+      mean : [0, 0, 0],
+      std : [1, 1, 1],
+      scaler: 1,
     }
   },
   network_args : {
@@ -73,25 +73,25 @@ dataset : {
     args : {
       image_set : train,
     },
-    augmentations : [{
-      module : albumentations,
-      args : {
-        transforms : [
-          {compose : OneOf, args : {
-            transforms : [{transform : RandomBrightnessContrast, args : {p : 0.5}},
-                          {transform : RandomSnow, args : {p : 0.5}}
-            ],
-            p : 0.5}},
-          {transform : HorizontalFlip, args : {p : 0.5}},
-          {transform : RandomScale, args : {scale_limit : 0.3, p : 0.5,}}
-        ],
-        bbox_params : {
-          min_visibility : 0.0,
-          min_area : 0.0
-        },
-        visual_debug : False
-      }
-    }]
+    # augmentations : [{
+    #   module : albumentations,
+    #   args : {
+    #     transforms : [
+    #       {compose : OneOf, args : {
+    #         transforms : [{transform : RandomBrightnessContrast, args : {p : 0.5}},
+    #                       {transform : RandomSnow, args : {p : 0.5}}
+    #         ],
+    #         p : 0.5}},
+    #       {transform : HorizontalFlip, args : {p : 0.5}},
+    #       {transform : RandomScale, args : {scale_limit : 0.3, p : 0.5,}}
+    #     ],
+    #     bbox_params : {
+    #       min_visibility : 0.0,
+    #       min_area : 0.0
+    #     },
+    #     visual_debug : False
+    #   }
+    # }]
   },
   eval : {
     name: VOC2007DetectionDataset,
@@ -101,9 +101,10 @@ dataset : {
   },
 }
 dataloader: {
-  module: PytorchDataLoader,
+  module: DALIDataLoader,
   args: {
-    num_workers: 0,
+    num_thread: 1,
+    device_id: 0,
     batch_size: 4,
     shuffle: True,
   },

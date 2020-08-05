@@ -45,6 +45,7 @@ class DALIDataloader():
                                        device_id=device_id)
 
         self.dataset = iterator.dataset
+        self.disable_image_auto_pad = self.dataset.disable_image_auto_pad
         self.data_format = dataset.data_format
         self.preprocess_args = iterator.dataset.preprocess_args
 
@@ -88,7 +89,8 @@ class DALIDataloader():
 
                 self.external_executors = [ExternalAugmentsExecutor.remote(transforms_list_ref,
                                                                   data_format_ref,
-                                                                  preprocess_args_ref) for i in range(batch_size)]
+                                                                  preprocess_args_ref,
+                                                                  self.disable_image_auto_pad) for i in range(batch_size)]
 
 
         pipeline = DALIExternalSourcePipeline(dataset_iterator = iterator,
@@ -126,9 +128,13 @@ class DALIDataloader():
 
             # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
             pre_padded_image_size = output['pre_padded_image_shape'][i].cpu()[:2].type(torch.float32)
-            input_size = self.preprocess_args.input_size
-            padded_image_size = torch.tensor([input_size,input_size]).type(torch.float32)
-            diff_ratio = pre_padded_image_size/padded_image_size
+            
+            if not self.disable_image_auto_pad:
+                input_size = self.preprocess_args.input_size
+                padded_image_size = torch.tensor([input_size,input_size]).type(torch.float32)
+                diff_ratio = pre_padded_image_size/padded_image_size
+            else:
+                image = image[:,:pre_padded_image_size[0].type(torch.int).item(),:pre_padded_image_size[1].type(torch.int).item()]
 
             # Prepare labels array
             aug_labels = dict()
@@ -143,8 +149,10 @@ class DALIDataloader():
                 if layout == 'original_labels':
                     ret_targets = label_output
                 else:
-                    # DALI still have flaws about padding image to square, this is the workaround by bringing the image shape before padding
-                    label_output = self._fix_coordinates(label_output,layout,diff_ratio)
+                    if not self.disable_image_auto_pad:
+                        # DALI still have flaws about padding image to square, 
+                        # this is the workaround by bringing the image shape before padding
+                        label_output = self._fix_coordinates(label_output,layout,diff_ratio)
                     aug_labels[layout] = label_output
 
             # Modify labels placeholder with augmented labels
@@ -231,7 +239,8 @@ class ExternalAugmentsExecutor():
     def __init__(self,
                  transforms_list : list,
                  data_format : dict,
-                 preprocess_args : dict):
+                 preprocess_args : dict,
+                 disable_image_auto_pad : bool = False):
         """Initialization
 
         Args:
@@ -249,11 +258,18 @@ class ExternalAugmentsExecutor():
         standard_tf_kwargs.data_format = self.data_format
         standard_tf_kwargs.transforms = [
             {'transform': 'LongestMaxSize', 'args': {'max_size': preprocess_args.input_size}},
+            # {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
+            #                                       'min_width': preprocess_args.input_size,
+            #                                       'border_mode': cv2.BORDER_CONSTANT,
+            #                                       'value': [0, 0, 0]}},
+        ]
+        if not disable_image_auto_pad:
+            standard_tf_kwargs.transforms.append(
             {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
                                                   'min_width': preprocess_args.input_size,
                                                   'border_mode': cv2.BORDER_CONSTANT,
                                                   'value': [0, 0, 0]}},
-        ]
+            )
         self.standard_augments = create_transform(
             'albumentations', **standard_tf_kwargs)
 
