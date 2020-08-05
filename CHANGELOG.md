@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - change `scheduler` to `lr_scheduler` in `config.trainer`.
   - change field `validation` to `validator` and move it from `config.trainer` to main `config`.
 - Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
+- It is now possible to override image auto padding in dataset object by adding and set `self.disable_image_auto_pad = True` attribute on the `collate_fn` object provided by the `model_components`
 
 
 ## v0.1.0
