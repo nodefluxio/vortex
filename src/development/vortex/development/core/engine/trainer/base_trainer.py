@@ -16,17 +16,18 @@ class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']
     def __init__(self, model: Type[nn.Module], optimizer: Union[Type[optim.Optimizer], Tuple[str, Dict], Dict[str,Any]], 
                  scheduler: Union[Type[optim.lr_scheduler._LRScheduler], Tuple[str, Dict[str, Any]], Dict[str,Any]], 
-                 criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,check_annotations: bool = True):
+                 criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,
+                 check_annotations: bool = True, optimizer_params: Union[List[dict]] = None):
 
         self.model = model
-        self.optimizer = type(self).create_optimizer(optimizer, self.model)
+        self.optimizer = type(self).create_optimizer(optimizer, self.model, optimizer_params=optimizer_params)
         self.scheduler = type(self).create_scheduler(scheduler, self.optimizer)
         self.criterion = criterion
         self.experiment_logger = experiment_logger
         self.global_step = 0
 
         self._check_model()
-    
+
     def _check_model(self, strict=False, check_annotations=True):
         """
         check model and loss, called after model, loss, optim, scheduler are assigned
@@ -69,10 +70,9 @@ class BaseTrainer(object):
         warn_or_error(loss_input_annotated, "loss input not annotated")
         match = return_type_annotated and loss_input_annotated and type_utils.match_annotation(model_return_anno,loss_input_anno)
         warn_or_error(match, "annotation mismatch")
-            
-    
+
     @staticmethod
-    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], model: Type[nn.Module]):
+    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], model: Type[nn.Module], optimizer_params: Union[List[dict]] = None):
         """
         create optimizer
         """
@@ -83,10 +83,7 @@ class BaseTrainer(object):
                 type(optimizer[0]))
             assert isinstance(optimizer[1], dict), "expect optimizer is type of Tuple[str,Dict], got optimizer[0] : %s" % (
                 type(optimizer[1]))
-            optimizer = dict(
-                module=optimizer[0],
-                args=optimizer[1],
-            )
+            optimizer = dict(module=optimizer[0], args=optimizer[1])
         if isinstance(optimizer, dict):
             if 'method' in optimizer and not 'module' in optimizer:
                 optimizer.update({'module': optimizer['method']})
@@ -95,7 +92,17 @@ class BaseTrainer(object):
                 opt_method = opt_method.replace('optim.','')
             assert hasattr(optim, opt_method), \
                 "unsupported optimizer {}".format(opt_method)
-            kwargs.update({'params' : model.parameters()})
+            if optimizer_params is not None:
+                assert (isinstance(optimizer_params, (list, tuple)) and isinstance(optimizer_params[0], dict)), \
+                    "'optimizer_params' should be list of dictionary, got {}{}".format(
+                        type(optimizer_params),
+                        " and contains " + str(type(optimizer_params[0])) if isinstance(optimizer_params, (list, tuple)) \
+                            else ""
+                    )
+                assert all('params' in m for m in optimizer_params), "all optimizer_params is required to have 'params' key"
+            else:
+                optimizer_params = model.parameters()
+            kwargs.update({'params' : optimizer_params})
             optimizer = getattr(optim, opt_method)(**kwargs)
         return optimizer
 
@@ -144,7 +151,7 @@ class BaseTrainer(object):
 
     def train(self, dataloader, epoch: int):
         raise NotImplementedError
-    
+
     def __call__(self, dataloader, epoch: int):
         is_training = self.model.training
         self.model.train()
