@@ -1,10 +1,11 @@
 import torch
-import warnings
 import torch.nn as nn
 import torch.optim as optim
-from . import lr_scheduler
+
 import inspect
-from inspect import Signature, Parameter
+import warnings
+import types
+
 from collections import OrderedDict
 from copy import copy
 from typing import Tuple, List, Union, Type, Any, Dict
@@ -12,16 +13,19 @@ from tqdm import tqdm
 
 from vortex.development.utils import type_utils
 from vortex.development.utils.logger.base_logger import ExperimentLogger
+from . import lr_scheduler
 
 class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']
     def __init__(self, model: Type[nn.Module], optimizer: Union[Type[optim.Optimizer], Tuple[str, Dict], Dict[str,Any]], 
                  scheduler: Union[Type[optim.lr_scheduler._LRScheduler], Tuple[str, Dict[str, Any]], Dict[str,Any]], 
                  criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,
-                 check_annotations: bool = True, optimizer_params: Union[List[dict]] = None):
+                 check_annotations: bool = True, param_groups: Union[List[dict]] = None):
 
         self.model = model
-        self.optimizer = type(self).create_optimizer(optimizer, self.model, optimizer_params=optimizer_params)
+        if param_groups is None:
+            param_groups = model.parameters()
+        self.optimizer = type(self).create_optimizer(optimizer, param_groups)
         self.scheduler = type(self).create_scheduler(scheduler, self.optimizer)
         self.criterion = criterion
         self.experiment_logger = experiment_logger
@@ -65,7 +69,7 @@ class BaseTrainer(object):
         warn_or_error(args_exist,args_not_exist_msg)
         if not check_annotations:
             return
-        return_type_annotated = model_return_anno != Signature.empty
+        return_type_annotated = model_return_anno != inspect.Signature.empty
         loss_input_annotated = loss_input_anno is not None
         warn_or_error(return_type_annotated, "return type not annotated")
         warn_or_error(loss_input_annotated, "loss input not annotated")
@@ -73,7 +77,7 @@ class BaseTrainer(object):
         warn_or_error(match, "annotation mismatch")
 
     @staticmethod
-    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], model: Type[nn.Module], optimizer_params: Union[List[dict]] = None):
+    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], param_groups: List[dict]):
         """
         create optimizer
         """
@@ -93,17 +97,17 @@ class BaseTrainer(object):
                 opt_method = opt_method.replace('optim.','')
             assert hasattr(optim, opt_method), \
                 "unsupported optimizer {}".format(opt_method)
-            if optimizer_params is not None:
-                assert (isinstance(optimizer_params, (list, tuple)) and isinstance(optimizer_params[0], dict)), \
-                    "'optimizer_params' should be list of dictionary, got {}{}".format(
-                        type(optimizer_params),
-                        " and contains " + str(type(optimizer_params[0])) if isinstance(optimizer_params, (list, tuple)) \
-                            else ""
-                    )
-                assert all('params' in m for m in optimizer_params), "all optimizer_params is required to have 'params' key"
-            else:
-                optimizer_params = model.parameters()
-            kwargs.update({'params' : optimizer_params})
+
+            if isinstance(param_groups, (list, tuple)):
+                assert isinstance(param_groups[0], dict), "'param_groups' should be list of dictionary, "\
+                    "got {} and contains {}".format(type(param_groups), type(param_groups[0]))
+                assert all('params' in m for m in param_groups), "all param_groups is required to have 'params' key"
+            elif not isinstance(param_groups, types.GeneratorType):
+                raise RuntimeError("'param_groups' argument should be 'model.parameters()' generator or "
+                    "a list of dictionary containing parameter groups, got type {}. See more details in "
+                    "https://pytorch.org/docs/stable/optim.html".format(type(param_groups)))
+
+            kwargs.update({'params' : param_groups})
             optimizer = getattr(optim, opt_method)(**kwargs)
         return optimizer
 
