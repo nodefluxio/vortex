@@ -75,8 +75,8 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
                     key_components=key_components,
                     returned_components=model_components
                 )
-                if 'optimizer_params' in model_components:
-                    key_components.append('optimizer_params')
+                if 'param_groups' in model_components:
+                    key_components.append('param_groups')
             elif stage == 'validate':
                 key_components = ['network', 'postprocess']
                 check_model_components_keys(
