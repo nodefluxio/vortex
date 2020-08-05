@@ -132,7 +132,7 @@ class BaseTrainer(object):
             if scheduler.step_update == None:
                 raise RuntimeError('Currently, scheduler {} is not supported, please select other scheduler'.format(type(scheduler).__name__))
         return scheduler
-    
+
     @staticmethod
     def apply_scheduler_step(scheduler,epoch,step,steps_per_epoch,accumulation_step):
         """ Apply scheduler step
