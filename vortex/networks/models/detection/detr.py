@@ -1012,6 +1012,6 @@ def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, l
         'loss': DETRLoss(**loss_args),
         'collate_fn': 'DETRColatte',
         'postprocess': DETRPostProcess(**postprocess_args),
-        'optimizer_params': optim_params
+        'param_groups': optim_params
     }
     return EasyDict(model_components)
