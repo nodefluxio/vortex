@@ -13,7 +13,8 @@ def main(args):
 
     ckpt_in_cfg = 'checkpoint' in config
     if ckpt_in_cfg:
-        config.checkpoint = config.checkpoint.rstrip(',')
+        if config.checkpoint is not None:
+            config.checkpoint = config.checkpoint.rstrip(',')
     if args.resume and (not ckpt_in_cfg or (ckpt_in_cfg and config.checkpoint == None)):
         ## TODO: point to documentation for resume
         raise RuntimeError("You choose to resume but 'checkpoint' is not specified. "

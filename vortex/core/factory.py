@@ -354,7 +354,8 @@ def create_dataloader(dataloader_config : EasyDict,
 
         # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
         # to disable auto pad augmentation
-        if hasattr(collate_fn,'disable_image_auto_padding'):
+        import pdb; pdb.set_trace()
+        if hasattr(collate_fn,'disable_image_auto_pad'):
             dataset = create_dataset(dataset_config=dataset_config, 
                                      stage=stage, 
                                      preprocess_config=preprocess_config,

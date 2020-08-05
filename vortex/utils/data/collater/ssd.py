@@ -11,9 +11,11 @@ class SSDCollate:
     def __init__(self, dataformat: dict) :
         ## TODO : check all necessary fields
         self.dataformat = EasyDict(dataformat)
+        # self.disable_image_auto_pad = True
     
     def __call__(self, batch) :
         imgs, targets = list(zip(*batch))
+        # import pdb; pdb.set_trace()
         df = self.dataformat
 
         list_targets = []

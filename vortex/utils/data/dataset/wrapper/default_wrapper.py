@@ -69,11 +69,19 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
         standard_tf_kwargs.data_format = self.data_format
         standard_tf_kwargs.transforms = [
             {'transform': 'LongestMaxSize', 'args': {'max_size': preprocess_args.input_size}},
-            {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
+            # {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
+            #                                       'min_width': preprocess_args.input_size,
+            #                                       'border_mode': cv2.BORDER_CONSTANT,
+            #                                       'value': [0, 0, 0]}},
+        ]
+
+        if not disable_image_auto_pad:
+            standard_tf_kwargs.transforms.append(
+                 {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
                                                   'min_width': preprocess_args.input_size,
                                                   'border_mode': cv2.BORDER_CONSTANT,
                                                   'value': [0, 0, 0]}},
-        ]
+            )
         self.standard_augments = create_transform(
             'albumentations', **standard_tf_kwargs)
 
