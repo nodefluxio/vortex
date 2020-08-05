@@ -184,9 +184,9 @@ class TrainingPipeline(BasePipeline):
         self.model_components.network = self.model_components.network.to(self.device)
         self.criterion = self.model_components.loss.to(self.device)
 
-        optimizer_params = None
-        if 'optimizer_params' in self.model_components:
-            optimizer_params = self.model_components.optimizer_params
+        param_groups = None
+        if 'param_groups' in self.model_components:
+            param_groups = self.model_components.param_groups
 
         if 'dataloader' in config:
             dataloader_config = config.dataloader
@@ -204,7 +204,7 @@ class TrainingPipeline(BasePipeline):
             config.trainer, criterion=self.criterion,
             model=self.model_components.network,
             experiment_logger=self.experiment_logger,
-            optimizer_params=optimizer_params
+            param_groups=param_groups
         )
         if resume:
             self.trainer.optimizer.load_state_dict(checkpoint['optimizer_state'])
