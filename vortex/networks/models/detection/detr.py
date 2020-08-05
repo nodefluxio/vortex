@@ -515,7 +515,7 @@ class DETRPostProcess(nn.Module):
         )
 
     def forward(self, inputs: torch.Tensor, score_threshold: torch.Tensor, **kwargs) -> torch.Tensor:
-        logits, bbox = inputs[..., 4:], inputs[...,:4]
+        logits, bbox = inputs[..., 4:], cxcywh_to_xyxy(inputs[...,:4])
 
         conf, labels = F.softmax(logits, -1).max(-1, keepdim=True)
         keep = (conf > score_threshold).nonzero()[:, 1]
