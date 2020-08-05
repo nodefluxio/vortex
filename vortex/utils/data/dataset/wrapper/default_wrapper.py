@@ -36,12 +36,15 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
 
     def __init__(self, dataset: str, stage: str, preprocess_args: Union[EasyDict, dict],
                  augmentations: Union[Tuple[str, dict], List, Callable] = None,
-                 dataset_args: Union[EasyDict, dict] = {}):
+                 dataset_args: Union[EasyDict, dict] = {},
+                 disable_image_auto_pad : bool = False
+                 ):
         super().__init__(dataset=dataset,
                          stage=stage,
                          preprocess_args=preprocess_args,
                          augmentations=augmentations,
-                         dataset_args=dataset_args
+                         dataset_args=dataset_args,
+                         disable_image_auto_pad=disable_image_auto_pad
                          )
         # Configured computer vision augmentation initialization
         self.augments = None

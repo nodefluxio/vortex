@@ -211,7 +211,9 @@ def create_runtime_model(model_path : Union[str, Path],
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str,
-                   wrapper_format : str = 'default'):
+                   wrapper_format : str = 'default',
+                   disable_image_auto_pad : bool = False
+                   ):
     dataset_config = deepcopy(dataset_config)
     augmentations = []
 
@@ -239,19 +241,21 @@ def create_dataset(dataset_config : EasyDict,
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
     if wrapper_format=='default':
-        return DefaultDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
-                          augmentations=augmentations, dataset_args=dataset_args)
+        dataset_wrapper = DefaultDatasetWrapper
     elif wrapper_format=='basic':
-        return BasicDatasetWrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
-                          augmentations=augmentations, dataset_args=dataset_args)
+        dataset_wrapper = BasicDatasetWrapper
     else:
         raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
+
+    return dataset_wrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
+                          augmentations=augmentations, dataset_args=dataset_args, disable_image_auto_pad=disable_image_auto_pad)
 
 def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
-                      collate_fn : Union[Callable,str,None] = None) -> Type[Iterable]:
+                      collate_fn : Union[Callable,str,None] = None,
+                      ) -> Type[Iterable]:
     """Function to create iterable data loader object
 
     Args:
@@ -347,6 +351,16 @@ def create_dataloader(dataloader_config : EasyDict,
             collater_args = {}
         collater_args['dataformat'] = dataset.data_format
         collate_fn = create_collater(collate_fn, **collater_args)
+
+        # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
+        # to disable auto pad augmentation
+        if hasattr(collate_fn,'disable_image_auto_padding'):
+            dataset = create_dataset(dataset_config=dataset_config, 
+                                     stage=stage, 
+                                     preprocess_config=preprocess_config,
+                                     wrapper_format=wrapper_format[dataloader_module],
+                                     disable_image_auto_pad=collate_fn.disable_image_auto_pad)
+
 
     elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
         raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "

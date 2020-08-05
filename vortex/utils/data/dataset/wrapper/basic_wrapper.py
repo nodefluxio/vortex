@@ -16,6 +16,7 @@ class BasicDatasetWrapper():
                  preprocess_args: Union[EasyDict, dict],
                  augmentations: Union[Tuple[str, dict]],
                  dataset_args: Union[EasyDict, dict] = {},
+                 disable_image_auto_pad : bool = False
                  ):
         """A basic form of dataset wrapper, maintain type checking and data format from integrated dataset
 
@@ -29,6 +30,7 @@ class BasicDatasetWrapper():
         self.stage = stage
         self.preprocess_args = preprocess_args
         self.augmentations_list = augmentations
+        self.disable_image_auto_pad = disable_image_auto_pad
 
         if stage == 'train' and self.augmentations_list is not None:
             if not isinstance(self.augmentations_list, List):
