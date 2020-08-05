@@ -101,35 +101,6 @@ class NestedTensor(object):
         return cls(tensor, mask)
 
 
-def _max_by_axis(the_list):
-    # type: (List[List[int]]) -> List[int]
-    maxes = the_list[0]
-    for sublist in the_list[1:]:
-        for index, item in enumerate(sublist):
-            maxes[index] = max(maxes[index], item)
-    return maxes
-
-
-def nested_tensor_from_tensor_list(tensor_list: List[torch.Tensor]):
-    # TODO make this more general
-    if tensor_list[0].ndim == 3:
-        # TODO make it support different-sized images
-        max_size = _max_by_axis([list(img.shape) for img in tensor_list])
-        # min_size = tuple(min(s) for s in zip(*[img.shape for img in tensor_list]))
-        batch_shape = [len(tensor_list)] + max_size
-        b, c, h, w = batch_shape
-        dtype = tensor_list[0].dtype
-        device = tensor_list[0].device
-        tensor = torch.zeros(batch_shape, dtype=dtype, device=device)
-        mask = torch.ones((b, h, w), dtype=torch.bool, device=device)
-        for img, pad_img, m in zip(tensor_list, tensor, mask):
-            pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
-            m[: img.shape[1], :img.shape[2]] = False
-    else:
-        raise ValueError('not supported')
-    return NestedTensor(tensor, mask)
-
-
 class Transformer(nn.Module):
     def __init__(self, d_model=512, nhead=8, num_encoder_layers=6,
                  num_decoder_layers=6, dim_feedforward=2048, dropout=0.1,
@@ -455,7 +426,8 @@ class DETR(nn.Module):
     def __init__(self, backbone, n_classes, num_queries=100, train_backbone=True, dilation=False, 
                  aux_loss=False, hidden_dim=256, position_embedding='sine', nhead=8, 
                  num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, dropout=0.1, 
-                 activation="relu", normalize_before=False, return_intermediate_dec=True):
+                 activation="relu", normalize_before=False, return_intermediate_dec=True,
+                 lr_backbone=1e-5):
         super().__init__()
 
         backbone = getattr(torchvision.models.resnet, backbone)(pretrained=True,
@@ -495,6 +467,7 @@ class DETR(nn.Module):
         self.query_embed = nn.Embedding(num_queries, hidden_dim)
         self.input_proj = nn.Conv2d(backbone_num_channels, hidden_dim, kernel_size=1)
         self.aux_loss = aux_loss
+        self.lr_backbone = lr_backbone
 
         self.output_format = {
             "bounding_box": {"indices": [0,1,2,3], "axis": 1},
@@ -505,7 +478,6 @@ class DETR(nn.Module):
     def forward(self, samples):
         if isinstance(samples, (list, torch.torch.Tensor)):
             samples = NestedTensor.from_batch_tensor(samples)
-            # samples = nested_tensor_from_tensor_list(samples)
         x = self.backbone(samples.tensors)
         mask = F.interpolate(samples.mask[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
         features = NestedTensor(x, mask)
@@ -799,7 +771,7 @@ class DETRLoss(nn.Module):
              target: list of dicts, such that len(target) == batch_size.
                       The expected keys in each dict depends on the losses applied, see each loss' doc
         """
-        outputs = input
+        outputs = input     # to comply with vortex format
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux'}
 
         # Retrieve the matching between the outputs of the last layer and the target
@@ -1024,10 +996,22 @@ def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, l
     network_args['aux_loss'] = False if not 'aux_loss' in network_args else network_args['aux_loss']
     loss_args['n_classes'] = network_args['n_classes']
     loss_args['aux_loss'] = network_args['aux_loss']
+    if 'num_decoder_layer' in network_args:
+        loss_args['decoder_layer'] = network_args['num_decoder_layer']
+
+    model = DETR(**network_args)
+    optim_params = [
+        {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
+        {
+            "params": [p for n, p in model.named_parameters() if "backbone" in n and p.requires_grad],
+            "lr": model.lr_backbone,
+        },
+    ]
     model_components = {
-        'network': DETR(**network_args),
+        'network': model,
         'loss': DETRLoss(**loss_args),
         'collate_fn': 'DETRColatte',
-        'postprocess': DETRPostProcess(**postprocess_args)
+        'postprocess': DETRPostProcess(**postprocess_args),
+        'optimizer_params': optim_params
     }
     return EasyDict(model_components)
