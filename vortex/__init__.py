@@ -12,3 +12,5 @@ from vortex import utils
 from vortex import networks
 from vortex import ir_runtime_predict
 from vortex import ir_runtime_validate
+
+from .version import __version__

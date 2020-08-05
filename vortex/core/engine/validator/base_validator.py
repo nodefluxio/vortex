@@ -77,12 +77,13 @@ class BaseValidator:
     """
     base class for validation
     """
-    def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', batch_size:int=1):
+    def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', batch_size:int=1,**prediction_args):
         if not isinstance(predictor, (BasePredictor,BaseRuntime)):
             raise RuntimeError("expects `predictor` to have type of BasePredictor or BaseRuntime, " \
                 "got %s" % type(predictor))
 
         self.predictor = predictor
+        self.prediction_args = prediction_args
         self.dataset = dataset
         self.metrics = None
         self.experiment_name = experiment_name
