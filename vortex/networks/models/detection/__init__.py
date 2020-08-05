@@ -69,12 +69,14 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
                 raise TypeError(
                     "return type from function create_model_components expected as EasyDict, got %s" % type(model_components))
             if stage == 'train':
-                key_components = ['network', 'loss',
-                                  'collate_fn', 'postprocess']
+                key_components = ['network', 'loss', 'collate_fn', 'postprocess']
                 check_model_components_keys(
                     stage=stage, model_name=model_name,
                     key_components=key_components,
-                    returned_components=model_components)
+                    returned_components=model_components
+                )
+                if 'optimizer_params' in model_components:
+                    key_components.append('optimizer_params')
             elif stage == 'validate':
                 key_components = ['network', 'postprocess']
                 check_model_components_keys(
@@ -83,10 +85,9 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
                     returned_components=model_components)
             model_components = EasyDict({component: model_components[component] for component in key_components})
 
+            preprocess_args = {}
             if "input_normalization" in preprocess_args:
                 preprocess_args = preprocess_args.input_normalization
-            else:
-                preprocess_args = {}
             model_components.preprocess = get_preprocess('normalizer', **preprocess_args)
             model_components.network.task = 'detection' ## force
             if not hasattr(model_components.network, "output_format"):
