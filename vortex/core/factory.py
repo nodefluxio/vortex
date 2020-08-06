@@ -211,8 +211,7 @@ def create_runtime_model(model_path : Union[str, Path],
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str,
-                   wrapper_format : str = 'default',
-                   disable_image_auto_pad : bool = False
+                   wrapper_format : str = 'default'
                    ):
     dataset_config = deepcopy(dataset_config)
     augmentations = []
@@ -248,7 +247,7 @@ def create_dataset(dataset_config : EasyDict,
         raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
     return dataset_wrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
-                          augmentations=augmentations, dataset_args=dataset_args, disable_image_auto_pad=disable_image_auto_pad)
+                          augmentations=augmentations, dataset_args=dataset_args)
 
 def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
@@ -355,12 +354,8 @@ def create_dataloader(dataloader_config : EasyDict,
         # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
         # to disable auto pad augmentation
         if hasattr(collate_fn,'disable_image_auto_pad'):
-            dataset = create_dataset(dataset_config=dataset_config, 
-                                     stage=stage, 
-                                     preprocess_config=preprocess_config,
-                                     wrapper_format=wrapper_format[dataloader_module],
-                                     disable_image_auto_pad=collate_fn.disable_image_auto_pad)
-
+            if collate_fn.disable_image_auto_pad:
+                dataset.disable_image_auto_pad()
 
     elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
         raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "

@@ -37,14 +37,12 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
     def __init__(self, dataset: str, stage: str, preprocess_args: Union[EasyDict, dict],
                  augmentations: Union[Tuple[str, dict], List, Callable] = None,
                  dataset_args: Union[EasyDict, dict] = {},
-                 disable_image_auto_pad : bool = False
                  ):
         super().__init__(dataset=dataset,
                          stage=stage,
                          preprocess_args=preprocess_args,
                          augmentations=augmentations,
                          dataset_args=dataset_args,
-                         disable_image_auto_pad=disable_image_auto_pad
                          )
         # Configured computer vision augmentation initialization
         self.augments = None
@@ -65,25 +63,27 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
                 self.augments.append(augments)
 
         # Standardized computer vision augmentation initialization, longest resize and pad to square
-        standard_tf_kwargs = EasyDict()
-        standard_tf_kwargs.data_format = self.data_format
-        standard_tf_kwargs.transforms = [
+        self.standard_tf_kwargs = EasyDict()
+        self.standard_tf_kwargs.data_format = self.data_format
+        self.standard_tf_kwargs.transforms = [
             {'transform': 'LongestMaxSize', 'args': {'max_size': preprocess_args.input_size}},
-            # {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
-            #                                       'min_width': preprocess_args.input_size,
-            #                                       'border_mode': cv2.BORDER_CONSTANT,
-            #                                       'value': [0, 0, 0]}},
-        ]
-
-        if not disable_image_auto_pad:
-            standard_tf_kwargs.transforms.append(
-                 {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
+            {'transform': 'PadIfNeeded', 'args': {'min_height': preprocess_args.input_size,
                                                   'min_width': preprocess_args.input_size,
                                                   'border_mode': cv2.BORDER_CONSTANT,
                                                   'value': [0, 0, 0]}},
-            )
+        ]
+
         self.standard_augments = create_transform(
-            'albumentations', **standard_tf_kwargs)
+            'albumentations', **self.standard_tf_kwargs)
+
+    def disable_image_auto_pad(self):
+        self.image_auto_pad = False
+
+        # Reinitialize standard augments if disable padding
+        self.standard_tf_kwargs.transforms = [transform for transform in self.standard_tf_kwargs.transforms if transform['transform']!='PadIfNeeded']
+
+        self.standard_augments = create_transform(
+            'albumentations', **self.standard_tf_kwargs)
 
     def __getitem__(self, index: int):
         image, target = super().__getitem__(index)
