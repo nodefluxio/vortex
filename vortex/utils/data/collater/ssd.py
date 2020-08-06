@@ -15,7 +15,6 @@ class SSDCollate:
     
     def __call__(self, batch) :
         imgs, targets = list(zip(*batch))
-        import pdb; pdb.set_trace()
         df = self.dataformat
 
         list_targets = []
