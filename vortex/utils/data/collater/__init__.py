@@ -25,7 +25,13 @@ def create_collater(collater : str, *args, **kwargs) :
         raise KeyError("collater %s not supported, available : %s" %(collater, ALL_COLLATERS))
     for module, collaters in supported_collater.items() :
         if collater in collaters :
-            return module.create_collater(collater, *args, **kwargs)
+            collater_obj = module.create_collater(collater, *args, **kwargs)
+            if not hasattr(collater_obj,'disable_image_auto_pad'):
+                try:
+                    collater_obj.disable_image_auto_pad = False
+                except:
+                    pass
+            return collater_obj
     raise RuntimeError("unexpected error! please report this as bug")
 
 ## for maintainer, register your module here :
