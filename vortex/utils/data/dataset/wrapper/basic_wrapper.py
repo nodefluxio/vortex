@@ -29,6 +29,7 @@ class BasicDatasetWrapper():
         self.stage = stage
         self.preprocess_args = preprocess_args
         self.augmentations_list = augmentations
+        self.image_auto_pad = True
 
         if stage == 'train' and self.augmentations_list is not None:
             if not isinstance(self.augmentations_list, List):
@@ -90,6 +91,9 @@ class BasicDatasetWrapper():
             raise RuntimeError("Unknown target return of %s" % type(target))
 
         return image,target
+    
+    def disable_image_auto_pad(self):
+        self.image_auto_pad = False
 
 def check_data_format_standard(data_format: EasyDict):
     def _convert_indices_to_list(indices: EasyDict):
