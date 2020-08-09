@@ -104,7 +104,7 @@ class BoundingBoxValidator(BaseValidator):
     def _update_results(self, index, results, targets):
         results = results[0] # single batch
 
-        if results['class_label'].max() >= len(self.class_names):
+        if results['class_label'] is not None and results['class_label'].max() >= len(self.class_names):
             self.class_names.append('N/A') ## background
 
         self.logger('labels :')
