@@ -605,7 +605,7 @@ class DETRLoss(nn.Module):
         2) supervise each pair of matched ground-truth / prediction (supervise class and box)
     """
     def __init__(self, n_classes, mask=False, aux_loss=False, matcher='hungarian', matcher_args=None, eos_coef=0.1,
-                 weight_ce=1., weight_bbox=5., weight_giou=2., weight_dice=1., weight_mask=1, decoder_layer=None):
+                 weight_ce=1., weight_bbox=5., weight_giou=2., weight_dice=1., weight_mask=1, num_decoder_layers=None):
         """ Create the criterion.
         Parameters:
             n_classes: number of object categories, omitting the special no-object category
@@ -618,7 +618,7 @@ class DETRLoss(nn.Module):
             weight_giou: generalized iou loss weight
             weight_dice: dice loss weight, only applies if mask is True
             weight_mask: mask loss weight, only applies if mask is True
-            decoder_layer: number of decoder layer on the model, used if aux_loss is True
+            num_decoder_layers: number of decoder layer on the model, used if aux_loss is True
         """
         super().__init__()
         self.n_classes = n_classes
@@ -646,10 +646,10 @@ class DETRLoss(nn.Module):
 
         self.aux_loss = aux_loss
         if self.aux_loss:
-            if decoder_layer is None:
-                decoder_layer = 6
-                warnings.warn("'decoder_layer' is not specified. Using default value of 6")
-            aux_weight = {k+'_'+str(i): v for k,v in self.weight_dict.items() for i in range(decoder_layer-1)}
+            if num_decoder_layers is None:
+                num_decoder_layers = 6
+                warnings.warn("'num_decoder_layers' is not specified. Using default value of 6")
+            aux_weight = {k+'_'+str(i): v for k,v in self.weight_dict.items() for i in range(num_decoder_layers-1)}
             self.weight_dict.update(aux_weight)
 
         empty_weight = torch.ones(self.n_classes + 1)
@@ -996,8 +996,8 @@ def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, l
     network_args['aux_loss'] = False if not 'aux_loss' in network_args else network_args['aux_loss']
     loss_args['n_classes'] = network_args['n_classes']
     loss_args['aux_loss'] = network_args['aux_loss']
-    if 'num_decoder_layer' in network_args:
-        loss_args['decoder_layer'] = network_args['num_decoder_layer']
+    if 'num_decoder_layers' in network_args:
+        loss_args['num_decoder_layers'] = network_args['num_decoder_layers']
 
     model = DETR(**network_args)
     optim_params = [
