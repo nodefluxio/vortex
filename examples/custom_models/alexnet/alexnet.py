@@ -127,12 +127,12 @@ class ClassificationLoss(nn.Module):
 #
 # There are two ways of registering *builder* function, using decorator `register_model`
 # ```
-# @vortex.networks.models.register_model(model_name='my_model_name')
+# @vortex.development.networks.models.register_model(model_name='my_model_name')
 # def create_model_components(...):
 # ```
 # or by directly calling `register_model_`
 # ```
-# vortex.networks.models.register_model_('my_model_name',create_model_components)
+# vortex.development.networks.models.register_model_('my_model_name',create_model_components)
 # ```
 
 @networks.models.register_model(model_name='alexnet')

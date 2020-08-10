@@ -6,9 +6,9 @@ import torch
 from pathlib import Path
 from easydict import EasyDict as edict
 
-from vortex.utils.parser import load_config, check_config
-from vortex.core import engine
-from vortex.core.factory import create_model, create_dataset
+from vortex.development.utils.parser import load_config, check_config
+from vortex.development.core import engine
+from vortex.development.core.factory import create_model, create_dataset
 
 def update_checkpoints(config, model_paths, override=False):
     assert isinstance(model_paths, list) and isinstance(model_paths[0], str)

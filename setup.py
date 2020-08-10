@@ -17,7 +17,7 @@ with open('optuna.vis.requirements.txt') as f:
 # Python scripts console entrypoints
 entry_points = {
         'console_scripts': [
-            'vortex=vortex.vortex_cli:main',
+            'vortex=vortex.development.vortex_cli:main',
             ],
     }
 

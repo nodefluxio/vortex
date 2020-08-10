@@ -30,8 +30,8 @@ class GraphExportPipeline(BasePipeline):
 
         Example:
             ```python
-            from vortex.utils.parser import load_config
-            from vortex.core.pipelines import GraphExportPipeline
+            from vortex.development.utils.parser import load_config
+            from vortex.development.core.pipelines import GraphExportPipeline
             
             # Parse config
             config = load_config('experiments/config/example.yml')
@@ -69,7 +69,7 @@ class GraphExportPipeline(BasePipeline):
                 dataset_name = config.dataset.train.dataset
 
             if dataset_name:
-                from vortex.utils.data.dataset.dataset import all_datasets
+                from vortex.development.utils.data.dataset.dataset import all_datasets
                 dataset_available = False
                 for datasets in all_datasets.values():
                     if dataset_name in datasets:

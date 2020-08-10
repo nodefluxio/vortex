@@ -15,7 +15,7 @@ def main(args):
     weights=args.weights
 
     from pathlib import Path
-    from vortex.utils.parser.loader import Loader
+    from vortex.development.utils.parser.loader import Loader
     with open(config_path) as f:
         config_data = yaml.load(f, Loader=Loader)
     with open(optconfig_path) as f:

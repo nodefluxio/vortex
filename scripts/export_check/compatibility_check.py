@@ -12,24 +12,27 @@ if __name__=='__main__' :
     from pathlib import Path
     proj_path = os.path.abspath(Path(__file__).parents[2])
     sys.path.append(proj_path)
+    sys.path.append('vortex/development_package')
+    sys.path.append('vortex/runtime_package')
+
 
 from math import isclose
 from datetime import datetime
 from easydict import EasyDict
 # from networks.models import create_model_components
-from vortex.networks.modules.backbones import all_models as all_backbones
-from vortex.utils.profiler.resource import get_uname, get_cpu_info, get_gpu_info
+from vortex.development.networks.modules.backbones import all_models as all_backbones
+from vortex.development.utils.profiler.resource import get_uname, get_cpu_info, get_gpu_info
 # from runtime_predict import model_runtime_map
-from vortex_runtime import model_runtime_map
+from vortex.runtime import model_runtime_map
 # from runtime_predict import create_model as create_onnx_model
 # from runtime_predict import predict as onnx_predict
 # from predict import predict as torch_predict
 # from export import create_exporter, create_predictor
-from vortex.predictor import create_predictor, get_prediction_results
-from vortex.core.factory import create_model,create_runtime_model,create_exporter
+from vortex.development.predictor import create_predictor, get_prediction_results
+from vortex.development.core.factory import create_model,create_runtime_model,create_exporter
 from typing import Type,List,Dict
-from vortex_runtime.basic_runtime import BaseRuntime
-from vortex.predictor.base_module import BasePredictor
+from vortex.runtime.basic_runtime import BaseRuntime
+from vortex.development.predictor.base_module import BasePredictor
 
 np.random.seed(0)
 torch.manual_seed(0)

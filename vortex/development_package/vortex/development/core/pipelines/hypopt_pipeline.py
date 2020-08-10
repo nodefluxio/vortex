@@ -39,8 +39,8 @@ class HypOptPipeline(BasePipeline):
         
         Example:
             ```python
-            from vortex.core.pipelines import HypOptPipeline
-            from vortex.utils.parser.loader import Loader
+            from vortex.development.core.pipelines import HypOptPipeline
+            from vortex.development.utils.parser.loader import Loader
             import yaml
 
             # Parse config

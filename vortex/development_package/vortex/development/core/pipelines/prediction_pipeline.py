@@ -252,8 +252,8 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         Example:
             ```python
-            from vortex.core.pipelines import PytorchPredictionPipeline
-            from vortex.utils.parser import load_config
+            from vortex.development.core.pipelines import PytorchPredictionPipeline
+            from vortex.development.utils.parser import load_config
 
             # Parse config
             config_path = 'experiments/config/example.yml'
@@ -327,7 +327,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
                 dataset_name = config.dataset.train.dataset
 
             if dataset_name:
-                from vortex.utils.data.dataset.dataset import all_datasets
+                from vortex.development.utils.data.dataset.dataset import all_datasets
                 dataset_available = False
                 for datasets in all_datasets.values():
                     if dataset_name in datasets:
@@ -416,8 +416,8 @@ class IRPredictionPipeline(BasePredictionPipeline):
         
         Example:
             ```python
-            from vortex.core.pipelines import IRPredictionPipeline
-            from vortex.utils.parser import load_config
+            from vortex.development.core.pipelines import IRPredictionPipeline
+            from vortex.development.utils.parser import load_config
 
             # Parse config
             model_file = 'experiments/outputs/example/example.pt' # Model file with extension '.onnx' or '.pt'

@@ -4,7 +4,7 @@ sys.path.append(str(Path(__file__).parents[2]))
 sys.path.append(str(Path(__file__).parents[2].joinpath("tests")))
 
 from tests.test_torchscript_exporter import test_exporter, output_dir, model_argmap
-from vortex.networks.modules.backbones import all_models as all_backbones
+from vortex.development.networks.modules.backbones import all_models as all_backbones
 
 
 if __name__ == "__main__":

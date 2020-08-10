@@ -272,406 +272,406 @@ class TestTrainingPipeline():
             assert not 'scheduler_state' in ckpt
 
 
-# def test_create_model():
-#     def _check(model):
-#         assert all(x in model for x in ('network', 'preprocess', 'postprocess'))
-#         assert all(x in model for x in ('loss', 'collate_fn'))
+def test_create_model():
+    def _check(model):
+        assert all(x in model for x in ('network', 'preprocess', 'postprocess'))
+        assert all(x in model for x in ('loss', 'collate_fn'))
 
-#     model = create_model(config.model, stage='train')
-#     _check(model)
+    model = create_model(config.model, stage='train')
+    _check(model)
 
-#     ckpt = torch.load(pth_model_path)
+    ckpt = torch.load(pth_model_path)
 
-#     ## using 'state_dict' path as 'str'
-#     model = create_model(config.model, state_dict=pth_model_path, stage='train')
-#     _check(model)
-#     state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+    ## using 'state_dict' path as 'str'
+    model = create_model(config.model, state_dict=pth_model_path, stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
 
-#     ## using 'state_dict' path as 'Path'
-#     model = create_model(config.model, state_dict=Path(pth_model_path), stage='train')
-#     _check(model)
-#     state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+    ## using 'state_dict' path as 'Path'
+    model = create_model(config.model, state_dict=Path(pth_model_path), stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
 
-#     ## using 'state_dict' from ckpt
-#     model = create_model(config.model, state_dict=ckpt['state_dict'], stage='train')
-#     _check(model)
-#     state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+    ## using 'state_dict' from ckpt
+    model = create_model(config.model, state_dict=ckpt['state_dict'], stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
 
-#     ## using 'init_state_dict' from config
-#     new_cfg_model = deepcopy(config.model)
-#     new_cfg_model['init_state_dict'] = pth_model_path
-#     model = create_model(new_cfg_model, stage='train')
-#     _check(model)
-#     state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
+    ## using 'init_state_dict' from config
+    new_cfg_model = deepcopy(config.model)
+    new_cfg_model['init_state_dict'] = pth_model_path
+    model = create_model(new_cfg_model, stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
 
-#     ## if both 'init_state_dict' config and 'state_dict' argument is specified
-#     ## 'state_dict' argument should be of top priority
-#     ckpt_ep0 = torch.load(train_info.run_directory/'test_classification_pipelines-epoch-0.pth')
-#     model = create_model(new_cfg_model, state_dict=ckpt_ep0['state_dict'], stage='train')
-#     _check(model)
-#     state_dict_is_equal(ckpt_ep0['state_dict'], model.network.state_dict())
+    ## if both 'init_state_dict' config and 'state_dict' argument is specified
+    ## 'state_dict' argument should be of top priority
+    ckpt_ep0 = torch.load(train_info.run_directory/'test_classification_pipelines-epoch-0.pth')
+    model = create_model(new_cfg_model, state_dict=ckpt_ep0['state_dict'], stage='train')
+    _check(model)
+    state_dict_is_equal(ckpt_ep0['state_dict'], model.network.state_dict())
 
 
-# def test_validation_pipeline():
-#     ## test device and old config
-#     for device in ("cpu", "cuda:0"):
-#         orig_cfg_dev = deepcopy(config)
-#         orig_cfg_dev.device = device
-#         old_cfg_dev = deepcopy(config)
-#         old_cfg_dev.trainer.device = device
-#         old_cfg_dev.pop('device', None)
+def test_validation_pipeline():
+    ## test device and old config
+    for device in ("cpu", "cuda:0"):
+        orig_cfg_dev = deepcopy(config)
+        orig_cfg_dev.device = device
+        old_cfg_dev = deepcopy(config)
+        old_cfg_dev.trainer.device = device
+        old_cfg_dev.pop('device', None)
 
-#         for cfg_dev in (old_cfg_dev, orig_cfg_dev):
-#             predictor = PytorchValidationPipeline(config=cfg_dev, weights=None, backends=[device])
-#             assert torch.device(predictor.backends[0]) == torch.device(device)
+        for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+            predictor = PytorchValidationPipeline(config=cfg_dev, weights=None, backends=[device])
+            assert torch.device(predictor.backends[0]) == torch.device(device)
 
-#     # Instantiate Validation
-#     validation_executor = PytorchValidationPipeline(config=config,
-#                                                  weights = None,
-#                                                  backends = 'cpu',
-#                                                  generate_report = True)
+    # Instantiate Validation
+    validation_executor = PytorchValidationPipeline(config=config,
+                                                 weights = None,
+                                                 backends = 'cpu',
+                                                 generate_report = True)
 
-#     eval_results = validation_executor.run(batch_size=2)
+    eval_results = validation_executor.run(batch_size=2)
 
-#     # Check return value
-#     assert isinstance(eval_results,EasyDict)
+    # Check return value
+    assert isinstance(eval_results,EasyDict)
 
-#     # Check generated reports
-#     report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-#     generated_report = Path(report_dir) / '{}_validation_cpu.md'.format(config.experiment_name)
-#     assert generated_report.exists()
+    # Check generated reports
+    report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
+    generated_report = Path(report_dir) / '{}_validation_cpu.md'.format(config.experiment_name)
+    assert generated_report.exists()
 
-# class TestPredictionPipeline():
+class TestPredictionPipeline():
 
-#     # Clear pre-existing output file
-#     if Path('tests/output_predict_test').exists():
-#         shutil.rmtree(Path('tests/output_predict_test'))
+    # Clear pre-existing output file
+    if Path('tests/output_predict_test').exists():
+        shutil.rmtree(Path('tests/output_predict_test'))
     
-#     weight_file = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pth"
+    weight_file = "tests/output_test/test_classification_pipelines/test_classification_pipelines.pth"
 
-#     def _check_result(self, results, visualize=True):
-#         # Prediction pipeline output must be EasyDict
-#         assert isinstance(results, EasyDict)
-#         assert 'prediction' in results
-#         assert 'visualization' in results
+    def _check_result(self, results, visualize=True):
+        # Prediction pipeline output must be EasyDict
+        assert isinstance(results, EasyDict)
+        assert 'prediction' in results
+        assert 'visualization' in results
 
-#         ## Prediction output must be in a list
-#         ## representation of batched output list index [0] means result for input [0]
-#         assert isinstance(results.prediction, list)
-#         assert isinstance(results.prediction[0], EasyDict)
-#         if visualize:
-#             assert isinstance(results.visualization, list)
-#             assert isinstance(results.visualization[0], np.ndarray)
-#         else:
-#             assert results.visualization is None
+        ## Prediction output must be in a list
+        ## representation of batched output list index [0] means result for input [0]
+        assert isinstance(results.prediction, list)
+        assert isinstance(results.prediction[0], EasyDict)
+        if visualize:
+            assert isinstance(results.visualization, list)
+            assert isinstance(results.visualization[0], np.ndarray)
+        else:
+            assert results.visualization is None
 
-#     def _check_pipeline(self, pipeline):
-#         ckpt = torch.load(pth_model_path)
-#         state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-#         assert state_dict_is_equal(state_dict, pipeline.model.model.state_dict())
+    def _check_pipeline(self, pipeline):
+        ckpt = torch.load(pth_model_path)
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        assert state_dict_is_equal(state_dict, pipeline.model.model.state_dict())
 
-#     def test_model_api(self):
-#         vortex_predictor = PytorchPredictionPipeline(config = config,
-#                                         weights = None,
-#                                         device = 'cpu')
+    def test_model_api(self):
+        vortex_predictor = PytorchPredictionPipeline(config = config,
+                                        weights = None,
+                                        device = 'cpu')
 
-#         assert isinstance(vortex_predictor.model.input_specs, OrderedDict)
-#         assert isinstance(vortex_predictor.model.class_names, list)
+        assert isinstance(vortex_predictor.model.input_specs, OrderedDict)
+        assert isinstance(vortex_predictor.model.class_names, list)
 
-#     def test_input_from_image_path(self):
-#         ## test device and old config
-#         for device in ("cpu", "cuda:0"):
-#             orig_cfg_dev = deepcopy(config)
-#             orig_cfg_dev.device = device
-#             old_cfg_dev = deepcopy(config)
-#             old_cfg_dev.trainer.device = device
-#             old_cfg_dev.pop('device', None)
+    def test_input_from_image_path(self):
+        ## test device and old config
+        for device in ("cpu", "cuda:0"):
+            orig_cfg_dev = deepcopy(config)
+            orig_cfg_dev.device = device
+            old_cfg_dev = deepcopy(config)
+            old_cfg_dev.trainer.device = device
+            old_cfg_dev.pop('device', None)
 
-#             for cfg_dev in (old_cfg_dev, orig_cfg_dev):
-#                 predictor = PytorchPredictionPipeline(config=cfg_dev, weights=None, device=device)
-#                 model_device = list(predictor.model.parameters())[0].device
-#                 assert model_device == torch.device(device)
+            for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+                predictor = PytorchPredictionPipeline(config=cfg_dev, weights=None, device=device)
+                model_device = list(predictor.model.parameters())[0].device
+                assert model_device == torch.device(device)
 
-#         # Instantiate predictor
-#         vortex_predictor = PytorchPredictionPipeline(config = config,
-#                                         weights = None,
-#                                         device = 'cpu')
+        # Instantiate predictor
+        vortex_predictor = PytorchPredictionPipeline(config = config,
+                                        weights = None,
+                                        device = 'cpu')
 
-#         def _test(predictor):
-#             kwargs = {}
-#             results = predictor.run(images = ['tests/images/cat.jpg'],
-#                                     visualize = True,
-#                                     dump_visual = True,
-#                                     output_dir = 'tests/output_predict_test',
-#                                     **kwargs)
-#             self._check_result(results)
-#             self._check_pipeline(predictor)
+        def _test(predictor):
+            kwargs = {}
+            results = predictor.run(images = ['tests/images/cat.jpg'],
+                                    visualize = True,
+                                    dump_visual = True,
+                                    output_dir = 'tests/output_predict_test',
+                                    **kwargs)
+            self._check_result(results)
+            self._check_pipeline(predictor)
 
-#             # If dump_visualization and images is provided as string, allow for dump visualized image
-#             vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
-#             assert vis_dump_path.exists()
+            # If dump_visualization and images is provided as string, allow for dump visualized image
+            vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
+            assert vis_dump_path.exists()
 
-#             assert all([isinstance(spec, dict) and \
-#                 ('shape' in spec) and ('pos' in spec) and ('type' in spec) and \
-#                 isinstance(spec['shape'], (tuple, list)) and \
-#                 isinstance(spec['type'], str) and \
-#                 isinstance(spec['pos'], int)
-#                     for spec in predictor.model.input_specs.values()
-#             ])
+            assert all([isinstance(spec, dict) and \
+                ('shape' in spec) and ('pos' in spec) and ('type' in spec) and \
+                isinstance(spec['shape'], (tuple, list)) and \
+                isinstance(spec['type'], str) and \
+                isinstance(spec['pos'], int)
+                    for spec in predictor.model.input_specs.values()
+            ])
 
-#         ## normal predictor
-#         _test(vortex_predictor)
+        ## normal predictor
+        _test(vortex_predictor)
 
-#         ## no class names
-#         vortex_predictor.model.class_names = None
-#         _test(vortex_predictor)
+        ## no class names
+        vortex_predictor.model.class_names = None
+        _test(vortex_predictor)
 
-#     @pytest.mark.parametrize("visualize", [False, True])
-#     def test_input_from_numpy(self, visualize):
-#         # Instantiate predictor
-#         kwargs = {}
-#         vortex_predictor = PytorchPredictionPipeline(config = config,
-#                                                      weights = None,
-#                                                      device = 'cpu')
+    @pytest.mark.parametrize("visualize", [False, True])
+    def test_input_from_numpy(self, visualize):
+        # Instantiate predictor
+        kwargs = {}
+        vortex_predictor = PytorchPredictionPipeline(config = config,
+                                                     weights = None,
+                                                     device = 'cpu')
 
-#         # Read image
-#         image_data = cv2.imread('tests/images/cat.jpg')
-#         results = vortex_predictor.run(images = [image_data],
-#                                        visualize = visualize,
-#                                        **kwargs)
-#         self._check_result(results, visualize=visualize)
-#         self._check_pipeline(vortex_predictor)
+        # Read image
+        image_data = cv2.imread('tests/images/cat.jpg')
+        results = vortex_predictor.run(images = [image_data],
+                                       visualize = visualize,
+                                       **kwargs)
+        self._check_result(results, visualize=visualize)
+        self._check_pipeline(vortex_predictor)
 
-#     def test_weight_from_argument(self):
-#         vortex_predictor = PytorchPredictionPipeline(config=config,
-#                                                      weights=pth_model_path,
-#                                                      device = 'cpu')
-#         image_data = cv2.imread('tests/images/cat.jpg')
-#         results = vortex_predictor.run(images = [image_data],
-#                                    visualize = False)
-#         self._check_result(results, visualize=False)
-#         self._check_pipeline(vortex_predictor)
+    def test_weight_from_argument(self):
+        vortex_predictor = PytorchPredictionPipeline(config=config,
+                                                     weights=pth_model_path,
+                                                     device = 'cpu')
+        image_data = cv2.imread('tests/images/cat.jpg')
+        results = vortex_predictor.run(images = [image_data],
+                                   visualize = False)
+        self._check_result(results, visualize=False)
+        self._check_pipeline(vortex_predictor)
 
-# @pytest.mark.parametrize("weight", [None, pth_model_path])
-# def test_export_pipeline(weight):
-#     # Initialize graph exporter
-#     graph_exporter = GraphExportPipeline(config=config, weights=weight)
+@pytest.mark.parametrize("weight", [None, pth_model_path])
+def test_export_pipeline(weight):
+    # Initialize graph exporter
+    graph_exporter = GraphExportPipeline(config=config, weights=weight)
 
-#     status = graph_exporter.run(example_input=None)
-#     assert isinstance(status,EasyDict)
-#     assert 'export_status' in status.keys()
-#     assert isinstance(status.export_status, bool)
+    status = graph_exporter.run(example_input=None)
+    assert isinstance(status,EasyDict)
+    assert 'export_status' in status.keys()
+    assert isinstance(status.export_status, bool)
 
-#     ## without class names
-#     graph_exporter.class_names = None
-#     status = graph_exporter.run(example_input=None)
-#     assert isinstance(status,EasyDict)
-#     assert 'export_status' in status.keys()
-#     assert isinstance(status.export_status, bool)
+    ## without class names
+    graph_exporter.class_names = None
+    status = graph_exporter.run(example_input=None)
+    assert isinstance(status,EasyDict)
+    assert 'export_status' in status.keys()
+    assert isinstance(status.export_status, bool)
 
-#     ckpt = torch.load(pth_model_path)
-#     state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-#     assert state_dict_is_equal(state_dict, graph_exporter.predictor.model.state_dict())
+    ckpt = torch.load(pth_model_path)
+    state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+    assert state_dict_is_equal(state_dict, graph_exporter.predictor.model.state_dict())
 
-# class TestIRValidationPipeline():
+class TestIRValidationPipeline():
 
-#     def test_onnx_validation_single_batch(self):
-#         # Instantiate Validation
-#         model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.onnx')
+    def test_onnx_validation_single_batch(self):
+        # Instantiate Validation
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.onnx')
 
-#         validation_executor = IRValidationPipeline(config=config,
-#                                                 model = model_path,
-#                                                 backends = 'cpu',
-#                                                 generate_report = True)
+        validation_executor = IRValidationPipeline(config=config,
+                                                model = model_path,
+                                                backends = 'cpu',
+                                                generate_report = True)
 
-#         eval_results = validation_executor.run(batch_size=1)
+        eval_results = validation_executor.run(batch_size=1)
 
-#         # Check return value
-#         assert isinstance(eval_results,EasyDict)
+        # Check return value
+        assert isinstance(eval_results,EasyDict)
 
-#         # Check generated reports
-#         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-#         generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
-#         assert generated_report.exists()
+        # Check generated reports
+        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
+        generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
+        assert generated_report.exists()
     
-#     def test_onnx_validation_multi_batch(self):
-#         # Instantiate Validation
-#         model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.onnx')
+    def test_onnx_validation_multi_batch(self):
+        # Instantiate Validation
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.onnx')
 
-#         validation_executor = IRValidationPipeline(config=config,
-#                                                 model = model_path,
-#                                                 backends = 'cpu',
-#                                                 generate_report = True)
+        validation_executor = IRValidationPipeline(config=config,
+                                                model = model_path,
+                                                backends = 'cpu',
+                                                generate_report = True)
 
-#         eval_results = validation_executor.run(batch_size=2)
+        eval_results = validation_executor.run(batch_size=2)
 
-#         # Check return value
-#         assert isinstance(eval_results,EasyDict)
+        # Check return value
+        assert isinstance(eval_results,EasyDict)
 
-#         # Check generated reports
-#         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-#         generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
-#         assert generated_report.exists()
+        # Check generated reports
+        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
+        generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
+        assert generated_report.exists()
 
-#     def test_torchscript_validation_single_batch(self):
-#         # Instantiate Validation
-#         model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.pt')
+    def test_torchscript_validation_single_batch(self):
+        # Instantiate Validation
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.pt')
 
-#         validation_executor = IRValidationPipeline(config=config,
-#                                                 model = model_path,
-#                                                 backends = 'cpu',
-#                                                 generate_report = True)
+        validation_executor = IRValidationPipeline(config=config,
+                                                model = model_path,
+                                                backends = 'cpu',
+                                                generate_report = True)
 
-#         eval_results = validation_executor.run(batch_size=1)
+        eval_results = validation_executor.run(batch_size=1)
 
-#         # Check return value
-#         assert isinstance(eval_results,EasyDict)
+        # Check return value
+        assert isinstance(eval_results,EasyDict)
 
-#         # Check generated reports
-#         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-#         generated_report = Path(report_dir) / '{}_torchscript_IR_validation_cpu.md'.format(config.experiment_name)
-#         assert generated_report.exists()
+        # Check generated reports
+        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
+        generated_report = Path(report_dir) / '{}_torchscript_IR_validation_cpu.md'.format(config.experiment_name)
+        assert generated_report.exists()
     
-#     def test_torchscript_validation_multi_batch(self):
-#         # Instantiate Validation
-#         model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.pt')
+    def test_torchscript_validation_multi_batch(self):
+        # Instantiate Validation
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.pt')
 
-#         validation_executor = IRValidationPipeline(config=config,
-#                                                 model = model_path,
-#                                                 backends = 'cpu',
-#                                                 generate_report = True)
+        validation_executor = IRValidationPipeline(config=config,
+                                                model = model_path,
+                                                backends = 'cpu',
+                                                generate_report = True)
 
-#         eval_results = validation_executor.run(batch_size=2)
+        eval_results = validation_executor.run(batch_size=2)
 
-#         # Check return value
-#         assert isinstance(eval_results,EasyDict)
+        # Check return value
+        assert isinstance(eval_results,EasyDict)
 
-#         # Check generated reports
-#         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-#         generated_report = Path(report_dir) / '{}_torchscript_IR_validation_cpu.md'.format(config.experiment_name)
-#         assert generated_report.exists()
+        # Check generated reports
+        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
+        generated_report = Path(report_dir) / '{}_torchscript_IR_validation_cpu.md'.format(config.experiment_name)
+        assert generated_report.exists()
 
-# class TestIRPredictionPipeline(): 
+class TestIRPredictionPipeline(): 
 
-#     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-#     def test_model_api(self,model_input):
-#         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-#                                                 runtime = 'cpu')
+    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    def test_model_api(self,model_input):
+        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
+                                                runtime = 'cpu')
         
-#         assert isinstance(vortex_ir_predictor.model.input_specs,OrderedDict)
-#         assert isinstance(vortex_ir_predictor.model.class_names,list)
+        assert isinstance(vortex_ir_predictor.model.input_specs,OrderedDict)
+        assert isinstance(vortex_ir_predictor.model.class_names,list)
 
-#     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-#     def test_input_from_image_path(self,model_input):
-#         # Instantiate predictor
-#         kwargs = {}
-#         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-#                                                 runtime = 'cpu')
+    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    def test_input_from_image_path(self,model_input):
+        # Instantiate predictor
+        kwargs = {}
+        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
+                                                runtime = 'cpu')
 
-#         results = vortex_ir_predictor.run(images = ['tests/images/cat.jpg'],
-#                                       visualize = True,
-#                                       dump_visual = True,
-#                                       output_dir = 'tests/output_predict_test',
-#                                       **kwargs)
+        results = vortex_ir_predictor.run(images = ['tests/images/cat.jpg'],
+                                      visualize = True,
+                                      dump_visual = True,
+                                      output_dir = 'tests/output_predict_test',
+                                      **kwargs)
         
-#         # Prediction pipeline output must be EasyDict
-#         assert isinstance(results,EasyDict)
-#         assert 'prediction' in results.keys()
-#         assert 'visualization' in results.keys()
+        # Prediction pipeline output must be EasyDict
+        assert isinstance(results,EasyDict)
+        assert 'prediction' in results.keys()
+        assert 'visualization' in results.keys()
 
-#         # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-#         assert isinstance(results.prediction,list)
-#         assert isinstance(results.visualization,list)
+        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
+        assert isinstance(results.prediction,list)
+        assert isinstance(results.visualization,list)
 
-#         # Check list member type
-#         assert isinstance(results.prediction[0],EasyDict)
-#         assert isinstance(results.visualization[0],np.ndarray)
+        # Check list member type
+        assert isinstance(results.prediction[0],EasyDict)
+        assert isinstance(results.visualization[0],np.ndarray)
 
-#         # If dump_visualization and images is provided as string, allow for dump visualized image
+        # If dump_visualization and images is provided as string, allow for dump visualized image
 
-#         if model_input==onnx_model_path:
-#             vis_dump_path = Path('tests/output_predict_test') / 'onnx_ir_prediction_cat.jpg'
-#         elif model_input==pt_model_path:
-#             vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_cat.jpg'
-#         assert vis_dump_path.exists()
+        if model_input==onnx_model_path:
+            vis_dump_path = Path('tests/output_predict_test') / 'onnx_ir_prediction_cat.jpg'
+        elif model_input==pt_model_path:
+            vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_cat.jpg'
+        assert vis_dump_path.exists()
 
-#     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-#     def test_input_from_numpy_with_vis(self,model_input):
-#         # Instantiate predictor
-#         kwargs = {}
-#         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-#                                                 runtime = 'cpu')
+    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    def test_input_from_numpy_with_vis(self,model_input):
+        # Instantiate predictor
+        kwargs = {}
+        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
+                                                runtime = 'cpu')
         
-#         # Read image
-#         image_data = cv2.imread('tests/images/cat.jpg')
+        # Read image
+        image_data = cv2.imread('tests/images/cat.jpg')
 
-#         results = vortex_ir_predictor.run(images = [image_data],
-#                                       visualize = True,
-#                                       **kwargs)
+        results = vortex_ir_predictor.run(images = [image_data],
+                                      visualize = True,
+                                      **kwargs)
         
-#         # Prediction pipeline output must be EasyDict
-#         assert isinstance(results,EasyDict)
-#         assert 'prediction' in results.keys()
-#         assert 'visualization' in results.keys()
+        # Prediction pipeline output must be EasyDict
+        assert isinstance(results,EasyDict)
+        assert 'prediction' in results.keys()
+        assert 'visualization' in results.keys()
 
-#         # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-#         assert isinstance(results.prediction,list)
-#         assert isinstance(results.visualization,list)
+        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
+        assert isinstance(results.prediction,list)
+        assert isinstance(results.visualization,list)
 
-#         # Check list member type
-#         assert isinstance(results.prediction[0],EasyDict)
-#         assert isinstance(results.visualization[0],np.ndarray)
+        # Check list member type
+        assert isinstance(results.prediction[0],EasyDict)
+        assert isinstance(results.visualization[0],np.ndarray)
 
-#     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-#     def test_input_from_numpy_wo_vis(self,model_input):
-#         # Instantiate predictor
-#         kwargs = {}
-#         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-#                                                 runtime = 'cpu')
+    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    def test_input_from_numpy_wo_vis(self,model_input):
+        # Instantiate predictor
+        kwargs = {}
+        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
+                                                runtime = 'cpu')
         
-#         # Read image
-#         image_data = cv2.imread('tests/images/cat.jpg')
+        # Read image
+        image_data = cv2.imread('tests/images/cat.jpg')
 
-#         results = vortex_ir_predictor.run(images = [image_data],
-#                                       visualize = False,
-#                                       **kwargs)
+        results = vortex_ir_predictor.run(images = [image_data],
+                                      visualize = False,
+                                      **kwargs)
         
-#         # Prediction pipeline output must be EasyDict
-#         assert isinstance(results,EasyDict)
-#         assert 'prediction' in results.keys()
-#         assert 'visualization' in results.keys()
+        # Prediction pipeline output must be EasyDict
+        assert isinstance(results,EasyDict)
+        assert 'prediction' in results.keys()
+        assert 'visualization' in results.keys()
 
-#         # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
-#         assert isinstance(results.prediction,list)
-#         assert results.visualization is None
+        # Prediction output muSt be in a list -> representation of batched output list index [0] means result for input [0]
+        assert isinstance(results.prediction,list)
+        assert results.visualization is None
 
-#         # Check list member type
-#         assert isinstance(results.prediction[0],EasyDict)
+        # Check list member type
+        assert isinstance(results.prediction[0],EasyDict)
 
-# class TestHypOptPipeline:
+class TestHypOptPipeline:
 
-#     def test_train_obj(self):
+    def test_train_obj(self):
 
-#         hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
-#         trial_result = hypopt.run()
+        hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
+        trial_result = hypopt.run()
 
-#         dump_report_path = Path(config.output_directory) / config.experiment_name / 'hypopt' / hypopt_train_obj_config.study_name / 'best_params.txt'
+        dump_report_path = Path(config.output_directory) / config.experiment_name / 'hypopt' / hypopt_train_obj_config.study_name / 'best_params.txt'
 
-#         assert isinstance(trial_result,EasyDict)
-#         assert 'best_trial' in trial_result.keys()
-#         assert dump_report_path.exists()
+        assert isinstance(trial_result,EasyDict)
+        assert 'best_trial' in trial_result.keys()
+        assert dump_report_path.exists()
 
-#     def test_gpu_train_obj(self):
+    def test_gpu_train_obj(self):
 
-#         config.trainer.device = 'cuda'
-#         hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
-#         trial_result = hypopt.run()
+        config.trainer.device = 'cuda'
+        hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
+        trial_result = hypopt.run()
 
-#         dump_report_path = Path(config.output_directory) / config.experiment_name / 'hypopt' / hypopt_train_obj_config.study_name / 'best_params.txt'
+        dump_report_path = Path(config.output_directory) / config.experiment_name / 'hypopt' / hypopt_train_obj_config.study_name / 'best_params.txt'
 
-#         assert isinstance(trial_result,EasyDict)
-#         assert 'best_trial' in trial_result.keys()
-#         assert dump_report_path.exists()
+        assert isinstance(trial_result,EasyDict)
+        assert 'best_trial' in trial_result.keys()
+        assert dump_report_path.exists()
     
-#     # TODO add test_validation_obj
+    # TODO add test_validation_obj
         

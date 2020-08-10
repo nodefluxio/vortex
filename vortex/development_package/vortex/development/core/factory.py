@@ -380,8 +380,8 @@ def create_exporter(config: Union[EasyDict,dict],
                     experiment_name: str, 
                     image_size: int, 
                     output_directory: Union[Path,str]='.') -> Type[BaseExporter]:
-    from vortex.exporter.onnx import OnnxExporter
-    from vortex.exporter.torchscript import TorchScriptExporter
+    from vortex.development.exporter.onnx import OnnxExporter
+    from vortex.development.exporter.torchscript import TorchScriptExporter
     module_map = {
         'onnx': (OnnxExporter, '.onnx'),
         'torchscript': (TorchScriptExporter, '.pt')

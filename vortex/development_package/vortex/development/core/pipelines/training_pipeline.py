@@ -84,8 +84,8 @@ class TrainingPipeline(BasePipeline):
 
         Example:
             ```python
-            from vortex.utils.parser import load_config
-            from vortex.core.pipelines import TrainingPipeline
+            from vortex.development.utils.parser import load_config
+            from vortex.development.core.pipelines import TrainingPipeline
             
             # Parse config
             config_path = 'experiments/config/example.yml'
