@@ -387,6 +387,8 @@ class TrainingPipeline(BasePipeline):
         date_time = pst_now.strftime("%m/%d/%Y, %H:%M:%S")
         logging_provider = None if config.logging == None else config.logging.module
         log_file = Path('experiments/local_runs.log')
+        if not os.path.isdir('experiments'):
+            os.makedirs('experiments')
         if log_file.exists():
             mode='r+'
         else:

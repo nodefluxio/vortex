@@ -84,9 +84,9 @@ class YoloV3(BackbonePoolConnector):
 
 
 def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, loss_args: EasyDict, postprocess_args: EasyDict) -> EasyDict:
-    from vortex.networks.modules.losses.yolov3 import YoloV3Loss
-    from vortex.utils.data.collater.darknet import DarknetCollate
-    from vortex.networks.modules.postprocess.yolov3 import YoloV3PostProcess
+    from vortex.development.networks.modules.losses.yolov3 import YoloV3Loss
+    from vortex.development.utils.data.collater.darknet import DarknetCollate
+    from vortex.development.networks.modules.postprocess.yolov3 import YoloV3PostProcess
     model_components = EasyDict()
     model_components.network = YoloV3(
         img_size=preprocess_args.input_size, **network_args)
