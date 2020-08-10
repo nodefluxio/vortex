@@ -1,2 +1,2 @@
-from vortex.predictor.base_module import create_predictor
-from vortex.predictor.utils import get_prediction_results
+from vortex.development.predictor.base_module import create_predictor
+from vortex.development.predictor.utils import get_prediction_results

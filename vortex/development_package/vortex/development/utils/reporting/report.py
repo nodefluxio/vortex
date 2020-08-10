@@ -1,7 +1,7 @@
 from datetime import datetime
 import torch
 import onnx
-from vortex.utils.profiler.resource import get_uname, get_cpu_info,get_cpu_scaling, get_gpu_info
+from vortex.development.utils.profiler.resource import get_uname, get_cpu_info,get_cpu_scaling, get_gpu_info
 from pathlib import Path
 from typing import Tuple
 

@@ -1,0 +1,6 @@
+Number of finished trials : 2
+Best trial:
+	value : 0.6908439596494039
+	params : 
+		trainer.optimizer: {'method': 'Adam', 'args': {'lr': 0.001}}
+		trainer.lr_scheduler: {'method': 'CosineLRScheduler', 'args': {'t_initial': 10, 't_mul': 1.0, 'lr_min': 1e-05, 'warmup_lr_init': 1e-05, 'warmup_t': 3, 'cycle_limit': 1, 't_in_epochs': True, 'decay_rate': 0.1}}

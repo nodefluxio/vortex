@@ -1,6 +1,6 @@
 from typing import Union
 from easydict import EasyDict
-from vortex.utils.logger.base_logger import ExperimentLogger
+from vortex.development.utils.logger.base_logger import ExperimentLogger
 
 supported_logger = {}
 

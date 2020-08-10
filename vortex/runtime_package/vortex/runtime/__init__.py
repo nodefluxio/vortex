@@ -1,5 +1,5 @@
-from vortex_runtime.onnx.onnxruntime import OnnxRuntimeCpu,OnnxRuntimeCuda,OnnxRuntimeTensorRT
-from vortex_runtime.torchscript import TorchScriptRuntimeCpu,TorchScriptRuntimeCuda
+from vortex.runtime.onnx.onnxruntime import OnnxRuntimeCpu,OnnxRuntimeCuda,OnnxRuntimeTensorRT
+from vortex.runtime.torchscript import TorchScriptRuntimeCpu,TorchScriptRuntimeCuda
 
 model_runtime_map = {
     'onnx': {

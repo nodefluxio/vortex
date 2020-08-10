@@ -4,10 +4,10 @@ import numpy as np
 import os
 
 from typing import Union
-from vortex.networks.modules.postprocess.utils import nms
-from vortex.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
+from vortex.development.networks.modules.postprocess.utils import nms
+from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
 
-from vortex.exporter.base_exporter import BaseExporter
+from vortex.development.exporter.base_exporter import BaseExporter
 
 class TorchScriptExporter(BaseExporter):
 

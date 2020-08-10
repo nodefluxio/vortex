@@ -4,7 +4,7 @@ from tqdm import tqdm
 from easydict import EasyDict
 from typing import Tuple, List, Union, Type, Any, Dict
 
-from vortex.core.engine.trainer.base_trainer import BaseTrainer
+from vortex.development.core.engine.trainer.base_trainer import BaseTrainer
 
 class DefaultTrainer(BaseTrainer):
     def __init__(self, accumulation_step: int = 1, *args, **kwargs):

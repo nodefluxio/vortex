@@ -10,11 +10,11 @@ import operator
 import numpy as np
 import warnings
 
-from vortex.core.pipelines.training_pipeline import TrainingPipeline
-from vortex.core.pipelines.validation_pipeline import PytorchValidationPipeline
-from vortex.utils.parser.override import override_param
-from vortex.utils.common import check_and_create_output_dir
-from vortex.core.pipelines.base_pipeline import BasePipeline
+from vortex.development.core.pipelines.training_pipeline import TrainingPipeline
+from vortex.development.core.pipelines.validation_pipeline import PytorchValidationPipeline
+from vortex.development.utils.parser.override import override_param
+from vortex.development.utils.common import check_and_create_output_dir
+from vortex.development.core.pipelines.base_pipeline import BasePipeline
 
 logger = logging.getLogger(__name__)
 

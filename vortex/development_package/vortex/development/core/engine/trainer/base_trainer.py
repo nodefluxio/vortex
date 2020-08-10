@@ -10,8 +10,8 @@ from copy import copy
 from typing import Tuple, List, Union, Type, Any, Dict
 from tqdm import tqdm
 
-import vortex.utils.type_utils as type_utils
-from vortex.utils.logger.base_logger import ExperimentLogger
+from vortex.development.utils import type_utils
+from vortex.development.utils.logger.base_logger import ExperimentLogger
 
 class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']

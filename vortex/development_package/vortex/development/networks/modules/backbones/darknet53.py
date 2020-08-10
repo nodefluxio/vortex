@@ -6,7 +6,7 @@ import enforce
 
 from typing import Tuple, List, Union
 from .base_backbone import Backbone, ClassifierFeature
-from vortex.networks.modules.utils.darknet import DarknetResidual, darknet_conv
+from vortex.development.networks.modules.utils.darknet import DarknetResidual, darknet_conv
 
 from pathlib import Path
 

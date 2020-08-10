@@ -1,8 +1,8 @@
 import onnx
 import numpy as np
 
-from vortex_runtime.basic_runtime import BaseRuntime
-from vortex_runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
+from vortex.runtime.basic_runtime import BaseRuntime
+from vortex.runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
 
 from pathlib import Path
 from collections import OrderedDict

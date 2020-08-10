@@ -12,7 +12,7 @@ from sklearn.metrics import average_precision_score, precision_recall_curve
 from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support
 
-from vortex.predictor.base_module import BasePredictor
+from vortex.development.predictor.base_module import BasePredictor
 
 from .base_validator import BaseValidator
 

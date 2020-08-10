@@ -1,7 +1,7 @@
 import argparse
 
-from vortex.core.pipelines import TrainingPipeline
-from vortex.utils.parser import load_config
+from vortex.development.core.pipelines import TrainingPipeline
+from vortex.development.utils.parser import load_config
 
 description='Vortex training pipeline; will generate a Pytorch model file'
 

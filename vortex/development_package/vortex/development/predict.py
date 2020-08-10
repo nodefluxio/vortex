@@ -1,8 +1,8 @@
 import argparse
 from typing import Union, List
 
-from vortex.utils.parser import load_config
-from vortex.core.pipelines import PytorchPredictionPipeline
+from vortex.development.utils.parser import load_config
+from vortex.development.core.pipelines import PytorchPredictionPipeline
 
 description = 'Vortex Pytorch model prediction pipeline; may receive multiple image(s) for batched prediction'
 

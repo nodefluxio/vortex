@@ -1,1 +1,1 @@
-from vortex.networks.models import create_model_components
+from vortex.development.networks.models import create_model_components

@@ -6,8 +6,8 @@ import numpy as np
 import torch.nn as nn
 
 from copy import copy
-from vortex.networks.modules.postprocess.utils.nms import NoNMS
-from vortex.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
+from vortex.development.networks.modules.postprocess.utils.nms import NoNMS
+from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
 from .utils.onnx.graph_ops.embed_output_format import embed_output_format
 from .utils.onnx.graph_ops.embed_class_names import embed_class_names
 from .utils.onnx.graph_ops.nms_iou_threshold_as_input import nms_iou_threshold_as_input
@@ -32,7 +32,7 @@ from torch.onnx.symbolic_helper import parse_args, scalar_type_to_onnx, scalar_t
 from torch.onnx.symbolic_opset9 import select, unsqueeze, squeeze, _cast_Long, reshape
 from torch.onnx import register_custom_op_symbolic
 
-from vortex.exporter.base_exporter import BaseExporter
+from vortex.development.exporter.base_exporter import BaseExporter
 
 class OnnxExporter(BaseExporter):
     def __init__(self, filename : str, image_size : int, input_dtype : str='uint8', n_channels=3, n_batch=1, opset_version=11, **kwargs) :

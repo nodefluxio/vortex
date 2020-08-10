@@ -1,5 +1,5 @@
 from comet_ml import Experiment
-from vortex.utils.logger.base_logger import ExperimentLogger
+from vortex.development.utils.logger.base_logger import ExperimentLogger
 from flatten_dict import flatten
 from easydict import EasyDict
 

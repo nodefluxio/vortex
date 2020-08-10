@@ -1,7 +1,7 @@
 import argparse
 
-from vortex.utils.parser import load_config
-from vortex.core.pipelines import GraphExportPipeline
+from vortex.development.utils.parser import load_config
+from vortex.development.core.pipelines import GraphExportPipeline
 
 description = "export model to specific IR specified in config, output IR are "\
         "stored in the experiment directory based on `experiment_name` under `output_directory` config field, after successful export, you should be able to visualize the "\

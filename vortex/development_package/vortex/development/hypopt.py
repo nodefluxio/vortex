@@ -3,7 +3,7 @@ import logging
 import argparse
 from easydict import EasyDict
 
-from vortex.core.pipelines import HypOptPipeline
+from vortex.development.core.pipelines import HypOptPipeline
 
 logger = logging.getLogger(__name__)
 description = "Vortex hyperparameter optimization experiment"

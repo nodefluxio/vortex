@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from vortex.networks.modules.backbones import get_backbone
+from vortex.development.networks.modules.backbones import get_backbone
 
 from typing import Union, Type
 from ..modules.backbones.base_backbone import supported_feature_type

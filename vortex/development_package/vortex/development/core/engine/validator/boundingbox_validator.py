@@ -17,18 +17,18 @@ from collections.abc import Sequence
 from functools import singledispatch
 from typing import Union, List, Dict, Type, Any
 
-from vortex.predictor.base_module import BasePredictor, create_predictor
-from vortex.utils.metrics.evaluator import DetectionEvaluator as Evaluator
-from vortex.utils.prediction import BoundingBox
+from vortex.development.predictor.base_module import BasePredictor, create_predictor
+from vortex.development.utils.metrics.evaluator import DetectionEvaluator as Evaluator
+from vortex.development.utils.prediction import BoundingBox
 
-from vortex.utils.profiler.speed import TimeData
-from vortex.utils.profiler.resource import CPUMonitor, GPUMonitor
-from vortex.core.factory import create_runtime_model
-from vortex.predictor.base_module import BasePredictor, create_predictor
-from vortex.predictor.utils import get_prediction_results
+from vortex.development.utils.profiler.speed import TimeData
+from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
+from vortex.development.core.factory import create_runtime_model
+from vortex.development.predictor.base_module import BasePredictor, create_predictor
+from vortex.development.predictor.utils import get_prediction_results
 
 from .base_validator import BaseValidator
-from vortex_runtime.basic_runtime import BaseRuntime
+from vortex.runtime.basic_runtime import BaseRuntime
 
 class BoundingBoxValidator(BaseValidator):
     __output_format__ = ['bounding_box', 'class_label', 'class_confidence']

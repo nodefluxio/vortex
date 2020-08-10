@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from vortex_runtime.basic_runtime import BaseRuntime
+from vortex.runtime.basic_runtime import BaseRuntime
 from pathlib import Path
 from typing import Union, List
 from collections import OrderedDict

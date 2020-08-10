@@ -1,4 +1,4 @@
-from vortex.utils.prediction.bboxes import BoundingBox
+from vortex.development.utils.prediction.bboxes import BoundingBox
 from typing import Union, List, Dict, Tuple
 from copy import copy
 

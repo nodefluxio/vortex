@@ -1,7 +1,7 @@
 from typing import Union, Type, List
-from vortex.core.pipelines import IRPredictionPipeline
+from vortex.development.core.pipelines import IRPredictionPipeline
 
-from vortex_runtime import model_runtime_map
+from vortex.runtime import model_runtime_map
 import argparse
 
 description = 'Vortex IR model prediction pipeline; may receive multiple image(s) for batched prediction'

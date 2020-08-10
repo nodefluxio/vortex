@@ -8,7 +8,7 @@ from copy import copy
 from typing import Type, List, Tuple, Dict, Callable, Union
 from easydict import EasyDict
 
-from vortex.networks.modules.postprocess.base_postprocess import NoOpPostProcess
+from vortex.development.networks.modules.postprocess.base_postprocess import NoOpPostProcess
 
 class BasePredictor(nn.Module):
     """

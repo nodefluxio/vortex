@@ -1,2 +1,2 @@
-from vortex.networks.modules.backbones import *
-from vortex.networks.modules.heads import *
+from vortex.development.networks.modules.backbones import *
+from vortex.development.networks.modules.heads import *

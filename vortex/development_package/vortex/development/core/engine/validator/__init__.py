@@ -5,11 +5,11 @@ from easydict import EasyDict
 from typing import Type
 from functools import singledispatch
 
-from vortex.predictor import create_predictor
+from vortex.development.predictor import create_predictor
 from .base_validator import BaseRuntime, BaseValidator
 from .boundingbox_validator import BoundingBoxValidator
 from .classification_validator import ClassificationValidator
-from vortex.core.factory import create_runtime_model
+from vortex.development.core.factory import create_runtime_model
 
 ## NOTE : extend validator for specific task here
 ## TODO : make sure consistent with task name(s) in networks.models

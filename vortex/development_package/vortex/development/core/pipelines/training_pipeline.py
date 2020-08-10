@@ -14,15 +14,15 @@ import torch
 import numpy as np
 import comet_ml
 
-from vortex.core.factory import (
+from vortex.development.core.factory import (
     create_model,create_dataset,
     create_dataloader,
     create_experiment_logger
 )
-from vortex.utils.common import check_and_create_output_dir
-from vortex.utils.parser import check_config
-from vortex.core.pipelines.base_pipeline import BasePipeline
-from vortex.core import engine
+from vortex.development.utils.common import check_and_create_output_dir
+from vortex.development.utils.parser import check_config
+from vortex.development.core.pipelines.base_pipeline import BasePipeline
+from vortex.development.core import engine
 
 __all__ = ['TrainingPipeline']
 

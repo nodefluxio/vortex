@@ -23,9 +23,9 @@ import zipfile
 import warnings
 
 from .base_backbone import Backbone, ClassifierFeature
-from vortex.networks.modules.utils.conv2d import conv1x1, conv1x1_block, conv3x3_block, dwconv3x3_block, dwconv5x5_block
-from vortex.networks.modules.utils.arch_utils import round_channels
-from vortex.networks.modules.utils.activations import hard_sigmoid, hard_swish, sigmoid, swish
+from vortex.development.networks.modules.utils.conv2d import conv1x1, conv1x1_block, conv3x3_block, dwconv3x3_block, dwconv5x5_block
+from vortex.development.networks.modules.utils.arch_utils import round_channels
+from vortex.development.networks.modules.utils.activations import hard_sigmoid, hard_swish, sigmoid, swish
 
 
 _model_sha1 = {name: (error, checksum, repo_release_tag) for name, error, checksum, repo_release_tag in [

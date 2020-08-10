@@ -15,9 +15,9 @@ import torch
 import torch.nn as nn
 import torchvision as vision
 
-import vortex
-import vortex.networks as networks
-import vortex.networks.modules as vortex_modules
+import vortex.development
+import vortex.development.networks as networks
+import vortex.development.networks.modules as vortex_modules
 
 ######################################################################
 # 1. Model Architecture
@@ -198,7 +198,7 @@ def create_model_components(
 if __name__=='__main__':
     ## let's use vortex_cli to demonstrate vortex features
     ## this will be our entrypoint to supported experiments
-    vortex.vortex_cli.main()
+    vortex.development.vortex_cli.main()
 
 ######################################################################
 # Note that since our custom model is added outside the vortex distribution,

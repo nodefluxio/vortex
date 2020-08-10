@@ -15,9 +15,9 @@ import torchvision as vision
 
 import warnings
 
-import vortex
-import vortex.networks as networks
-import vortex.networks.modules as vortex_modules
+import vortex.development
+import vortex.development.networks as networks
+import vortex.development.networks.modules as vortex_modules
 
 ######################################################################
 # 1. Vortex Backbone Module
