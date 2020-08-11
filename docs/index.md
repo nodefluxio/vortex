@@ -10,7 +10,7 @@ A Deep Learning Model Development Framework for Computer Vision
 
 ## Overview
 
-Vortex (a.k.a Visual Cortex) is a computer deep learning framework based on Pytorch that provides end-to-end model development. It utilizes **a single experiment file** in YAML format (and an optional YAML file for hyperparameter optimization) to navigate all of the pipelines and provides complete development environment which consists of the following pipelines :
+Vortex (a.k.a Visual Cortex) is a computer deep learning framework based on Pytorch that provides end-to-end model development, from training to deployment. It utilizes **a single experiment file** in YAML format (and an optional YAML file for hyperparameter optimization) to navigate all of the pipelines and provides complete development environment which consists of the following pipelines :
 
 - [Training](user-guides/pipelines.md#training-pipeline)
 - [Validation](user-guides/pipelines.md#validation-pipeline)
@@ -56,8 +56,8 @@ Currently this installation guide cover the installation of the following compon
 
 - Vortex
 - Vortex Runtime :
-    - torchscript (backends : cpu,cuda )
-    - onnxruntime (backends : cpu )
+    - torchscript (backends : cpu,cuda)
+    - onnxruntime (backends : cpu)
 
 ### On Host
 

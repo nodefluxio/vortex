@@ -1,6 +1,7 @@
 site_name: Vortex
 nav:
     - Home : 'index.md'
+    - Getting Started: 'getting-started.md'
     - User Guides :
         - 'Dataset Integration' : 'user-guides/dataset_integration.md'
         - 'Experiment File Configuration' : 'user-guides/experiment_file_config.md'
