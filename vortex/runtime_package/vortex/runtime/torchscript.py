@@ -1,4 +1,3 @@
-import torch
 import numpy as np
 
 from vortex.runtime.basic_runtime import BaseRuntime
@@ -13,8 +12,9 @@ __all__ = [
 ]
 
 class TorchScriptRuntime(BaseRuntime):
-    def __init__(self, model: Union[str, Path, torch.nn.Module], device: Union[str, torch.device], 
+    def __init__(self, model: Union[str, Path], device: Union[str,None], 
                  *args, **kwargs):
+        import torch
         if isinstance(model, (str, Path)):
             if not str(model).endswith('.pt') or str(model).endswith('.pth'):
                 raise RuntimeError("Unknown model file extension from {}".format(str(model)))
@@ -60,6 +60,7 @@ class TorchScriptRuntime(BaseRuntime):
         
     ## TODO : check signature properly (?)
     def predict(self, x, *args, **kwargs) -> np.ndarray:
+        import torch
         ## TODO: use keyword arguments, currently the exporter doesn't support it
         # args = {name: torch.tensor(value) for name, value in zip(self.input_specs, args)}
         # kwargs = {name: torch.tensor(value) for name, value in kwargs.items()}
@@ -77,17 +78,22 @@ class TorchScriptRuntime(BaseRuntime):
 
     @staticmethod
     def is_available(device="cpu"):
-        if device == "gpu":
-            device = "cuda"
-        device = str(device)
-        if device == "cpu":
-            return True     # cpu runtime always available
-        elif "cuda" in device:
-            return torch.cuda.is_available()
-        else:
-            raise RuntimeError("Unknown device of '{}'".format(device))
+        try:
+            import torch
+            if device == "gpu":
+                device = "cuda"
+            device = str(device)
+            if device == "cpu":
+                return True     # cpu runtime always available
+            elif "cuda" in device:
+                return torch.cuda.is_available()
+            else:
+                raise RuntimeError("Unknown device of '{}'".format(device))
+        except:
+            return False
 
     def _resolve_inputs(self, *args, **kwargs):
+        import torch
         args = list(args)
         for name, val in kwargs.items():
             args.insert(self.input_pos[name]-1, torch.tensor(val, device=self.device))
@@ -95,31 +101,36 @@ class TorchScriptRuntime(BaseRuntime):
 
 
 class TorchScriptRuntimeCpu(TorchScriptRuntime):
-    def __init__(self, model: Union[str, Path, torch.nn.Module], *args, **kwargs):
-        super(TorchScriptRuntimeCpu, self).__init__(model, device=torch.device("cpu"))
+    def __init__(self, model: Union[str, Path], *args, **kwargs):
+        super(TorchScriptRuntimeCpu, self).__init__(model, device="cpu")
 
     @staticmethod
     def is_available():
-        return TorchScriptRuntime.is_available(device=torch.device("cpu"))
+        return TorchScriptRuntime.is_available(device="cpu")
 
 class TorchScriptRuntimeCuda(TorchScriptRuntime):
-    def __init__(self, model: Union[str, Path, torch.nn.Module], device_id: Union[int] = None,
+    def __init__(self, model: Union[str, Path], device_id: Union[int,None] = None,
                  *args, **kwargs):
         if not self.is_valid_device(device_id):
             raise RuntimeError("CUDA GPU device {} is not available".format(device_id))
         device = "cuda"
         if device_id is not None:
             device = device + ":{}".format(device_id)
-        super(TorchScriptRuntimeCuda, self).__init__(model, device=torch.device(device))
+        super(TorchScriptRuntimeCuda, self).__init__(model, device=device)
 
     @staticmethod
     def is_available(device_id: Union[int] = None):
-        cuda_available = TorchScriptRuntime.is_available(device=torch.device("cuda"))
-        valid = TorchScriptRuntimeCuda.is_valid_device(device_id)
-        return cuda_available and valid
+        try:
+            import torch
+            cuda_available = TorchScriptRuntime.is_available(device=torch.device("cuda"))
+            valid = TorchScriptRuntimeCuda.is_valid_device(device_id)
+            return cuda_available and valid
+        except:
+            return False
 
     @staticmethod
     def is_valid_device(device_id: Union[int] = None):
+        import torch
         if device_id is not None and device_id > 0:
             if device_id < 0 or device_id >= torch.cuda.device_count():
                 return False

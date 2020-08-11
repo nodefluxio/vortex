@@ -1,4 +1,3 @@
-import onnx
 import numpy as np
 
 from vortex.runtime.basic_runtime import BaseRuntime
@@ -26,6 +25,7 @@ class OnnxRuntime(BaseRuntime) :
     }
     def __init__(self, model : Union[str,Path], providers : Any, fallback : bool, input_name : str = 'input', output_name : Union[str,List[str]] = 'output', execution_mode : Union[str,int] = 'sequential', graph_optimization_level : Union[str,int] = 'basic') :
         import onnxruntime
+        import onnx
         sess_options = onnxruntime.SessionOptions()
         if graph_optimization_level in OnnxRuntime.graph_optimization_level.keys() :
             graph_optimization_level = OnnxRuntime.graph_optimization_level[graph_optimization_level]
@@ -69,6 +69,7 @@ class OnnxRuntime(BaseRuntime) :
     def is_available() :
         try :
             import onnxruntime
+            import onnx
             return True
         except ImportError :
             return False
@@ -93,6 +94,7 @@ class OnnxRuntimeCpu(OnnxRuntime) :
     def is_available() :
         try :
             import onnxruntime
+            import onnx
             return 'CPUExecutionProvider' in onnxruntime.capi._pybind_state.get_available_providers()
         except ImportError :
             return False
@@ -109,6 +111,7 @@ class OnnxRuntimeCuda(OnnxRuntime) :
     def is_available() :
         try :
             import onnxruntime
+            import onnx
             return 'CUDAExecutionProvider' in onnxruntime.capi._pybind_state.get_available_providers()
         except ImportError :
             return False
@@ -125,6 +128,7 @@ class OnnxRuntimeTensorRT(OnnxRuntime) :
     def is_available() :
         try :
             import onnxruntime
+            import onnx
             return 'TensorrtExecutionProvider' in onnxruntime.capi._pybind_state.get_available_providers()
         except ImportError :
             return False
