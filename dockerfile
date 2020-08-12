@@ -15,7 +15,7 @@ RUN git checkout v0.1.0
 RUN apt update && xargs apt install -y < requirements.sys
 
 ## install python requirements
-RUN pip3 install -U pip && \
+RUN pip3 install -U pip setuptools && \
     pip3 install -r requirements.txt
 
 RUN pip3 install .[optuna-vis]

@@ -29,6 +29,7 @@ setup(name=package_name,
       extras_require={
         "onnxruntime":  onnxruntime_requires,
         "torchscript":  torchscript_requires,
+        "all": torchscript_requires+onnxruntime_requires
       },
       author='Nodeflux - AI Platform',
       license='MIT',

@@ -11,7 +11,7 @@ teardown() {
 }
 
 compatibility_check_efficientnetb0() {
-    python3.6 scripts/export_check/compatibility_check.py --opset-version 11 --models $TEST_MODEL --backbones $TEST_BACKBONE
+    python3 scripts/export_check/compatibility_check.py --opset-version 11 --models $TEST_MODEL --backbones $TEST_BACKBONE
 }
 
 @test "onnx compatibility check on opset-version 11 retinaface efficientnet" {

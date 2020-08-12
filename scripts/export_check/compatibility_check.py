@@ -358,7 +358,7 @@ def onnx_predict(model: Type[BaseRuntime], img: np.ndarray, **kwargs):
             else np.asarray(value, dtype=dtype)
     results = model(img, **predict_args)
     ## convert to dict for visualization
-    results = [result._asdict() for result in results]
+    # results = [result._asdict() for result in results]
     return results
 
 def torch_predict(predictor: BasePredictor, img: np.ndarray, **kwargs) -> List[Dict[str,np.ndarray]]:

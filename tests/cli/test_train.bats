@@ -12,7 +12,7 @@ teardown() {
 }
 
 short_train_efficientnet_lite0_test_data() {
-    python3.6 vortex/train.py --config $CONFIG_FILE
+    python3 packages/development/vortex/development/train.py --config $CONFIG_FILE
 }
 
 short_train_efficientnet_lite0_test_data_cli() {
