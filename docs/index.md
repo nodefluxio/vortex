@@ -52,14 +52,27 @@ Currently we support deep learning model development on computer vision of the f
 
 ---
 
-Currently this installation guide cover the installation of the following components:
+This installation guide cover the installation of Vortex components, which consists of 2 packages:
 
-- Vortex
-- Vortex Runtime :
+- Vortex development package (`vortex.development`)
+
+    This package contain full vortex pipelines and main development features with all of it's dependencies
+
+- Vortex runtime package (`vortex.runtime`):
+
+    This package only contain minimal dependencies to run vortex graph IR file for prediction pipeline (minimal interface).
+    Currently this guide will cover for the following backends:
+
     - torchscript (backends : cpu,cuda )
     - onnxruntime (backends : cpu )
 
-### On Host
+---
+
+### Vortex Development Package Installation
+
+---
+
+#### On Host
 
 Install package dependencies :
 
@@ -78,41 +91,44 @@ apt install -y python3 python3-pip
 
 or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/)
 
-And it's also better to update the pip package to avoid several installation issues
+And don't forget to update the pip and setuptools package to avoid several installation issues
 
 ```console
-pip3 install -U pip
+pip3 install -U pip setuptools
 ```
 
-Then, clone the repo and install the vortex package
+Then, clone the repo and install the vortex packages. It's important to be noted that `vortex.development` package also depends on `vortex.runtime` package, so we need to install both packages :
 
 ```console
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
-git checkout v0.1.0
-pip3 install '.'
+git checkout v0.2.0-rc1
+pip3 install 'packages/runtime[all]'
+pip3 install 'packages/development'
 ```
 
 Additionally if you want to install vortex with optuna visualization support :
 
 ```console
-pip3 install '.[optuna_vis]'
+pip3 install 'packages/development[optuna_vis]'
 ```
 
-This command will register a python package named as `visual-cortex` when you check it using `pip3 list`.
+This command will register a python package named as `visual-cortex` and `visual-cortex-runtime` when you check it using `pip3 list`.
 
 ```console
 pip3 list | grep visual-cortex
 
 /*
 visual-cortex            {installed-version}
+visual-cortex-runtime    {installed-version}
 */
 ```
 
 To check whether the installation is succesful, you can run :
 
 ```console
-python3.6 -c 'import vortex'
+python3.6 -c 'import vortex.development'
+python3.6 -c 'import vortex.runtime'
 ```
 
 Which will print output like this
@@ -135,13 +151,86 @@ UserWarning: finished scanning dataset, available dataset(s) :
 
 ---
 
-### Using Docker
+#### Using Docker
 
 You can build the dockerfile,
 
 ```console
-docker build -t vortex:dev -f dockerfile .
+docker build -t vortex:dev -f dockerfiles/vortex.dockerfile .
 ```
+
+---
+
+### Vortex Runtime Package Installation
+
+---
+
+#### On Host
+
+Install package dependencies :
+
+```console
+apt update
+apt install -y libsm6 libxext6 libxrender-dev ffmpeg \
+               x264 libx264-dev libsm6 git sqlite3 \
+               libsqlite3-dev
+```
+
+Vortex run and tested on Python 3.6, so if you use Ubuntu 18.04 just run :
+
+```console
+apt install -y python3 python3-pip
+```
+
+or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/)
+
+And don't forget to update the pip and setuptools package to avoid several installation issues
+
+```console
+pip3 install -U pip setuptools
+```
+
+Then, clone the repo and install the vortex runtime package which suit your targeted IR runtime. Currently Vortex support the following runtime :
+
+- `onnxruntime`
+- `torchscript`
+
+For example, if you want to install specific dependencies for `onnxruntime`, execute the following command :
+
+```console
+git clone https://github.com/nodefluxio/vortex.git
+cd vortex
+git checkout v0.2.0-rc1
+pip3 install 'packages/runtime[onnxruntime]'
+```
+
+However, if you want to test all available runtime, you can install it using the following command :
+
+```console
+pip3 install 'packages/runtime[all]'
+```
+
+This command will register a python package named as `visual-cortex-runtime` when you check it using `pip3 list`.
+
+```console
+pip3 list | grep visual-cortex
+
+/*
+visual-cortex-runtime    {installed-version}
+*/
+```
+
+To check whether the installation is succesful, you can run :
+
+```console
+python3.6 -c 'import vortex.runtime'
+```
+
+---
+
+#### Using Docker
+
+TODO
 
 ---
 
@@ -169,6 +258,7 @@ Vortex utilizes a certain standard to allow seamless integration between pipelin
 
     - measure your IR model's performance using [IR validation pipeline](user-guides/pipelines.md#ir-validation-pipeline), or
     - directly use the IR model in your script using [IR prediction pipeline API](api/vortex.development.core.pipelines.md#irpredictionpipeline)
+    - develop the production-level inferencing code by [installing only the Vortex runtime package](#vortex-runtime-package-installation) and using [runtime API](api/vortex.runtime.md#create_runtime_model) to make prediction.
 
 ---
 
