@@ -162,13 +162,13 @@ Vortex utilizes a certain standard to allow seamless integration between pipelin
 4. After receiving Vortex model from training pipeline, you can either do :
 
     - measure your model's performance using [validation pipeline](user-guides/pipelines.md#validation-pipeline), or
-    - directly use the model in your script using [prediction pipeline API](api/vortex.core.pipelines.md#pytorchpredictionpipeline), or
+    - directly use the model in your script using [prediction pipeline API](api/vortex.development.core.pipelines.md#pytorchpredictionpipeline), or
     - further optimize your model by converting it into Intermediate Representation using [graph export pipeline](user-guides/pipelines.md#graph-export-pipeline)
 
 5. If you choose to export your model, once you have the Vortex IR model, you can either do :
 
     - measure your IR model's performance using [IR validation pipeline](user-guides/pipelines.md#ir-validation-pipeline), or
-    - directly use the IR model in your script using [IR prediction pipeline API](api/vortex.core.pipelines.md#irpredictionpipeline)
+    - directly use the IR model in your script using [IR prediction pipeline API](api/vortex.development.core.pipelines.md#irpredictionpipeline)
 
 ---
 

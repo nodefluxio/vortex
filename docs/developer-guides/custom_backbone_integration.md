@@ -16,8 +16,8 @@ import torchvision as vision
 import warnings
 
 import vortex
-import vortex.networks as networks
-import vortex.networks.modules as vortex_modules
+import vortex.development.networks as networks
+import vortex.development.networks.modules as vortex_modules
 ```
 
 ---
@@ -42,7 +42,7 @@ an adapter for `nn.Sequential` to also returns its *intermediate results*.
 Registering backbone is done by adding *builder* function to `vortex`.
 To register the function, we decorate our function with 
 ```
-@vortex.networks.modules.backbones.register_backbone(model_name)
+@vortex.development.networks.modules.backbones.register_backbone(model_name)
 def get_backbone(...)
 ```
 or we can call `register_backbone_` directly.
@@ -188,7 +188,7 @@ to get more vortex' features in a *configurable* way:
 if __name__=='__main__':
     ## let's use vortex_cli to demonstrate vortex features
     ## this will be our entrypoint to supported experiments
-    vortex.vortex_cli.main()
+    vortex.development.vortex_cli.main()
 ```
 
 Note that since our custom model is added outside the vortex distribution,

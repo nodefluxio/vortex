@@ -23,7 +23,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
-import vortex
+import vortex.development
 import vortex.development.networks as networks
 import vortex.development.networks.modules as vortex_modules
 import vortex.development.exporter.utils.onnx.graph_ops as graph_ops

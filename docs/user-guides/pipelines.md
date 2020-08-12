@@ -6,7 +6,7 @@ This section will describe how to easily run each of Vortex pipeline in details.
 
 ## Training Pipeline
 
-This pipeline purpose is to train a deep learning model using the provided dataset. If you need to integrate the training into your own script you can see the [training pipeline API section](../api/vortex.core.pipelines.md#trainingpipeline).
+This pipeline purpose is to train a deep learning model using the provided dataset. If you need to integrate the training into your own script you can see the [training pipeline API section](../api/vortex.development.core.pipelines.md#trainingpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -67,7 +67,7 @@ This pipeline will generate several outputs :
 
 ## Validation Pipeline
 
-This pipeline handle the evaluation of the Vortex model (Pytorch state dict `.pth`) in term of model's performance and resource usage. In addition, this pipeline also generate a visual report. If you need to integrate the validation into your own script you can see the [validation pipeline API section](../api/vortex.core.pipelines.md#pytorchvalidationpipeline).
+This pipeline handle the evaluation of the Vortex model (Pytorch state dict `.pth`) in term of model's performance and resource usage. In addition, this pipeline also generate a visual report. If you need to integrate the validation into your own script you can see the [validation pipeline API section](../api/vortex.development.core.pipelines.md#pytorchvalidationpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -120,7 +120,7 @@ This pipeline will generate several outputs :
 
 ## Prediction Pipeline
 
-This pipeline is used to test and visualize your Vortex model's prediction. If you need to integrate the prediction into your own script you can see the [prediction pipeline API section](../api/vortex.core.pipelines.md#pytorchpredictionpipeline).
+This pipeline is used to test and visualize your Vortex model's prediction. If you need to integrate the prediction into your own script you can see the [prediction pipeline API section](../api/vortex.development.core.pipelines.md#pytorchpredictionpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -183,7 +183,7 @@ This pipeline will generate several outputs :
 
 ## Hyperparameters Optimization Pipeline
 
-This pipeline is used to search for optimum hyperparameter to be used for either training pipeline or validation pipeline (parameter in validation pipeline also can be used for prediction pipeline). Basically this pipeline is [Optuna](https://optuna.org/) wrapper for Vortex components. If you need to integrate the prediction into your own script you can see the [hyperparameters optimization pipeline API section](../api/vortex.core.pipelines.md#hypoptpipeline).
+This pipeline is used to search for optimum hyperparameter to be used for either training pipeline or validation pipeline (parameter in validation pipeline also can be used for prediction pipeline). Basically this pipeline is [Optuna](https://optuna.org/) wrapper for Vortex components. If you need to integrate the prediction into your own script you can see the [hyperparameters optimization pipeline API section](../api/vortex.development.core.pipelines.md#hypoptpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -231,7 +231,7 @@ This pipeline will generate several outputs :
 
 ## Graph Export Pipeline
 
-This pipeline is used to export trained Vortex model (or graph) into another graph representation (or Intermediate Representation (IR)). If you need to integrate the graph export pipeline into your own script you can see the [graph export pipeline API section](../api/vortex.core.pipelines.md#graphexportpipeline).
+This pipeline is used to export trained Vortex model (or graph) into another graph representation (or Intermediate Representation (IR)). If you need to integrate the graph export pipeline into your own script you can see the [graph export pipeline API section](../api/vortex.development.core.pipelines.md#graphexportpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -279,7 +279,7 @@ This pipeline will generate several outputs :
 
 ## IR Validation Pipeline
 
-This pipeline handle the evaluation of the IR model (`*.pt` or `*.onnx`) in term of model's performance and resource usage. In addition, this pipeline also generate a visual report. If you need to integrate the validation into your own script you can see the [IR validation pipeline API section](../api/vortex.core.pipelines.md#irvalidationpipeline).
+This pipeline handle the evaluation of the IR model (`*.pt` or `*.onnx`) in term of model's performance and resource usage. In addition, this pipeline also generate a visual report. If you need to integrate the validation into your own script you can see the [IR validation pipeline API section](../api/vortex.development.core.pipelines.md#irvalidationpipeline).
 
 To run this pipeline, make sure you've already prepared :
 
@@ -332,7 +332,7 @@ This pipeline will generate several outputs :
 
 ## IR Prediction Pipeline
 
-This pipeline is used to test and visualize your IR model's (`*.pt` or `*.onnx`) prediction. If you need to integrate the prediction into your own script you can see the [IR prediction pipeline API section](../api/vortex.core.pipelines.md#irpredictionpipeline).
+This pipeline is used to test and visualize your IR model's (`*.pt` or `*.onnx`) prediction. If you need to integrate the prediction into your own script you can see the [IR prediction pipeline API section](../api/vortex.development.core.pipelines.md#irpredictionpipeline).
 
 To run this pipeline, make sure you've already prepared :
 

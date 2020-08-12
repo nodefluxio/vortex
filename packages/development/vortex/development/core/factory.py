@@ -51,7 +51,7 @@ def create_model(model_config : EasyDict,
         - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format into desirable format that can be accepted by `loss` components
 
         ```python
-        from vortex.core.factory import create_model
+        from vortex.development.core.factory import create_model
         from easydict import EasyDict
 
         model_config = EasyDict({
@@ -202,7 +202,7 @@ def create_dataloader(dataloader_config : EasyDict,
 
     Example:
         ```python
-        from vortex.core.factory import create_dataloader
+        from vortex.development.core.factory import create_dataloader
         from easydict import EasyDict
 
         dataloader_config = EasyDict({

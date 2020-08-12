@@ -23,7 +23,7 @@ from vortex.development.predictor.utils import get_prediction_results
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.development.core.factory import create_runtime_model
-# from vortex.core.pipelines.prediction_pipeline import IRPredictionPipeline
+# from vortex.development.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex.runtime.basic_runtime import BaseRuntime
 
