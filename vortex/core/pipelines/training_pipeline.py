@@ -213,7 +213,7 @@ class TrainingPipeline(BasePipeline):
             elif 'device' in config.trainer:
                 validator_cfg = config.trainer.validator
             else:
-                raise RuntimeError("'validator' field not found in config. Please specify properly in main level.")
+                raise AttributeError()
 
             val_dataset = create_dataset(config.dataset, config.model.preprocess_args, stage='validate')
             ## use same batch-size as training by default
