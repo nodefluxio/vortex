@@ -8,14 +8,23 @@ This section will describe how to easily run each of Vortex pipeline in details.
 
 This pipeline purpose is to train a deep learning model using the provided dataset. If you need to integrate the training into your own script you can see the [training pipeline API section](../api/vortex.core.pipelines.md#trainingpipeline).
 
-To run this pipeline, make sure you've already prepared :
+To run this pipeline, make sure you've already prepared:
 
-- **Dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets
-- **Experiment file** : see [this section](experiment_file_config.md) to create one
+- **Dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets.
+- **Experiment file** : see [this section](experiment_file_config.md) to create one.
 
-and additionally, if you want to **resume previous training** or **load pretrained model**, you also need :
+The **minimum configuration** required in the experiment file to run training pipeline:
+- `experiment_name`
+- `model`
+- `trainer`
+- `device`
+- `dataset`
+- `dataloader`
 
-- **Vortex model's file** `*.pth` : obtained from previously executed training pipeline which corresponds to the previous mentioned experiment file. Specific checkpoint file on several epoch can be found under **run directory** ( see outputs of this training pipeline section ). This file must be configured in experiment file under [`checkpoint`](experiment_file_config.md#checkpoint) section
+If you also want to include validation in the training, you need to specify `validator` configuration, otherwise validation will be skipped in the training.
+
+Additionally, if you want to **resume previous training** or **load pretrained model**, you also need **Vortex model's file** `*.pth`  obtained from previously executed training pipeline which corresponds to the previous mentioned experiment file. Specific checkpoint file on several epoch can be found under **run directory** ( see outputs of this training pipeline section ). This file must be configured in experiment file under [`checkpoint`](experiment_file_config.md#checkpoint) section.
+
 
 You only need to run this command from the command line interface :
 
@@ -74,6 +83,15 @@ To run this pipeline, make sure you've already prepared :
 - **Validation dataset** : see [this section](../modules/builtin_dataset.md) for built-in datasets, or [this section](dataset_integration.md) for external datasets
 - **Experiment file** : see [this section](experiment_file_config.md) to create one. Must be valid for validation, make sure [`dataset.eval`](experiment_file_config.md#dataset) and [`validator`](experiment_file_config.md#trainer) is set
 - **Vortex model's file** `*.pth` : obtained from [training pipeline](#training-pipeline) which corresponds to the previous mentioned experiment file
+
+The **minimum configuration** required in the experiment file to run training pipeline:
+- `experiment_name`
+- `model`
+- `trainer`
+- `device`
+- `dataset`
+- `dataloader`
+- `validator`
 
 You only need to run this command from the command line interface :
 

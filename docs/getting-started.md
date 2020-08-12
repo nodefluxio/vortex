@@ -34,7 +34,16 @@ $ vortex validate --config resnet18_classification_cifar10.yml
 
 But this process is optional as validation is also automatically done in training pipeline as well.
 
-At this stage, you would then ready to use our model in deployment. [## TODO: EXPLAIN WHY EXPORT?]
+At this stage, you would then ready to use our model in deployment. 
+To deploy our model seamlessly, you need to export your model into what we called an 
+*intermediate representation* (IR) which is a representation of the model that is more general for other
+runtime, that is what you use to run the model, and also that we can use a better or faster inference
+that is more optimize for the machine. 
+In vortex we support two kinds of intermediate representation, torchscript and ONNX. 
+Torchscript model is the builtin representation from PyTorch, so to run this representation we still 
+need PyTorch installed to be able to run the model.
+ONNX model is an open standard representation that is generally used and could run in a variety of
+runtime libraries.
 
 To export our model, use `export` command:
 
@@ -42,13 +51,13 @@ To export our model, use `export` command:
 $ vortex export --config resnet18_classification_cifar10.yml
 ```
 
-This would then resulted in exported ONNX model in [## TODO]
+This would then resulted in exported ONNX model in the path pointed by `output_directory` in config.
+You can specify what IR you want your models to export to by specifying in the `exporter` field in
+the config file.
 
-## Configuration File
-### Train
-### Validate
-### Export
+To understand more about each pipeline in the your model development, see [Pipeline User Guide][3]
 
 
 [1]: https://www.cs.toronto.edu/~kriz/cifar.html
 [2]: https://github.com/nodefluxio/vortex/blob/master/experiments/configs/resnet18_classification_cifar10.yml
+[3]: user-guides/pipelines.md
