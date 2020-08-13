@@ -13,11 +13,11 @@ teardown() {
 }
 
 validate_efficientnet_lite0_test_data() {
-    python3 packages/development/vortex/development/validate.py --config $CONFIG_FILE
+    python3 src/development/vortex/development/validate.py --config $CONFIG_FILE
 }
 
 validate_efficientnet_lite0_test_data_bs4() {
-    python3 packages/development/vortex/development/validate.py --config $CONFIG_FILE --batch-size $BATCH_SIZE
+    python3 src/development/vortex/development/validate.py --config $CONFIG_FILE --batch-size $BATCH_SIZE
 }
 
 validate_efficientnet_lite0_test_data_cli() {

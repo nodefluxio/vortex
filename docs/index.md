@@ -103,14 +103,14 @@ Then, clone the repo and install the vortex packages. It's important to be noted
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
 git checkout v0.2.0-rc1
-pip3 install 'packages/runtime[all]'
-pip3 install 'packages/development'
+pip3 install 'src/runtime[all]'
+pip3 install 'src/development'
 ```
 
 Additionally if you want to install vortex with optuna visualization support :
 
 ```console
-pip3 install 'packages/development[optuna_vis]'
+pip3 install 'src/development[optuna_vis]'
 ```
 
 This command will register a python package named as `visual-cortex` and `visual-cortex-runtime` when you check it using `pip3 list`.
@@ -201,13 +201,13 @@ For example, if you want to install specific dependencies for `onnxruntime`, exe
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
 git checkout v0.2.0-rc1
-pip3 install 'packages/runtime[onnxruntime]'
+pip3 install 'src/runtime[onnxruntime]'
 ```
 
 However, if you want to test all available runtime, you can install it using the following command :
 
 ```console
-pip3 install 'packages/runtime[all]'
+pip3 install 'src/runtime[all]'
 ```
 
 This command will register a python package named as `visual-cortex-runtime` when you check it using `pip3 list`.

@@ -20,35 +20,35 @@ teardown() {
 }
 
 predict_test_data_onnx() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.onnx --image $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.onnx --image $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_torchscript() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.pt --image $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.pt --image $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_onnx_cuda() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.onnx --image $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.onnx --image $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
 }
 
 predict_test_data_torchscript_cuda() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.pt --image $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}.pt --image $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
 }
 
 predict_test_data_onnx_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_torchscript_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.pt --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.pt --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_onnx_cuda_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --image $TEST_IMAGE $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --image $TEST_IMAGE $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
 }
 
 predict_test_data_torchscript_cuda_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.pt --image $TEST_IMAGE $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
+    python3 src/development/vortex/development/ir_runtime_predict.py --model ${OUTPUT_EXPERIMENT}_bs4.pt --image $TEST_IMAGE $TEST_IMAGE --runtime cuda -o $OUTPUT_DIR
 }
 
 

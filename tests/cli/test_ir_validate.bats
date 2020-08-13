@@ -20,11 +20,11 @@ teardown() {
 }
 
 validate_efficientnet_lite0_test_data_onnx() {
-    python3 packages/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}.onnx --config $CONFIG_FILE
+    python3 src/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}.onnx --config $CONFIG_FILE
 }
 
 validate_efficientnet_lite0_test_data_onnx_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --config $CONFIG_FILE --batch-size $BATCH_SIZE
+    python3 src/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}_bs4.onnx --config $CONFIG_FILE --batch-size $BATCH_SIZE
 }
 
 validate_efficientnet_lite0_test_data_onnx_cli() {
@@ -72,11 +72,11 @@ validate_efficientnet_lite0_test_data_onnx_bs4_cli() {
 }
 
 validate_efficientnet_lite0_test_data_torchscript() {
-    python3 packages/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}.pt --config $CONFIG_FILE
+    python3 src/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}.pt --config $CONFIG_FILE
 }
 
 validate_efficientnet_lite0_test_data_torchscript_bs4() {
-    python3 packages/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}_bs4.pt  --config $CONFIG_FILE --batch-size $BATCH_SIZE
+    python3 src/development/vortex/development/ir_runtime_validate.py --model ${OUTPUT_EXPERIMENT}_bs4.pt  --config $CONFIG_FILE --batch-size $BATCH_SIZE
 }
 
 validate_efficientnet_lite0_test_data_torchscript_cli() {

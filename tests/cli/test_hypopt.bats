@@ -13,7 +13,7 @@ teardown() {
 }
 
 hpyopt_classification() {
-    python3 packages/development/vortex/development/hypopt.py --config $CONFIG_FILE --optconfig $OPTCONFIG_FILE
+    python3 src/development/vortex/development/hypopt.py --config $CONFIG_FILE --optconfig $OPTCONFIG_FILE
 }
 
 hpyopt_classification_cli() {

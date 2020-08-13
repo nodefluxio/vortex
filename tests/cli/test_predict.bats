@@ -14,15 +14,15 @@ teardown() {
 }
 
 predict_test_data() {
-    python3 packages/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_batch() {
-    python3 packages/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE $TEST_IMAGE -o $OUTPUT_DIR
 }
 
 predict_test_data_custom_weights() {
-    python3 packages/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE --weights $PTH_FILE -o $OUTPUT_DIR
+    python3 src/development/vortex/development/predict.py --config $CONFIG_FILE --image $TEST_IMAGE --weights $PTH_FILE -o $OUTPUT_DIR
 }
 
 predict_test_data_cli() {

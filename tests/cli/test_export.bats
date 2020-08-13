@@ -13,15 +13,15 @@ teardown() {
 }
 
 export_test_data() {
-    python3 packages/development/vortex/development/export.py --config $CONFIG_FILE
+    python3 src/development/vortex/development/export.py --config $CONFIG_FILE
 }
 
 export_test_data_example_input() {
-    python3 packages/development/vortex/development/export.py --config $CONFIG_FILE --example-input $TEST_IMAGE
+    python3 src/development/vortex/development/export.py --config $CONFIG_FILE --example-input $TEST_IMAGE
 }
 
 export_test_data_example_input_custom_weights() {
-    python3 packages/development/vortex/development/export.py --config $CONFIG_FILE --example-input $TEST_IMAGE --weights ${OUTPUT_EXPERIMENT}.pth
+    python3 src/development/vortex/development/export.py --config $CONFIG_FILE --example-input $TEST_IMAGE --weights ${OUTPUT_EXPERIMENT}.pth
 }
 
 export_test_data_cli() {
