@@ -282,9 +282,8 @@ def create_dataloader(dataloader_config : EasyDict,
 
         # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
         # to disable auto pad augmentation
-        if hasattr(collate_fn,'disable_image_auto_pad'):
-            if collate_fn.disable_image_auto_pad:
-                dataset.disable_image_auto_pad()
+        if collate_fn.disable_image_auto_pad:
+            dataset.disable_image_auto_pad()
 
     elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
         raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "
