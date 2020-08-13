@@ -11,10 +11,9 @@ def main(args):
     # Load configuration from experiment file
     config = load_config(args.config)
 
-    ckpt_in_cfg = 'checkpoint' in config
+    ckpt_in_cfg = 'checkpoint' in config and config.checkpoint is not None
     if ckpt_in_cfg:
-        if config.checkpoint is not None:
-            config.checkpoint = config.checkpoint.rstrip(',')
+        config.checkpoint = config.checkpoint.rstrip(',')
     if args.resume and (not ckpt_in_cfg or (ckpt_in_cfg and config.checkpoint == None)):
         ## TODO: point to documentation for resume
         raise RuntimeError("You choose to resume but 'checkpoint' is not specified. "
