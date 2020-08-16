@@ -1,9 +1,12 @@
+import sys
+sys.path.append('src/development')
+
 import pytest
 import torch
 import numpy as np
 from typing import Union, Tuple, List
 
-from vortex.utils import type_utils
+from vortex.development.utils import type_utils
 
 
 class DummyClass:

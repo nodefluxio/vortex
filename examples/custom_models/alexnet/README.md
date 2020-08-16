@@ -9,17 +9,17 @@ Demonstrate steps to create custom classification model and integrate to vortex.
 ### Usage
 - Hyperparameter Optimization
   ```
-  python3.6 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
+  python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
   ```
 - Training
   ```
-  python3.6 alexnet.py train --config cifar10.yml
+  python3 alexnet.py train --config cifar10.yml
   ```
 - TorchScript & ONNX Export
   ```
-  python3.6 alexnet.py export --config cifar10.yml
+  python3 alexnet.py export --config cifar10.yml
   ```
 - TensorRT Inference (using exported ONNX model)
   ```
-  python3.6 alexnet.py predict --config cifar10.yml -i example_image.jpg
+  python3 alexnet.py predict --config cifar10.yml -i example_image.jpg
   ```

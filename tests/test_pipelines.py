@@ -1,10 +1,11 @@
-# import os
-# import sys
-# from pathlib import Path
-# proj_path = os.path.abspath(Path(__file__).parents[1])
-# sys.path.append(proj_path)
-
 import os
+import sys
+sys.path.append('src/runtime')
+sys.path.append('src/development')
+from pathlib import Path
+proj_path = os.path.abspath(Path(__file__).parents[3])
+sys.path.append(proj_path)
+
 import shutil
 import pytest
 import numpy as np
@@ -17,7 +18,7 @@ from easydict import EasyDict
 from collections import OrderedDict
 from copy import deepcopy
 
-from vortex.core.pipelines import (
+from vortex.development.core.pipelines import (
     TrainingPipeline,
     PytorchValidationPipeline,
     PytorchPredictionPipeline,
@@ -27,9 +28,9 @@ from vortex.core.pipelines import (
     HypOptPipeline
 )
 
-from vortex.core.factory import create_model
-from vortex.utils.parser.parser import load_config
-from vortex.utils.parser.loader import Loader
+from vortex.development.core.factory import create_model
+from vortex.development.utils.parser.parser import load_config
+from vortex.development.utils.parser.loader import Loader
 
 
 config_path = "tests/config/test_classification_pipelines.yml"

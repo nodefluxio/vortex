@@ -1,9 +1,12 @@
+import sys
+sys.path.append('src/development')
+
 import torch
 from easydict import EasyDict
 from torch import Tensor, Size, allclose, tensor
 
-from vortex.networks.modules.postprocess.retinaface import RetinaFaceDecoder
-from vortex.networks.models.detection.retinaface import RetinaFace, create_model_components
+from vortex.development.networks.modules.postprocess.retinaface import RetinaFaceDecoder
+from vortex.development.networks.models.detection.retinaface import RetinaFace, create_model_components
 
 def test_darknet53_retinaface() :
     """
@@ -74,7 +77,7 @@ def test_darknet53_retinaface_create_components() :
     retinaface.eval()
     assert retinaface(torch.rand(1,3,640,640)).size(2) == 16
 
-from vortex.networks import models
+from vortex.development.networks import models
 
 def test_create_model_components() :
     preprocess_args, model_args = EasyDict(), EasyDict()
@@ -106,7 +109,7 @@ def test_create_model_components() :
     retinaface.eval()
     assert retinaface(torch.rand(1,3,640,640)).size(2) == 16
 
-from vortex.predictor.base_module import BasePredictor
+from vortex.development.predictor.base_module import BasePredictor
 
 def test_darknet53_retinaface_predictor() :
     preprocess_args, model_args = EasyDict(), EasyDict()

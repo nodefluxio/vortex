@@ -1,11 +1,14 @@
+import sys
+sys.path.append('src/development')
+
 import torch
 
 from easydict import EasyDict
 from torch import Tensor, Size, allclose, tensor
 
-from vortex.networks.models.detection.fpn_ssd import FPNSSD, create_model_components
-from vortex.networks.modules.postprocess.fpn_ssd import FPNSSDDecoder
-from vortex.networks.modules.losses.ssd import MultiBoxLoss
+from vortex.development.networks.models.detection.fpn_ssd import FPNSSD, create_model_components
+from vortex.development.networks.modules.postprocess.fpn_ssd import FPNSSDDecoder
+from vortex.development.networks.modules.losses.ssd import MultiBoxLoss
 
 def test_darknet53_fpn_ssd() :
     strides = [8, 16, 32, 64, 128]
@@ -112,7 +115,7 @@ def test_darknet53_fpn_ssd_create_components() :
     loss = loss_fn(predictions, gt)
     assert not any(torch.isinf(loss).view(-1)) and not any(torch.isnan(loss).view(-1))
 
-from vortex.predictor.base_module import BasePredictor
+from vortex.development.predictor.base_module import BasePredictor
 
 def test_darknet53_fpn_ssd_predictor() :
     preprocess_args, model_args = EasyDict(), EasyDict()

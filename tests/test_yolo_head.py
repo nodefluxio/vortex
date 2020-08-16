@@ -1,10 +1,13 @@
+import sys
+sys.path.append('src/development')
+
 import unittest
 import torch
 
-from vortex.networks.modules.utils.darknet import yolo_feature_maps
-from vortex.networks.modules.heads.detection.yolov3 import YoloV3Layer as YoloLayer
-from vortex.networks.modules.heads.detection.yolov3 import YoloV3UpsampleBlock as YoloUpsampleBlock
-from vortex.networks.modules.heads.detection.yolov3 import YoloV3ConvBlock as YoloConvBlock
+from vortex.development.networks.modules.utils.darknet import yolo_feature_maps
+from vortex.development.networks.modules.heads.detection.yolov3 import YoloV3Layer as YoloLayer
+from vortex.development.networks.modules.heads.detection.yolov3 import YoloV3UpsampleBlock as YoloUpsampleBlock
+from vortex.development.networks.modules.heads.detection.yolov3 import YoloV3ConvBlock as YoloConvBlock
 
 class YoloHeadTest(unittest.TestCase) :
     def test_yolo_layer_train_1(self):

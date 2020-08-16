@@ -2,8 +2,12 @@ import unittest
 from easydict import EasyDict
 import numpy as np
 
-from vortex.utils.data.augment import create_transform
-from vortex.utils.data.dataset.wrapper.basic_wrapper import check_data_format_standard
+import sys
+sys.path.append('src/runtime')
+sys.path.append('src/development')
+
+from vortex.development.utils.data.augment import create_transform
+from vortex.development.utils.data.dataset.wrapper.basic_wrapper import check_data_format_standard
 
 class TestAugmentation():
     def test_albumentations(self):

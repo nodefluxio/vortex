@@ -1,4 +1,7 @@
-from vortex.networks.modules.losses.utils.focal_loss import FocalLoss
+import sys
+sys.path.append('src/development')
+
+from vortex.development.networks.modules.losses.utils.focal_loss import FocalLoss
 import numpy as np
 import torch
 

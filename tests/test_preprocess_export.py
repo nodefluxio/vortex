@@ -1,3 +1,7 @@
+import sys
+sys.path.append('src/development')
+sys.path.append('src/runtime')
+
 import torch
 import unittest
 import numpy as np
@@ -5,9 +9,9 @@ import onnxruntime
 from pathlib import Path
 
 
-from vortex_runtime.onnx.onnxruntime import OnnxRuntimeCpu as Runtime
-from vortex.exporter.onnx import export
-from vortex.networks.modules.preprocess import get_preprocess
+from vortex.runtime.onnx.onnxruntime import OnnxRuntimeCpu as Runtime
+from vortex.development.exporter.onnx import export
+from vortex.development.networks.modules.preprocess import get_preprocess
 
 class PreprocessTest(unittest.TestCase) :
     def test_normalize_torchscript(self) :

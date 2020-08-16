@@ -1,5 +1,8 @@
-from vortex.core.factory import create_dataloader
-from vortex.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper
+import sys
+sys.path.append('src/development')
+
+from vortex.development.core.factory import create_dataloader
+from vortex.development.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper
 from easydict import EasyDict
 import torch
 import pytest

@@ -1,3 +1,6 @@
+import sys
+sys.path.append('src/development')
+
 import unittest
 import torch
 import sys
@@ -6,10 +9,10 @@ import functools
 import traceback
 import numpy as np
 
-from vortex.networks.models.detection.yolov3 import YoloV3
-import vortex.networks.modules.losses.utils.yolov3 as yolo_utils
-from vortex.networks.modules.losses.utils.yolov3 import build_targets, encode_grid_labels, encode_yolo_bbox_labels
-from vortex.networks.modules.losses.yolov3 import YoloV3Loss as YoloLoss
+from vortex.development.networks.models.detection.yolov3 import YoloV3
+import vortex.development.networks.modules.losses.utils.yolov3 as yolo_utils
+from vortex.development.networks.modules.losses.utils.yolov3 import build_targets, encode_grid_labels, encode_yolo_bbox_labels
+from vortex.development.networks.modules.losses.yolov3 import YoloV3Loss as YoloLoss
 
 class TestYoLosses(unittest.TestCase) :
     

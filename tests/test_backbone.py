@@ -1,4 +1,7 @@
-from vortex.networks.modules import backbones
+import sys
+sys.path.append('src/development')
+
+from vortex.development.networks.modules import backbones
 import torch
 import pytest
 

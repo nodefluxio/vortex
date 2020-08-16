@@ -1,7 +1,8 @@
 import os
 import sys
+sys.path.append('src/development')
 
-from vortex.core.factory import create_model
+from vortex.development.core.factory import create_model
 from easydict import EasyDict
 
 def test_create_softmax_model():

@@ -1,8 +1,11 @@
+import sys
+sys.path.append('src/development')
+
 import math
 import torch
 import unittest
 import torchvision
-from vortex.core.engine.trainer.lr_scheduler import CosineLRScheduler, MultiStepLR
+from vortex.development.core.engine.trainer.lr_scheduler import CosineLRScheduler, MultiStepLR
 
 class TestLRScheduler(unittest.TestCase) :
     def test_cosine(self) :

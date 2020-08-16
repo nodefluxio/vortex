@@ -1,9 +1,12 @@
+import sys
+sys.path.append('src/development')
+
 import torch
 import pytest
 from pathlib import Path
 
-from vortex.networks.models.detection.retinaface import DefaultBox
-from vortex.networks.modules.postprocess.retinaface import RetinaFacePostProcess as PostProcess
+from vortex.development.networks.models.detection.retinaface import DefaultBox
+from vortex.development.networks.modules.postprocess.retinaface import RetinaFacePostProcess as PostProcess
 
 class Wrapper(torch.nn.Module) :
     def __init__(self,pp) :

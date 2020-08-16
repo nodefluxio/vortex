@@ -1,8 +1,11 @@
+import sys
+sys.path.append('src/development')
+
 import numpy as np
 import pytest
 import numpy.testing as npt
 
-from vortex.utils.metrics.classification import (
+from vortex.development.utils.metrics.classification import (
     multilabel_confusion_matrix,
     precision_recall_fscore,
     precision, recall,

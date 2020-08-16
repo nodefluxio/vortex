@@ -3,17 +3,19 @@ import sys
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
+sys.path.append('src/runtime')
+sys.path.append('src/development')
 
 import torch
 import torch.nn as nn
 import numpy as np
 import pytest
 
-from vortex.predictor import create_predictor
-from vortex.predictor.base_module import BasePredictor
-from vortex.networks import create_model_components
-from vortex.utils.parser.parser import load_config, check_config
-from vortex.predictor import get_prediction_results
+from vortex.development.predictor import create_predictor
+from vortex.development.predictor.base_module import BasePredictor
+from vortex.development.networks import create_model_components
+from vortex.development.utils.parser.parser import load_config, check_config
+from vortex.development.predictor import get_prediction_results
 
 
 torch.manual_seed(123)

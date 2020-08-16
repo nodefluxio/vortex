@@ -1,9 +1,12 @@
+import sys
+sys.path.append('src/development')
+
 import torch
 
 from math import sqrt
 from torch import Tensor, tensor, allclose, Size, eq
 
-from vortex.networks.models.detection.retinaface import PriorBox, DefaultBox, compute_ssd_anchors
+from vortex.development.networks.models.detection.retinaface import PriorBox, DefaultBox, compute_ssd_anchors
 
 """
 test case for compute_ssd_anchors

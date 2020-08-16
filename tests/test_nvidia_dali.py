@@ -1,7 +1,10 @@
+import sys
+sys.path.append('src/development')
+
 from easydict import EasyDict
-from vortex.utils.data.dataset import dataset
+from vortex.development.utils.data.dataset import dataset
 from pathlib import Path
-from vortex.core.factory import create_dataloader
+from vortex.development.core.factory import create_dataloader
 import pytest
 
 dataset.register_dvc_dataset("obj_det_landmarks", path=Path("tests/test_dataset"))

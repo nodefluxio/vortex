@@ -1,5 +1,8 @@
-from vortex.utils.metrics.evaluator import *
-from vortex.utils.prediction.bboxes import BoundingBox
+import sys
+sys.path.append('src/development')
+
+from vortex.development.utils.metrics.evaluator import *
+from vortex.development.utils.prediction.bboxes import BoundingBox
 
 
 bbox_a = BoundingBox(x=1., y=1., w=4., h=4., class_label=0, img_name='test.jpg')

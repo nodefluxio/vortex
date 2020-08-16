@@ -1,7 +1,10 @@
+import sys
+sys.path.append('src/development')
+
 import unittest
 import torch
 
-from vortex.networks.modules.backbones.darknet53 import Darknet53
+from vortex.development.networks.modules.backbones.darknet53 import Darknet53
 
 class Darknet53Test(unittest.TestCase) :
     def test_forward(self) :

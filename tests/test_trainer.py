@@ -1,15 +1,17 @@
 """
 test case for core trainer
 """
+import sys
+sys.path.append('src/development')
 
 import pytest
 import torch
 import torch.nn as nn
 
-import vortex.core.engine as engine
-from vortex.core.engine import create_trainer
-from vortex.core.engine.trainer.default_trainer import DefaultTrainer
-from vortex.core.engine.trainer.base_trainer import ExperimentLogger, BaseTrainer
+import vortex.development.core.engine as engine
+from vortex.development.core.engine import create_trainer
+from vortex.development.core.engine.trainer.default_trainer import DefaultTrainer
+from vortex.development.core.engine.trainer.base_trainer import ExperimentLogger, BaseTrainer
 
 experiment_logger = ExperimentLogger()
 

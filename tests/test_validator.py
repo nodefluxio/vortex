@@ -1,11 +1,14 @@
+import sys
+sys.path.append('src/development')
+
 import numpy as np
 import torch.nn as nn
 from easydict import EasyDict
 
-from vortex.core.factory import create_model
-from vortex.predictor.base_module import create_predictor
+from vortex.development.core.factory import create_model
+from vortex.development.predictor.base_module import create_predictor
 from .dummy_dataset.utils import dataset
-import vortex.core.engine as engine
+import vortex.development.core.engine as engine
 
 
 class DummyDataset(dataset.DummyDataset):

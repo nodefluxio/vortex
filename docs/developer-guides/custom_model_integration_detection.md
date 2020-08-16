@@ -22,15 +22,15 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 
-import vortex
-import vortex.networks as networks
-import vortex.networks.modules as vortex_modules
-import vortex.exporter.utils.onnx.graph_ops as graph_ops
+import vortex.development
+import vortex.development.networks as networks
+import vortex.development.networks.modules as vortex_modules
+import vortex.development.exporter.utils.onnx.graph_ops as graph_ops
 
-Pipeline = vortex.core.pipelines.PytorchPredictionPipeline
-ExportPipeline = vortex.core.pipelines.GraphExportPipeline
-ONNXPipeline = vortex.core.pipelines.IRPredictionPipeline
-TorchScriptPipeline = vortex.core.pipelines.IRPredictionPipeline
+Pipeline = vortex.development.core.pipelines.PytorchPredictionPipeline
+ExportPipeline = vortex.development.core.pipelines.GraphExportPipeline
+ONNXPipeline = vortex.development.core.pipelines.IRPredictionPipeline
+TorchScriptPipeline = vortex.development.core.pipelines.IRPredictionPipeline
 np.set_printoptions(precision=2, suppress=True)
 ```
 
@@ -334,7 +334,7 @@ our entry-point (see `cli.py`)
 
 ```python
 def cli():
-    vortex.vortex_cli.main()
+    vortex.development.vortex_cli.main()
 ```
 
 ---

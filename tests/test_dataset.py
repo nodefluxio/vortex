@@ -1,13 +1,16 @@
+
+
 import os
 import sys
 import subprocess
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
+sys.path.append('src/development')
 from easydict import EasyDict
 
-from vortex.utils.data.dataset import dataset
-from vortex.core.factory import create_dataset
+from vortex.development.utils.data.dataset import dataset
+from vortex.development.core.factory import create_dataset
 
 def test_dataset_register_dvc():
     dataset.register_dvc_dataset("dummy_dataset", path=Path("tests"))

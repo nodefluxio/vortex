@@ -1,10 +1,11 @@
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).parents[2]))
+sys.path.append(str(Path(__file__).parents[2].joinpath("src/development")))
+sys.path.append(str(Path(__file__).parents[2].joinpath("src/runtime")))
 sys.path.append(str(Path(__file__).parents[2].joinpath("tests")))
 
-from tests.test_torchscript_exporter import test_exporter, output_dir, model_argmap
-from vortex.networks.modules.backbones import all_models as all_backbones
+from test_torchscript_exporter import test_exporter, output_dir, model_argmap
+from vortex.development.networks.modules.backbones import all_models as all_backbones
 
 
 if __name__ == "__main__":

@@ -54,8 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - change `scheduler` to `lr_scheduler` in `config.trainer`.
   - change field `validation` to `validator` and move it from `config.trainer` to main `config`.
 - Refactor `DatasetWrapper` into `BasicDatasetWrapper` and `DefaultDatasetWrapper`
+- Change output type of BaseRuntime `__call__` method to list of orderedDict
 - It is now possible to override image auto padding in dataset object by adding and set `self.disable_image_auto_pad = True` attribute on the `collate_fn` object provided by the `model_components`
-
+- Refactor package into 2 namespace packages : `vortex.runtime` and `vortex.development`. In which case `vortex.development` is depend on `vortex.runtime`, but `vortex.runtime` can be installed as a standalone package for minimal requirement inferencing library
 
 ## v0.1.0
 

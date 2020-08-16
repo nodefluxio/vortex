@@ -1,5 +1,8 @@
-from vortex.utils.prediction.tools import *
-from vortex.utils.prediction import BoundingBox
+import sys
+sys.path.append('src/development')
+
+from vortex.development.utils.prediction.tools import *
+from vortex.development.utils.prediction import BoundingBox
 
 import pytest
 

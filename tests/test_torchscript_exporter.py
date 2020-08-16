@@ -1,11 +1,14 @@
+import sys
+sys.path.append('src/development')
+
 import os
 import torch
 import pytest
 from easydict import EasyDict
 
-from vortex.exporter.torchscript import TorchScriptExporter
-from vortex.networks.models import create_model_components
-from vortex.predictor import create_predictor
+from vortex.development.exporter.torchscript import TorchScriptExporter
+from vortex.development.networks.models import create_model_components
+from vortex.development.predictor import create_predictor
 
 
 output_dir = "tmp/torchscript"

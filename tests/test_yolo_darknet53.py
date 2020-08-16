@@ -1,7 +1,10 @@
+import sys
+sys.path.append('src/development')
+
 import torch
 import unittest
 
-from vortex.networks.models.detection.yolov3 import YoloV3
+from vortex.development.networks.models.detection.yolov3 import YoloV3
 
 
 class YoloV3Tests(unittest.TestCase) :

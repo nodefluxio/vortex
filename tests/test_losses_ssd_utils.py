@@ -1,4 +1,7 @@
-import vortex.networks.modules.losses.utils.ssd as ssd_utils
+import sys
+sys.path.append('src/development')
+
+import vortex.development.networks.modules.losses.utils.ssd as ssd_utils
 
 import torch
 from torch import Tensor, tensor, allclose, Size
@@ -243,7 +246,7 @@ def test_encode_simple() :
         atol=1e-5,
     )
 
-from vortex.networks.models.detection.retinaface import DefaultBox
+from vortex.development.networks.models.detection.retinaface import DefaultBox
 
 def test_match_targets() :
     box_kwargs = {

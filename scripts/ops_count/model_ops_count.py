@@ -3,17 +3,17 @@ from pathlib import Path
 import torch
 import pandas as pd
 
-repo_root = Path(__file__).parent.parent
+repo_root = Path(__file__).parent.parent.joinpath('src/development')
 
 if __name__=='__main__' :
     sys.path.insert(0, str(repo_root))
 
-from vortex.networks.modules import backbones
-from vortex.networks import models
+from vortex.development.networks.modules import backbones
+from vortex.development.networks import models
 from thop import profile
 from mod_torchsummary import summary
 from easydict import EasyDict
-from vortex.networks.models import create_model_components
+from vortex.development.networks.models import create_model_components
 
 mean_std=dict(
     mean=[0.5, 0.5, 0.5],

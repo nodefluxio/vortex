@@ -3,13 +3,16 @@ import sys
 from pathlib import Path
 proj_path = str(Path(__file__).parents[1])
 sys.path.append(proj_path)
+sys.path.append('src/runtime')
+sys.path.append('src/development')
+
 
 import torch
 import pytest
 
-from vortex.networks.models import create_model_components
-from vortex.networks.modules.backbones import supported_models as supported_backbone
-from vortex.utils.parser.parser import load_config, check_config
+from vortex.development.networks.models import create_model_components
+from vortex.development.networks.modules.backbones import supported_models as supported_backbone
+from vortex.development.utils.parser.parser import load_config, check_config
 
 backbones = [bb[0] for bb in supported_backbone.values() if not 'mobilenetv3' in bb[0]]
 backbones.append("mobilenetv3_large_w1")

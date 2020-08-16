@@ -1,8 +1,11 @@
+import sys
+sys.path.append('src/development')
+
 import unittest
 import yaml
 
-from vortex.utils.parser.loader import Loader
-from vortex.utils.parser.parser import load_config, check_config
+from vortex.development.utils.parser.loader import Loader
+from vortex.development.utils.parser.parser import load_config, check_config
 
 def test_loader() :
     test_file = 'tests/config/test1.yml'
