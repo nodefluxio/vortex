@@ -1,5 +1,5 @@
 import sys
-sys.path.append('vortex/development_package')
+sys.path.append('src/development')
 
 from easydict import EasyDict
 from vortex.development.utils.data.dataset import dataset

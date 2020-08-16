@@ -2,7 +2,7 @@
 test case for core trainer
 """
 import sys
-sys.path.append('vortex/development_package')
+sys.path.append('src/development')
 
 import pytest
 import torch

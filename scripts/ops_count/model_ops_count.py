@@ -3,7 +3,7 @@ from pathlib import Path
 import torch
 import pandas as pd
 
-repo_root = Path(__file__).parent.parent
+repo_root = Path(__file__).parent.parent.joinpath('src/development')
 
 if __name__=='__main__' :
     sys.path.insert(0, str(repo_root))

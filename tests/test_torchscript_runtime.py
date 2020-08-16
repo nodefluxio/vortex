@@ -1,6 +1,6 @@
 import sys
-sys.path.append('vortex/development_package')
-sys.path.append('vortex/runtime_package')
+sys.path.append('src/development')
+sys.path.append('src/runtime')
 
 import os
 import cv2

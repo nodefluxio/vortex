@@ -1,5 +1,5 @@
 import sys
-sys.path.append('vortex/development_package')
+sys.path.append('src/development')
 
 from vortex.development.utils.metrics.evaluator import *
 from vortex.development.utils.prediction.bboxes import BoundingBox

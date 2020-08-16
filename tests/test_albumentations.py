@@ -3,8 +3,8 @@ from easydict import EasyDict
 import numpy as np
 
 import sys
-sys.path.append('vortex/runtime_package')
-sys.path.append('vortex/development_package')
+sys.path.append('src/runtime')
+sys.path.append('src/development')
 
 from vortex.development.utils.data.augment import create_transform
 from vortex.development.utils.data.dataset.wrapper.basic_wrapper import check_data_format_standard

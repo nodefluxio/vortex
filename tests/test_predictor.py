@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
-sys.path.append('vortex/runtime_package')
-sys.path.append('vortex/development_package')
+sys.path.append('src/runtime')
+sys.path.append('src/development')
 
 import torch
 import torch.nn as nn

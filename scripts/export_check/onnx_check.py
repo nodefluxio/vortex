@@ -10,11 +10,9 @@ if __name__=='__main__' :
     import os
     import sys
     from pathlib import Path
-    proj_path = os.path.abspath(Path(__file__).parents[2])
-    sys.path.append(proj_path)
-    sys.path.append('vortex/development_package')
-    sys.path.append('vortex/runtime_package')
-
+    proj_path = Path(__file__).parents[2]
+    sys.path.append(proj_path.joinpath('src/development'))
+    sys.path.append(proj_path.joinpath('src/runtime'))
 
 from math import isclose
 from datetime import datetime

@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.append('vortex/development_package')
+sys.path.append('src/development')
 
 from vortex.development.core.factory import create_model
 from easydict import EasyDict

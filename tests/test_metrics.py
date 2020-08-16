@@ -1,5 +1,5 @@
 import sys
-sys.path.append('vortex/development_package')
+sys.path.append('src/development')
 
 import numpy as np
 import pytest
