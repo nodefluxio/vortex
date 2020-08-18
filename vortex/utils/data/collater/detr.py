@@ -15,7 +15,7 @@ class DETRColatte:
         images = NestedTensor.from_batch_tensor(images)
 
         collated_targets = []
-        for batch_idx, target in enumerate(targets):
+        for target in targets:
             out_target = {}
             if target.ndim != 2:
                 raise RuntimeError("expects dimensionality of target is 2 got %s" % target.ndim)
@@ -32,6 +32,7 @@ class DETRColatte:
                 dim=self.dataformat.bounding_box.axis,
                 index=self.dataformat.bounding_box.indices
             ).float()
+            out_target['bbox'][:, :2] += out_target['bbox'][:, 2:] / 2  ## x,y,w,h -> cx,cy,w,h
             collated_targets.append(out_target)
         return images, collated_targets
 
