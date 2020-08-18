@@ -6,6 +6,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
+if float(torchvision.__version__[:3]) < 0.7:
+    from torchvision.ops import _new_empty_tensor
+    from torchvision.ops.misc import _output_size
 
 from typing import Optional, List
 from easydict import EasyDict
@@ -66,7 +69,6 @@ class NestedTensor(object):
         self.mask = mask
 
     def to(self, device):
-        # type: (Device) -> NestedTensor # noqa
         self.tensors = self.tensors.to(device)
         if self.mask is not None:
             self.mask = self.mask.to(device)
@@ -455,7 +457,7 @@ class DETR(nn.Module):
 
         self.transformer = Transformer(
             d_model=hidden_dim, dropout=dropout, nhead=nhead,
-            dim_feedforward=dim_feedforward,
+            dim_feedforward=dim_feedforward, activation=activation,
             num_encoder_layers=num_encoder_layers,
             num_decoder_layers=num_decoder_layers,
             normalize_before=normalize_before,
@@ -529,11 +531,11 @@ class HungarianMatcher(nn.Module):
     """This class computes an assignment between the targets and the predictions of the network
 
     For efficiency reasons, the targets don't include the no_object. Because of this, in general,
-    there are more predictions than targets. In this case, we do a 1-to-1 matching of the best predictions,
-    while the others are un-matched (and thus treated as non-objects).
+    there are more predictions than targets. In this case, we do a 1-to-1 matching of the best 
+    predictions, while the others are un-matched (and thus treated as non-objects).
     """
 
-    def __init__(self, cost_class: float = 1, cost_bbox: float = 1, cost_giou: float = 1):
+    def __init__(self, cost_class: float = 1, cost_bbox: float = 5, cost_giou: float = 2):
         """Creates the matcher
 
         Params:
@@ -834,7 +836,7 @@ def accuracy(output, target, topk=(1,)):
 
 
 def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corners=None):
-    # type: (Tensor, Optional[List[int]], Optional[float], str, Optional[bool]) -> Tensor
+    # type: (torch.Tensor, Optional[List[int]], Optional[float], str, Optional[bool]) -> torch.Tensor
     """
     Equivalent to nn.functional.interpolate, but with support for empty batch sizes.
     This will eventually be supported natively by PyTorch, and this
