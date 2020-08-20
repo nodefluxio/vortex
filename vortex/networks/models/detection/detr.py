@@ -478,6 +478,7 @@ class DETR(nn.Module):
             "class_confidence": {"indices": [4], "axis": 1},
             "class_label": {"indices": [5], "axis": 1},
         }
+        self.task = 'detection'
 
     def forward(self, samples):
         if isinstance(samples, (list, torch.torch.Tensor)):
@@ -518,6 +519,7 @@ class DETRPostProcess(nn.Module):
             ('score_threshold', (1,)),
         )
 
+    @torch.no_grad()
     def forward(self, inputs: torch.Tensor, score_threshold: torch.Tensor, **kwargs) -> torch.Tensor:
         if inputs.ndim != 3:
             raise RuntimeError("DETR postprocess input must have dimension of 3 "
@@ -533,9 +535,10 @@ class DETRPostProcess(nn.Module):
 
     def _process_single_batch(self, inputs, score_threshold):
         assert inputs.ndim == 2, "single batch post process must have dimension of 2 (num_queries, num_pred)"
-        bbox, logits = cxcywh_to_xyxy(inputs[:, :4]), inputs[:, 4:-1]
+        bbox, logits = cxcywh_to_xyxy(inputs[:, :4]), inputs[:, 4:]
 
-        conf, labels = logits.softmax(-1).max(-1, keepdim=True)
+        probas = logits.softmax(-1)[:, :-1]
+        conf, labels = probas.max(-1, keepdim=True)
         keep = (conf > score_threshold).flatten()
 
         detection = torch.cat((bbox, conf, labels.float()), -1)
