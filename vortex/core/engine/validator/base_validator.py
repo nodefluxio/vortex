@@ -325,17 +325,17 @@ class BaseValidator:
         image = image[np.newaxis,:] \
             if (input_dim - image_dim) else image
         return IRPredictionPipeline._runtime_predict(predictor, image, *args, **kwargs)
-    
+
     def format_output(self, results) :
         """
         format output
         """
-        if isinstance(results, torch.Tensor) :
-            results = results.cpu().numpy()
-        if isinstance(results, (np.ndarray, (list, tuple))) \
-            and not isinstance(results[0], (dict,OrderedDict)):
-            ## first map to cpu/numpy
+        if isinstance(results, torch.Tensor):
+            results = [results.cpu().numpy()]
+        elif isinstance(results, (list, tuple)):
             results = list(map(lambda x: x.cpu().numpy() if isinstance(x,torch.Tensor) else x, results))
+        if isinstance(results, (list, tuple)) \
+                and not isinstance(results[0], (dict,OrderedDict)):
             ## actually perform output formatting
             results = get_prediction_results(results, self.result_fmt)
         assert isinstance(results[0], (dict, OrderedDict)), "result type {} not understood".format(type(results))
