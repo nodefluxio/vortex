@@ -436,6 +436,8 @@ class DETR(nn.Module):
             replace_stride_with_dilation=[False, False, dilation],
             norm_layer=FrozenBatchNorm2d)
         ## always freeze layer1 or freeze all when not train_backbone
+        if lr_backbone <= 0:
+            train_backbone = False
         for name, parameter in backbone.named_parameters():
             if not train_backbone or 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
                 parameter.requires_grad_(False)
@@ -517,14 +519,27 @@ class DETRPostProcess(nn.Module):
         )
 
     def forward(self, inputs: torch.Tensor, score_threshold: torch.Tensor, **kwargs) -> torch.Tensor:
-        logits, bbox = inputs[..., 4:], cxcywh_to_xyxy(inputs[...,:4])
+        if inputs.ndim != 3:
+            raise RuntimeError("DETR postprocess input must have dimension of 3 "
+                "(num_batch, num_queries, (num_classes + 1) + 4)")
+        num_batch = inputs.size(0)
+        if num_batch == 1:
+            return self._process_single_batch(inputs[0], score_threshold)
+        else:
+            results = []
+            for i in range(num_batch):
+                results.append(self._process_single_batch(inputs[i], score_threshold))
+            return tuple(results)
 
-        conf, labels = F.softmax(logits, -1).max(-1, keepdim=True)
-        keep = (conf > score_threshold).nonzero()[:, 1]
+    def _process_single_batch(self, inputs, score_threshold):
+        assert inputs.ndim == 2, "single batch post process must have dimension of 2 (num_queries, num_pred)"
+        bbox, logits = cxcywh_to_xyxy(inputs[:, :4]), inputs[:, 4:-1]
+
+        conf, labels = logits.softmax(-1).max(-1, keepdim=True)
+        keep = (conf > score_threshold).flatten()
 
         detection = torch.cat((bbox, conf, labels.float()), -1)
-        detection = torch.index_select(detection, 1, keep)
-        return detection
+        return detection[keep]
 
 
 class HungarianMatcher(nn.Module):
@@ -782,9 +797,6 @@ class DETRLoss(nn.Module):
         # Compute the average number of target boxes accross all nodes, for normalization purposes
         num_boxes = sum(len(t["labels"]) for t in target)
         num_boxes = torch.as_tensor([num_boxes], dtype=torch.float, device=next(iter(outputs.values())).device)
-        # if is_dist_avail_and_initialized():
-        #     torch.distributed.all_reduce(num_boxes)
-        # num_boxes = torch.clamp(num_boxes / get_world_size(), min=1).item()
         num_boxes = torch.clamp(num_boxes, min=1).item()
 
         # Compute all the requested losses
