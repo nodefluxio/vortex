@@ -4,7 +4,7 @@
 
 A Deep Learning Model Development Framework for Computer Vision
 
-**Version : 0.1.0**
+**Version : 0.2.0**
 
 ---
 
@@ -102,7 +102,7 @@ Then, clone the repo and install the vortex packages. It's important to be noted
 ```console
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
-git checkout v0.2.0-rc1
+git checkout v0.2.0
 pip3 install 'src/runtime[all]'
 pip3 install 'src/development'
 ```
@@ -200,7 +200,7 @@ For example, if you want to install specific dependencies for `onnxruntime`, exe
 ```console
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
-git checkout v0.2.0-rc1
+git checkout v0.2.0
 pip3 install 'src/runtime[onnxruntime]'
 ```
 
