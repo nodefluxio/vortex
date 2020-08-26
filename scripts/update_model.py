@@ -1,24 +1,26 @@
 import os
+import sys
 import glob
 import argparse
+import warnings
 import torch
 
 from pathlib import Path
 from easydict import EasyDict as edict
 
-if __name__ == "__main__":
-    proj_path = Path(__file__).parents[1]
-    sys.path.append(proj_path.joinpath('src/development'))
+sys.path.append(str(Path(__file__).parents[1].joinpath('src/development')))
 
+warnings.filterwarnings('ignore')
 from vortex.development.utils.parser import load_config, check_config
 from vortex.development.core import engine
 from vortex.development.core.factory import create_model, create_dataset
+
 
 def update_checkpoints(config, model_paths, override=False):
     assert isinstance(model_paths, list) and isinstance(model_paths[0], str)
     assert isinstance(config, (str, edict))
 
-    model_components = create_model(model_config=config.model,stage='validate')
+    model_components = create_model(model_config=config.model, stage='train')
     trainer = engine.create_trainer(
         config.trainer, experiment_logger=None,
         criterion=model_components.loss,
@@ -29,7 +31,7 @@ def update_checkpoints(config, model_paths, override=False):
     checkpoint = {
         "config": config,
         "class_names": dataset.class_names,
-        # since we dont know how it trained, just put an empty optimizer state
+        # since we don't know how it trained, just put an empty optimizer state
         "optimizer_state": trainer.optimizer.state_dict(), 
     }
     for idx, model_path in enumerate(model_paths):
@@ -38,15 +40,15 @@ def update_checkpoints(config, model_paths, override=False):
         if not override:
             basename, ext = os.path.splitext(updated_fname)
             updated_fname = basename + '_updated' + ext
-        print("[{}/{}] updating {} to {}".format(idx+1, len(model_paths), 
-            model_path, os.path.join(fdir, updated_fname)))
+        print("[{}/{}]updating {} {}".format(idx+1, len(model_paths), 
+            model_path, "to {}".format(os.path.join(fdir, updated_fname)) if not override else ""))
 
         if not os.path.exists(model_path) and os.path.splitext(model_path)[-1] == '.pth':
             raise RuntimeError("Model path {} is invalid, make sure file is available "
                 "and filename have extension of '.pth'".format(model_path))
         ckpt = torch.load(model_path)
         if all((k in ckpt) for k in ('epoch', 'state_dict', 'class_names', 'config')):
-            print("=> skipping {}, checkpoint already in new format")
+            print(" => skipping {}, checkpoint already in new format".format(model_path))
             continue 
 
         epoch = config.trainer.epoch
