@@ -525,13 +525,10 @@ class DETRPostProcess(nn.Module):
             raise RuntimeError("DETR postprocess input must have dimension of 3 "
                 "(num_batch, num_queries, (num_classes + 1) + 4)")
         num_batch = inputs.size(0)
-        if num_batch == 1:
-            return self._process_single_batch(inputs[0], score_threshold)
-        else:
-            results = []
-            for i in range(num_batch):
-                results.append(self._process_single_batch(inputs[i], score_threshold))
-            return tuple(results)
+        results = []
+        for i in range(num_batch):
+            results.append(self._process_single_batch(inputs[i], score_threshold))
+        return tuple(results)
 
     def _process_single_batch(self, inputs, score_threshold):
         assert inputs.ndim == 2, "single batch post process must have dimension of 2 (num_queries, num_pred)"
