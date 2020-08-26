@@ -1,9 +1,10 @@
 import torch
+import copy
 
 from vortex.networks.models.detection.detr import (
     DETR, HungarianMatcher,
     DETRLoss, DETRPostProcess,
-    NestedTensor
+    NestedTensor, cxcywh_to_xyxy
 )
 from vortex.utils.data.collater.detr import DETRColatte
 
@@ -142,13 +143,24 @@ def test_detr_collater():
 
 
 def test_detr_postprocess():
+    score_threshold = torch.tensor(0.3)
     postprocess = DETRPostProcess()
 
     outputs_single = torch.cat((pred_bbox[0], pred_logits[0]), -1).unsqueeze(0)
-    det = postprocess(outputs_single, score_threshold=torch.tensor(0.35))
-    assert isinstance(det, torch.Tensor) and det.size(1) == 6
+    det = postprocess(outputs_single, score_threshold=score_threshold)
+    assert isinstance(det, tuple)
+    assert isinstance(det[0], torch.Tensor) and det[0].size(1) == 6
 
     outputs = torch.cat((pred_bbox, pred_logits), -1)
-    det = postprocess(outputs, score_threshold=torch.tensor(0.35))
+    det = postprocess(outputs, score_threshold=score_threshold)
+
+    expected = []
+    for bbox, logits in zip(copy.deepcopy(pred_bbox), copy.deepcopy(pred_logits)):
+        bbox = cxcywh_to_xyxy(bbox)
+        conf, labels = logits.softmax(-1)[:, :-1].max(-1)
+        res = torch.cat((bbox, conf.unsqueeze(1), labels.float().unsqueeze(1)), -1)[conf > score_threshold]
+        expected.append(res)
+
     assert isinstance(det, tuple)
     assert all((isinstance(d, torch.Tensor) and d.size(1) == 6) for d in det)
+    assert all(torch.equal(e, r) for e, r in zip(expected, det))
