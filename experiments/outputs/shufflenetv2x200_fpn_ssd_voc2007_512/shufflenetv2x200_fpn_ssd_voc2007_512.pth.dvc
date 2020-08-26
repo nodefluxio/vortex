@@ -1,7 +1,3 @@
 outs:
-- metric: false
-  persist: false
-  md5: 91e75fad4e0d9ffbb7aecf58e730e564
-  cache: true
+- md5: 22f481a1f966e188b4b9b7b1cc99779e
   path: shufflenetv2x200_fpn_ssd_voc2007_512.pth
-md5: 953c369bd9c81516c451ef32b4ca89b8

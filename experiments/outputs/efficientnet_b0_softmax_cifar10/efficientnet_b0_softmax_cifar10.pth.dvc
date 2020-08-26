@@ -1,7 +1,3 @@
-md5: b354f7ca1bc0472e9ec866d7d9e8c7ef
 outs:
-- md5: 9bfb3f36292515fcbc351f895cf7d6cb
+- md5: b42af6d1816710bd3fca096467834be6
   path: efficientnet_b0_softmax_cifar10.pth
-  cache: true
-  metric: false
-  persist: false
