@@ -64,9 +64,14 @@ def create_validator_instance(task, predictor, dataset, **validation_args):
     return validator
 
 @singledispatch
-def create_validator(model_components: Union[str,Path], dataset, validation_args, predictor_args=None, device='cpu'):
+def create_validator(model_components: Union[str,Path], dataset, validation_args, 
+                     predictor_args=None, device='cpu'):
     """
     """
+    model_components = Path(model_components)
+    if not model_components.exists():
+        raise RuntimeError("model path {} is not exist, please make sure to specify "
+            "the correct path".format(str(model_components)))
     runtime = create_runtime_model(
         runtime=device,
         model_path=model_components
