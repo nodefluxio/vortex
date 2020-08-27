@@ -77,7 +77,8 @@ class BaseValidator:
     """
     base class for validation
     """
-    def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', batch_size:int=1,**prediction_args):
+    def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', 
+                 batch_size=None, **prediction_args):
         if not isinstance(predictor, (BasePredictor,BaseRuntime)):
             raise RuntimeError("expects `predictor` to have type of BasePredictor or BaseRuntime, " \
                 "got %s" % type(predictor))
@@ -89,16 +90,20 @@ class BaseValidator:
         self.experiment_name = experiment_name
         self.output_directory = Path(output_directory)
         self.batch_size = batch_size
-        
+
         self.predictor_name = '{}'.format(self.predictor.__class__.__name__)
         if isinstance(self.predictor, BasePredictor):
             self.predictor_name = '{}[{}]'.format(self.predictor_name, next(self.predictor.parameters()).device)
-        if isinstance(predictor, BaseRuntime) :
-            predictor_batch_size = predictor.input_specs['input']['shape'][0]
-            assert predictor_batch_size == batch_size, \
-                "predictor expects batch_size of {}, but got {}".format(
-                    predictor_batch_size, batch_size
-                )
+            if batch_size is None:
+                warnings.warn("batch size is not set, using default value of 1")
+                self.batch_size = 1
+        if isinstance(predictor, BaseRuntime):
+            self.predictor_input_shape = predictor.input_specs['input']['shape']
+            predictor_batch_size = self.predictor_input_shape[0]
+            if predictor_batch_size != batch_size and batch_size is not None:
+                warnings.warn("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
+                    "using batch size from model.".format(predictor_batch_size, batch_size))
+            self.batch_size = predictor_batch_size
 
         self._init_logger()
         self._init_dataset()
@@ -106,7 +111,7 @@ class BaseValidator:
         self._init_profiler()
         self._init_batch()
         self._check_output_format()
-    
+
     def _init_logger(self):
         """
         default logger initialization
@@ -119,11 +124,10 @@ class BaseValidator:
         """
         default batch initialization, convert to dataloader if necessary
         """
-        batch_size = self.batch_size
-        ## convert to DataLoader, if necessary
-        self.dataset = torch.utils.data.DataLoader(self.dataset, batch_size=batch_size, collate_fn=no_collate) \
-            if batch_size > 1 else self.dataset
-    
+        if self.batch_size > 1:
+            self.dataset = torch.utils.data.DataLoader(self.dataset, batch_size=self.batch_size, 
+                collate_fn=no_collate)
+
     def _init_profiler(self):
         """
         default profiler initializer
@@ -133,7 +137,7 @@ class BaseValidator:
         self.cpu_monitor = CPUMonitor(name='{}_cpu_resource_{}'.format(experiment_name, self.predictor_name))
         self.gpu_monitor = GPUMonitor(name='{}_gpu_resource_{}'.format(experiment_name, self.predictor_name))
         self.monitor = ResourceMonitorWrapper([self.cpu_monitor, self.gpu_monitor])
-    
+
     def _init_class_names(self):
         """
         default class names initializer
@@ -145,7 +149,7 @@ class BaseValidator:
         else:
             class_names = None
         self.class_names = class_names
-    
+
     def _init_dataset(self):
         """
         default dataset check, make sure image and label is torch.Tensor or np.ndarray
@@ -179,7 +183,7 @@ class BaseValidator:
         else:
             ## no problem
             pass
-    
+
     def validation_args(self) -> Dict[str,Any] :
         """
         reports validation args used for this run, 
@@ -189,13 +193,13 @@ class BaseValidator:
         return dict(
             batch_size=self.batch_size
         )
-    
+
     def eval_init(self, *args, **kwargs) :
         """
         invoked before entering evaluation loop, *args and *kwargs from __call__ are passed to this fn
         """
         pass
-    
+
     def predict(self, image, *args, **kwargs) -> Union[np.ndarray,torch.Tensor,List[Dict[str,np.ndarray]]]:
         """
         default implementation for predict, developer could overrides if specific impl are necessary for specific task
@@ -203,15 +207,17 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor) :
             results = type(self).torch_predict(
                 predictor=self.predictor, 
-                image=image, *args, **kwargs,
+                image=image, batch_size=self.batch_size,
+                *args, **kwargs,
             )
         else :
             results = type(self).runtime_predict(
                 predictor=self.predictor,
-                image=image, *args, **kwargs,
+                image=image, batch_size=self.batch_size,
+                *args, **kwargs,
             )
         return results
-    
+
     def update_results(self, index : int, results : List[Dict[str,np.ndarray]], targets : Union[np.ndarray,torch.Tensor], last_index : bool) :
         """
         required for each subclass
@@ -224,7 +230,7 @@ class BaseValidator:
         required for each subclass
         """
         raise NotImplementedError
-    
+
     def plot_resource_metrics(self, output_directory=None, filename=None) -> Dict[str,str] : 
         """
         save resource plot, return saved path
@@ -254,7 +260,7 @@ class BaseValidator:
             'gpu memory' : gpu_reports['process_memory'],
         })
         return results
-    
+
     def save_metrics(self, output_directory) -> dict :
         """
         optional, expects to return dict of filename
@@ -286,10 +292,10 @@ class BaseValidator:
         if not image.shape[3] == 3:
             raise RuntimeError('unexpected error')
         return torch.from_numpy(image)
-    
+
     @classmethod
     @torch.no_grad()
-    def torch_predict(cls, predictor: torch.nn.Module, image, *args, **kwargs) :
+    def torch_predict(cls, predictor: torch.nn.Module, image, batch_size=None, *args, **kwargs) :
         """
         helper function for torch, it is up to developer to use this fn
         """
@@ -308,25 +314,35 @@ class BaseValidator:
         return predictor(image, *args, **kwargs)
 
     @staticmethod
-    def runtime_predict(predictor: BaseRuntime, image : Union[List[np.ndarray],np.ndarray], *args, **kwargs) :
+    def runtime_predict(predictor: BaseRuntime, image : Union[List[np.ndarray],np.ndarray], batch_size=None, *args, **kwargs) :
         """
         helper function for BaseRuntime, it is up to developer to use this fn
         """
         ## TODO : complete docs
-        if isinstance(image, torch.Tensor) :
+        if isinstance(image, torch.Tensor):
             image = image.cpu().numpy()
-        if isinstance(image, list) :
+        if isinstance(image, list):
             image = np.stack(image)
         ## assuming image input is named 'input'
         ## TODO : deduce image input name
-        input_shapes = predictor.input_specs['input']['shape']
-        input_dim = len(input_shapes)
-        image_dim = len(image.shape)
-        image = image[np.newaxis,:] \
-            if (input_dim - image_dim) else image
-        result = predictor(image,*args, **kwargs)
+        if (len(predictor.input_specs['input']['shape']) - len(image.shape)):
+            image = image[np.newaxis, :]
+
+        ## pad batch if necessary
+        image_shape = image.shape
+        batch_padded = False
+        if batch_size is None:
+            batch_size = image_shape[0]
+        if batch_size != image_shape[0]:
+            batch_padded = True
+            pad_width = [(0, batch_size - image_shape[0])] + [(0, 0) for _ in range(len(image_shape)-1)]
+            image = np.pad(image, pad_width, mode='constant', constant_values=0)
+
+        result = predictor(image, *args, **kwargs)
+        if batch_padded:
+            result = result[:image_shape[0]]
         return result
-    
+
     def format_output(self, results) :
         """
         format output
@@ -346,14 +362,14 @@ class BaseValidator:
         """
         default validation pipeline
         """
-        if isinstance(self.predictor, BasePredictor) :
+        if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                            desc=" eval", leave=False):
-                with self.predict_timedata :
+                                                desc=" eval", leave=True):
+                with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
                 last_index = False
