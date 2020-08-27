@@ -454,6 +454,13 @@ class TestPredictionPipeline():
 
 @pytest.mark.parametrize("weight", [None, pth_model_path])
 def test_export_pipeline(weight):
+    exported_paths = [
+        Path(config.output_directory).joinpath(config.experiment_name, "{}.onnx".format(config.experiment_name)),
+        Path(config.output_directory).joinpath(config.experiment_name, "{}_bs8.onnx".format(config.experiment_name)),
+        Path(config.output_directory).joinpath(config.experiment_name, "{}.pt".format(config.experiment_name)),
+        Path(config.output_directory).joinpath(config.experiment_name, "{}_bs8.pt".format(config.experiment_name))
+    ]
+
     # Initialize graph exporter
     graph_exporter = GraphExportPipeline(config=config, weights=weight)
 
@@ -461,6 +468,7 @@ def test_export_pipeline(weight):
     assert isinstance(status,EasyDict)
     assert 'export_status' in status.keys()
     assert isinstance(status.export_status, bool)
+    assert all(p.exists() for p in exported_paths)
 
     ## without class names
     graph_exporter.class_names = None
@@ -468,6 +476,7 @@ def test_export_pipeline(weight):
     assert isinstance(status,EasyDict)
     assert 'export_status' in status.keys()
     assert isinstance(status.export_status, bool)
+    assert all(p.exists() for p in exported_paths)
 
     ckpt = torch.load(pth_model_path)
     state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
@@ -496,17 +505,19 @@ class TestIRValidationPipeline():
     
     def test_onnx_validation_multi_batch(self):
         # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.onnx')
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs8.onnx')
 
         validation_executor = IRValidationPipeline(config=config,
                                                 model = model_path,
                                                 backends = 'cpu',
                                                 generate_report = True)
 
-        eval_results = validation_executor.run(batch_size=2)
+        eval_results = validation_executor.run(batch_size=8)
+        assert isinstance(eval_results, EasyDict)
 
-        # Check return value
-        assert isinstance(eval_results,EasyDict)
+        ## batch size None
+        eval_results = validation_executor.run(batch_size=None)
+        assert isinstance(eval_results, EasyDict)
 
         # Check generated reports
         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
@@ -534,16 +545,18 @@ class TestIRValidationPipeline():
     
     def test_torchscript_validation_multi_batch(self):
         # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs2.pt')
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs8.pt')
 
         validation_executor = IRValidationPipeline(config=config,
                                                 model = model_path,
                                                 backends = 'cpu',
                                                 generate_report = True)
 
-        eval_results = validation_executor.run(batch_size=2)
+        eval_results = validation_executor.run(batch_size=8)
+        assert isinstance(eval_results,EasyDict)
 
-        # Check return value
+        ## not specified batch size
+        eval_results = validation_executor.run(batch_size=None)
         assert isinstance(eval_results,EasyDict)
 
         # Check generated reports
@@ -588,12 +601,12 @@ class TestIRPredictionPipeline():
         assert isinstance(results.visualization[0],np.ndarray)
 
         # If dump_visualization and images is provided as string, allow for dump visualized image
-
+        vis_dump_path = None
         if model_input==onnx_model_path:
             vis_dump_path = Path('tests/output_predict_test') / 'onnx_ir_prediction_cat.jpg'
         elif model_input==pt_model_path:
             vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_cat.jpg'
-        assert vis_dump_path.exists()
+        assert vis_dump_path is not None and vis_dump_path.exists()
 
     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
     def test_input_from_numpy_with_vis(self,model_input):
