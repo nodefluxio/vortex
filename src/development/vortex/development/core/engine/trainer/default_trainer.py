@@ -24,7 +24,7 @@ class DefaultTrainer(BaseTrainer):
         for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),
                                          desc=" train", leave=False):
             if self.scheduler is not None:
-                self.lr = self.scheduler.get_lr()[0]
+                self.lr = self.scheduler.get_last_lr()[0]
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
