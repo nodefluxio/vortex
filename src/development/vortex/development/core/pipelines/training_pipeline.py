@@ -207,13 +207,15 @@ class TrainingPipeline(BasePipeline):
                 self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])
 
         has_save = False
-        self.save_best_metric, self.save_best_type = None, None
-        if 'save_best_metric' in self.config.trainer and self.config.trainer.save_best_metric is not None:
+        self.save_best_metrics, self.save_best_type = None, None
+        if 'save_best_metric' in self.config.trainer and self.config.trainer.save_best_metrics is not None:
             has_save = True
-            self.save_best_metric = self.config.trainer.save_best_metric
-            if not isinstance(self.save_best_metric, (list, tuple)):
-                self.save_best_metric = [self.save_best_metric]
-            self.save_best_type = list({'loss' if m == 'loss' else 'val_metric' for m in self.save_best_metric})
+            self.save_best_metrics = self.config.trainer.save_best_metrics
+            if not isinstance(self.save_best_metrics, (list, tuple)):
+                self.save_best_metrics = [self.save_best_metrics]
+            self.save_best_type = list({'loss' if m == 'loss' else 'val_metric' for m in self.save_best_metrics})
+            if 'loss' in self.save_best_metrics:
+                self.save_best_metrics.remove('loss')
 
         self.save_epoch = None
         if 'save_epoch' in self.config.trainer and self.config.trainer.save_epoch is not None:
@@ -281,7 +283,7 @@ class TrainingPipeline(BasePipeline):
         learning_rates = []
         last_epoch = 0
         best_loss = float('inf')
-        best_metric = {name: float('-inf') for name in self.save_best_metric if name != 'loss'}
+        best_metric = {name: float('-inf') for name in self.save_best_metrics}
         for epoch in tqdm(range(self.start_epoch, self.config.trainer.epoch), desc="EPOCH",
                           total=self.config.trainer.epoch, initial=self.start_epoch, 
                           dynamic_ncols=True):
@@ -316,9 +318,7 @@ class TrainingPipeline(BasePipeline):
                     self.experiment_logger.log_on_validation_result(metrics_log)
 
                 if 'val_metric' in self.save_best_type:
-                    for metric_name in self.save_best_metric:
-                        if metric_name == 'loss':
-                            continue
+                    for metric_name in self.save_best_metrics:
                         if not metric_name in val_results:
                             val_res_key = ", ".join(list(val_results.keys()))
                             raise RuntimeError("'save_best_metric' value of ({}) is not found in validation "

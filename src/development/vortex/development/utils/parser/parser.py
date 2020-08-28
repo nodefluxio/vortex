@@ -229,7 +229,7 @@ def __trainer_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
         validation.parent = trainer
         save_epoch = ExperimentNode('save_epoch', parent=trainer, required=False,
             docstring='every `save_epoch` epoch step, we will save the weights')
-        save_best = ExperimentNode('save_best_metric', parent=trainer, required=False,
+        save_best = ExperimentNode('save_best_metrics', parent=trainer, required=False,
             docstring='metric name to save the best model')
     device = ExperimentNode('device', parent=trainer, required=False,
                             docstring='on which device we should train?')
