@@ -50,7 +50,10 @@ def calculate_lr(lr_config, epochs=100, optimizer_config=None):
     lr_data = []
     for ep in range(epochs):
         optimizer.step()
-        scheduler.step(ep)
+        try:
+            scheduler.step()
+        except:
+            scheduler.step(ep)
         lr_data.append(scheduler.get_last_lr())
     return np.array(lr_data)
 

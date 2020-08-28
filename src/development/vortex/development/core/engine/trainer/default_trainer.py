@@ -36,7 +36,10 @@ class DefaultTrainer(BaseTrainer):
             if (i+1) % self.accumulation_step == 0:
                 self.optimizer.step()
                 if self.scheduler:
-                    self.scheduler.step(epoch)
+                    try:
+                        self.scheduler.step()
+                    except:
+                        self.scheduler.step(epoch)
                 self.optimizer.zero_grad()
 
                 # Experiment Logging
