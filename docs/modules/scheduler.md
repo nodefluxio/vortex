@@ -86,8 +86,7 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-
-
+![CosineLR Visualization](../images/cosine_lr.jpg)
 
 ---
 
@@ -134,7 +133,7 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-
+![TanhLR Visualization](../images/tanh_lr.jpg)
 
 ---
 
@@ -168,3 +167,5 @@ Arguments :
 Example Visualization :
 
 Using above configuration, and epoch of 200,
+
+![StepLRWithBurnIn Visualization](../images/step_lr_with_burnin.jpg)
