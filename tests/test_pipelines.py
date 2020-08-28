@@ -139,9 +139,15 @@ class TestTrainingPipeline():
         backup_config = Path(train_executor.run_directory)/'config.yml'
         assert Path(backup_config).exists()
 
-        # Check if final weight is generated when training ends
-        final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
-        assert Path(final_weight).exists()
+        # Check if saved weight
+        experiment_dir = Path(train_executor.experiment_directory)
+        final_weight =  experiment_dir.joinpath('{}.pth'.format(config.experiment_name))
+        epoch_weight = experiment_dir.joinpath("{}-epoch-0.pth".format(config.experiment_name))
+        best_loss_weight = experiment_dir.joinpath("{}-best-loss.pth".format(config.experiment_name))
+        best_acc_weight = experiment_dir.joinpath("{}-best-accuracy.pth".format(config.experiment_name))
+        best_prec_weight = experiment_dir.joinpath("{}-best-precision (micro).pth".format(config.experiment_name))
+        assert final_weight.exists() and epoch_weight.exists() and best_loss_weight.exists()
+        assert best_acc_weight.exists() and best_prec_weight.exists()
 
         # Check local_runs log is generated
         assert Path('experiments/local_runs.log').exists()
