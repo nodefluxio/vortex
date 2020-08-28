@@ -49,8 +49,9 @@ def calculate_lr(lr_config, epochs=100, optimizer_config=None):
     print("Visualizing {} lr scheduler for {} epoch".format(sch_method, epochs))
     lr_data = []
     for ep in range(epochs):
+        optimizer.step()
         scheduler.step(ep)
-        lr_data.append(scheduler.get_lr()[0])
+        lr_data.append(scheduler.get_last_lr())
     return np.array(lr_data)
 
 
@@ -59,12 +60,12 @@ def visualize(learning_rates):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="update old model checkpoint to the new format")
-    parser.add_argument('CFG', type=str, nargs='?', help="configuration file path (.yml)")
+    parser = argparse.ArgumentParser(description="Visualize learning rate scheduler")
+    parser.add_argument('CFG', type=str, nargs='?', help="experiment configuration file path (.yml)")
     parser.add_argument('-c', '--config', required=False, type=str,
-        help="configuration file path (choose either one of this or positional argument)")
+        help="experiment configuration file path (choose either one of this or positional argument)")
     parser.add_argument('--epochs', required=False, type=int, 
-        help="number of epoch of learning rate to be calculated")
+        help="number of epoch of learning rate to be calculated, override epoxh in experiment file")
     args = parser.parse_args()
 
     if args.config is None and args.CFG is None:
