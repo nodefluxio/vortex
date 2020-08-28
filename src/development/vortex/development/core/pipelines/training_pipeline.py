@@ -208,7 +208,7 @@ class TrainingPipeline(BasePipeline):
 
         has_save = False
         self.save_best_metrics, self.save_best_type = None, None
-        if 'save_best_metric' in self.config.trainer and self.config.trainer.save_best_metrics is not None:
+        if 'save_best_metrics' in self.config.trainer and self.config.trainer.save_best_metrics is not None:
             has_save = True
             self.save_best_metrics = self.config.trainer.save_best_metrics
             if not isinstance(self.save_best_metrics, (list, tuple)):
@@ -283,12 +283,13 @@ class TrainingPipeline(BasePipeline):
         learning_rates = []
         last_epoch = 0
         best_loss = float('inf')
-        best_metric = {name: float('-inf') for name in self.save_best_metrics}
+        best_metric = float('-inf')
+        if self.save_best_metrics is not None:
+            best_metric = {name: float('-inf') for name in self.save_best_metrics}
         for epoch in tqdm(range(self.start_epoch, self.config.trainer.epoch), desc="EPOCH",
                           total=self.config.trainer.epoch, initial=self.start_epoch, 
                           dynamic_ncols=True):
-            # loss, lr = self.trainer(self.dataloader, epoch)
-            loss, lr = torch.tensor(10.25234), 1e-3
+            loss, lr = self.trainer(self.dataloader, epoch)
             epoch_losses.append(loss.item())
             learning_rates.append(lr)
             print('epoch %s loss : %s with lr : %s' % (epoch, loss.item(), lr))
@@ -306,8 +307,7 @@ class TrainingPipeline(BasePipeline):
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.validator.predictor.model is self.model_components.network)
-                # val_results = self.validator()
-                val_results = {"accuracy": 0.3246, "precision (micro)": 0.43525}
+                val_results = self.validator()
                 if 'pr_curves' in val_results :
                     val_results.pop('pr_curves')
                 val_metrics.append(val_results)
