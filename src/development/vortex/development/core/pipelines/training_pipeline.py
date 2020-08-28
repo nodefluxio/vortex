@@ -6,13 +6,11 @@ import warnings
 from typing import Union
 from pathlib import Path
 from datetime import datetime
-from copy import copy
 from tqdm import tqdm
 from easydict import EasyDict
 
 import torch
 import numpy as np
-import comet_ml
 
 from vortex.development.core.factory import (
     create_model,create_dataset,
@@ -97,7 +95,7 @@ class TrainingPipeline(BasePipeline):
         """
 
         self.start_epoch = 0
-        state_dict = None
+        checkpoint, state_dict = None, None
         if resume or ('checkpoint' in config and config.checkpoint is not None):
             if 'checkpoint' not in config:
                 raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
@@ -125,6 +123,8 @@ class TrainingPipeline(BasePipeline):
                 else:
                     raise RuntimeError("dataset name is not found in config. Please specify in "
                         "'config.dataset.train.name'.")
+
+                model_dataset_name = None
                 if 'name' in model_config.dataset.train:
                     model_dataset_name = model_config.dataset.train.name
                 elif 'dataset' in model_config.dataset.train:
@@ -206,6 +206,24 @@ class TrainingPipeline(BasePipeline):
             if self.trainer.scheduler is not None:
                 self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])
 
+        has_save = False
+        self.save_best_metric, self.save_best_type = None, None
+        if 'save_best_metric' in self.config.trainer and self.config.trainer.save_best_metric is not None:
+            has_save = True
+            self.save_best_metric = self.config.trainer.save_best_metric
+            if not isinstance(self.save_best_metric, (list, tuple)):
+                self.save_best_metric = [self.save_best_metric]
+            self.save_best_type = list({'loss' if m == 'loss' else 'val_metric' for m in self.save_best_metric})
+
+        self.save_epoch = None
+        if 'save_epoch' in self.config.trainer and self.config.trainer.save_epoch is not None:
+            self.save_epoch = self.config.trainer.save_epoch
+            has_save = True
+        if not has_save:
+            warnings.warn("No model checkpoint saving configuration is specified, the training would work "
+                "but the trained model will only be saved when training is complete.\nYou can configure "
+                "either one of 'config.trainer.save_epoch' or 'config.trainer.save_best_metric")
+
         # Validation components creation
         try:
             if 'validator' in config:
@@ -240,8 +258,7 @@ class TrainingPipeline(BasePipeline):
             print("\nexperiment directory:", self.run_directory)
         self._has_cls_names = hasattr(self.dataloader.dataset, "class_names")
 
-    def run(self,
-            save_model : bool = True) -> EasyDict:
+    def run(self, save_model: bool = True) -> EasyDict:
         """Execute training pipeline
 
         Args:
@@ -262,65 +279,73 @@ class TrainingPipeline(BasePipeline):
         val_metrics, val_results = [], None
         epoch_losses = []
         learning_rates = []
+        last_epoch = 0
+        best_loss = float('inf')
+        best_metric = {name: float('-inf') for name in self.save_best_metric if name != 'loss'}
         for epoch in tqdm(range(self.start_epoch, self.config.trainer.epoch), desc="EPOCH",
                           total=self.config.trainer.epoch, initial=self.start_epoch, 
                           dynamic_ncols=True):
-            loss, lr = self.trainer(self.dataloader, epoch)
+            # loss, lr = self.trainer(self.dataloader, epoch)
+            loss, lr = torch.tensor(10.25234), 1e-3
             epoch_losses.append(loss.item())
             learning_rates.append(lr)
             print('epoch %s loss : %s with lr : %s' % (epoch, loss.item(), lr))
+            last_epoch = epoch
 
-            # Experiment Logging
-            metrics_log = EasyDict({
-                'epoch' : epoch,
-                'epoch_loss' : loss.item(),
-                'epoch_lr' : lr
-            })
-
-            # Disable several training features for hyperparameter optimization
+            # Experiment Logging, disable on hyperparameter optimization
             if not self.hypopt:
+                metrics_log = EasyDict({
+                    'epoch' : epoch,
+                    'epoch_loss' : loss.item(),
+                    'epoch_lr' : lr
+                })
                 self.experiment_logger.log_on_epoch_update(metrics_log)
 
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.validator.predictor.model is self.model_components.network)
-                val_results = self.validator()
-                # val_results = {"accuracy": 0.3246}
+                # val_results = self.validator()
+                val_results = {"accuracy": 0.3246, "precision (micro)": 0.43525}
                 if 'pr_curves' in val_results :
                     val_results.pop('pr_curves')
                 val_metrics.append(val_results)
 
-                # Experiment Logging
-                metrics_log = EasyDict({
-                    'epoch' : epoch
-                })
-
-                # Assuming val_results type is dict
-                metrics_log.update(val_results)
-
-                # Disable several training features for hyperparameter optimization
+                # Experiment Logging, disable on hyperparameter optimization
                 if not self.hypopt:
+                    metrics_log = EasyDict(dict(epoch=epoch, **val_results))
                     self.experiment_logger.log_on_validation_result(metrics_log)
 
-                # logger.log_metrics(val_results, step=epoch)
+                if 'val_metric' in self.save_best_type:
+                    for metric_name in self.save_best_metric:
+                        if metric_name == 'loss':
+                            continue
+                        if not metric_name in val_results:
+                            val_res_key = ", ".join(list(val_results.keys()))
+                            raise RuntimeError("'save_best_metric' value of ({}) is not found in validation "
+                                "result, choose either one of [{}]".format(metric_name, val_res_key))
+                        if best_metric[metric_name] < val_results[metric_name]:
+                            best_metric[metric_name] = val_results[metric_name]
+                            model_fname = "{}-best-{}.pth".format(self.config.experiment_name, metric_name)
+                            self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
+
                 print('epoch %s validation : %s' % (epoch, ', '.join(['{}:{:.4f}'.format(key, value) for key, value in val_results.items()])))
 
+            ## save on best loss
+            if 'loss' in self.save_best_type and best_loss > loss.item() and save_model:
+                best_loss = loss.item()
+                metrics = None
+                if self.valid_for_validation:
+                    metrics = val_results
+                model_fname = "{}-best-loss.pth".format(self.config.experiment_name)
+                self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+
             # Save on several epoch
-            if ((epoch+1) % self.config.trainer.save_epoch == 0) and (save_model):
+            if self.save_epoch and ((epoch+1) % self.save_epoch == 0) and save_model:
                 metrics = None
                 if self.valid_for_validation:
                     metrics = val_results
                 model_fname = "{}-epoch-{}.pth".format(self.config.experiment_name, epoch)
                 self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
-
-                # Experiment Logging
-                # Disabled on hyperparameter optimization
-                if not self.hypopt:
-                    file_log = EasyDict({
-                        'epoch' : epoch,
-                        'model_path' : model_fname
-                    })
-                    self.experiment_logger.log_on_model_save(file_log)
 
         # Save final weights on after all epochs finished
         if save_model:
@@ -328,18 +353,9 @@ class TrainingPipeline(BasePipeline):
             if self.valid_for_validation:
                 metrics = val_results
             model_fname = "{}.pth".format(self.config.experiment_name)
-            model_path = self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+            model_path = self._save_checkpoint(last_epoch, metrics=metrics, filename=model_fname)
             # Copy final weight from runs directory to experiment directory
             shutil.copy(model_path, Path(self.experiment_directory))
-
-            # Experiment Logging
-            # Disabled on hyperparameter optimization
-            if not self.hypopt:
-                file_log = EasyDict({
-                    'epoch' : epoch,
-                    'model_path' : model_path
-                })
-                self.experiment_logger.log_on_model_save(file_log)
 
         return EasyDict({
             'epoch_losses' : epoch_losses, 
@@ -394,6 +410,7 @@ class TrainingPipeline(BasePipeline):
         else:
             mode='a+'
         with open(log_file,mode) as f:
+            old_content = ""
             if mode=='r+':
                 old_content = f.read()
                 f.seek(0,0)
@@ -411,32 +428,41 @@ class TrainingPipeline(BasePipeline):
                 f.write(old_content)
 
     def _save_checkpoint(self, epoch, metrics=None, filename=None):
-        checkpoint = {
-            "epoch": epoch+1, 
-            "config": self.config,
-            "state_dict": self.model_components.network.state_dict(),
-            "optimizer_state": self.trainer.optimizer.state_dict(),
-        }
-        if metrics is not None:
-            checkpoint["metrics"] = metrics
-        if self._has_cls_names and self.dataloader.dataset.class_names is not None:
-            checkpoint["class_names"] = self.dataloader.dataset.class_names
-        if self.trainer.scheduler is not None:
-            checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
-        filedir = self.run_directory
-        if filename is None:
-            filename = "{}.pth".format(self.config.experiment_name)
-        else:
-            filename = Path(filename)
-            if str(filename.parent) != ".":
-                filedir = filename.parent
-                filename = Path(filename.name)
-            if filename.suffix == "" or filename.suffix != ".pth":
-                if filename.suffix != ".pth":
-                     warnings.warn("filename for save checkpoint ({}) does not have "
-                        ".pth extension, overriding it to .pth".format(str(filename)))
-                filename = filename.with_suffix(".pth")
+        if not self.hypopt:
+            checkpoint = {
+                "epoch": epoch+1, 
+                "config": self.config,
+                "state_dict": self.model_components.network.state_dict(),
+                "optimizer_state": self.trainer.optimizer.state_dict(),
+            }
+            if metrics is not None:
+                checkpoint["metrics"] = metrics
+            if self._has_cls_names and self.dataloader.dataset.class_names is not None:
+                checkpoint["class_names"] = self.dataloader.dataset.class_names
+            if self.trainer.scheduler is not None:
+                checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
+            filedir = self.run_directory
+            if filename is None:
+                filename = "{}.pth".format(self.config.experiment_name)
+            else:
+                filename = Path(filename)
+                if str(filename.parent) != ".":
+                    filedir = filename.parent
+                    filename = Path(filename.name)
+                if filename.suffix == "" or filename.suffix != ".pth":
+                    if filename.suffix != ".pth":
+                        warnings.warn("filename for save checkpoint ({}) does not have "
+                            ".pth extension, overriding it to .pth".format(str(filename)))
+                    filename = filename.with_suffix(".pth")
 
-        filepath =  str(filedir.joinpath(filename))
-        torch.save(checkpoint, filepath)
-        return filepath
+            filepath =  str(filedir.joinpath(filename))
+            torch.save(checkpoint, filepath)
+
+            file_log = EasyDict({
+                'epoch' : epoch,
+                'model_path' : filepath
+            })
+            self.experiment_logger.log_on_model_save(file_log)
+            return filepath
+        else:
+            return None
