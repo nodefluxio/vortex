@@ -24,7 +24,7 @@ class DefaultTrainer(BaseTrainer):
         for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),
                                          desc=" train", leave=False):
             if self.scheduler is not None:
-                self.lr = self.scheduler.get_lr()[0]
+                self.lr = self.scheduler.get_last_lr()[0]
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
@@ -36,7 +36,10 @@ class DefaultTrainer(BaseTrainer):
             if (i+1) % self.accumulation_step == 0:
                 self.optimizer.step()
                 if self.scheduler:
-                    self.scheduler.step(epoch)
+                    try:
+                        self.scheduler.step()
+                    except:
+                        self.scheduler.step(epoch)
                 self.optimizer.zero_grad()
 
                 # Experiment Logging

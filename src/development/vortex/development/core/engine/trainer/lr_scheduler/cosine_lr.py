@@ -86,7 +86,7 @@ class CosineLRScheduler(Scheduler):
         else:
             return None
     
-    def get_lr(self) :
+    def get_last_lr(self) :
         return self.get_epoch_values(self.last_epoch)
 
     def get_update_values(self, num_updates: int):

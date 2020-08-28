@@ -1,7 +1,3 @@
-md5: 952455b938402f5d67370634e8ab5a02
 outs:
-- md5: 41f73e7f11f38edadf497beecde62c85
+- md5: 8b7e60155874b8081669717cc1b9d22b
   path: resnet18_softmax_stl10_224.pth
-  cache: true
-  metric: false
-  persist: false
