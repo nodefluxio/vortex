@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
+- `save_epoch` config is not required
 
 ## 0.2.0
 
