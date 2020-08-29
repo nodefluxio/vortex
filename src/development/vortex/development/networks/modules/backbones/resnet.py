@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 
 from .base_backbone import Backbone, ClassifierFeature
@@ -381,6 +380,7 @@ def get_backbone(model_name : str, pretrained: bool = False, feature_type: str =
     if not model_name in supported_models:
         raise RuntimeError("model %s is not supported yet, available : %s" %(model_name, supported_models))
     if len(args) != 0:
+        import warnings
         warnings.warn("unused argument(s) in 'get_backbone': %s" % args)
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
     stages, channels = _resnet_backbone(network)

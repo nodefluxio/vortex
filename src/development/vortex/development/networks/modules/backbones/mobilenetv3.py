@@ -23,9 +23,11 @@ import zipfile
 import warnings
 
 from .base_backbone import Backbone, ClassifierFeature
-from vortex.development.networks.modules.utils.conv2d import conv1x1, conv1x1_block, conv3x3_block, dwconv3x3_block, dwconv5x5_block
-from vortex.development.networks.modules.utils.arch_utils import round_channels
-from vortex.development.networks.modules.utils.activations import hard_sigmoid, hard_swish, sigmoid, swish
+from ..utils.layers import dwconv3x3_block, dwconv5x5_block, SqueezeExcite
+from ..utils.conv2d import create_conv2d
+from ..utils.constants import BN_ARGS_PT
+from ..utils.arch_utils import round_channels
+from ..utils.activations import get_act_layer
 
 
 _model_sha1 = {name: (error, checksum, repo_release_tag) for name, error, checksum, repo_release_tag in [
@@ -36,26 +38,57 @@ _model_sha1 = {name: (error, checksum, repo_release_tag) for name, error, checks
 imgclsmob_repo_url = 'https://github.com/osmr/imgclsmob'
 
 
-class SqueezeExcite(nn.Module):
-    def __init__(self, in_chs, reduce_chs=None, act_fn=F.relu, gate_fn=torch.sigmoid):
-        super(SqueezeExcite, self).__init__()
-        self.act_fn = act_fn
-        self.gate_fn = gate_fn
-        reduced_chs = reduce_chs or in_chs
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv_reduce = nn.Conv2d(in_chs, reduced_chs, 1, bias=True)
-        self.conv_expand = nn.Conv2d(reduced_chs, in_chs, 1, bias=True)
+def conv1x1(in_channels, out_channels, stride=1, groups=1, bias=False):
+    """
+    Convolution 1x1 layer.
+    Parameters:
+    ----------
+    in_channels : int
+        Number of input channels.
+    out_channels : int
+        Number of output channels.
+    stride : int or tuple/list of 2 int, default 1
+        Strides of the convolution.
+    groups : int, default 1
+        Number of groups.
+    bias : bool, default False
+        Whether the layer uses a bias vector.
+    """
+    return nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+        kernel_size=1, stride=stride, groups=groups, bias=bias)
 
-    def forward(self, x : torch.Tensor):
-        # NOTE adaptiveavgpool bad for NVIDIA AMP performance
-        # tensor.view + mean bad for ONNX export (produces mess of gather ops that break TensorRT)
-        #x_se = x.view(x.size(0), x.size(1), -1).mean(-1).view(x.size(0), x.size(1), 1, 1)
-        x_se = self.avg_pool(x)
-        x_se = self.conv_reduce(x_se)
-        x_se = self.act_fn(x_se)
-        x_se = self.conv_expand(x_se)
-        x = x * self.gate_fn(x_se)
+
+class ConvBnAct(nn.Module):
+    def __init__(self, in_chs, out_chs, kernel_size, stride=1, 
+                 pad_type='', act_layer=nn.ReLU, bn_args=BN_ARGS_PT):
+        super(ConvBnAct, self).__init__()
+        assert stride in [1, 2]
+        self.act_layer = act_layer(inplace=True) if act_layer is not None else nn.Identity()
+        self.conv = create_conv2d(in_chs, out_chs, kernel_size, stride=stride, padding=pad_type)
+        self.bn1 = nn.BatchNorm2d(out_chs, **bn_args)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn1(x)
+        x = self.act_layer(x)
         return x
+
+def conv1x1_block(in_channels, out_channels, stride=1, padding=0, groups=1, bias=False, 
+                  use_bn=True, bn_eps=1e-5, activation=nn.ReLU):
+    return ConvBnAct(
+        in_chs=in_channels, out_chs=out_channels, 
+        kernel_size=1, stride=stride, act_layer=activation,
+        bn_args={'eps': bn_eps}, pad_type=padding
+    )
+
+
+def conv3x3_block(in_channels, out_channels, stride=1, padding=1, dilation=1, group=1, 
+                  bias=False, use_bn=True, bn_eps=1e-5, activation=nn.ReLU):
+    return ConvBnAct(
+        in_chs=in_channels, out_chs=out_channels,
+        kernel_size=3, stride=stride, act_layer=activation,
+        bn_args={'eps': bn_eps}, pad_type=padding
+    )
 
 
 class MobileNetV3Unit(nn.Module):
@@ -78,14 +111,8 @@ class MobileNetV3Unit(nn.Module):
     use_se : bool
         Whether to use SE-module.
     """
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 exp_channels,
-                 stride,
-                 use_kernel3,
-                 activation,
-                 use_se):
+    def __init__(self, in_channels, out_channels, exp_channels,
+                 stride, use_kernel3, activation, use_se):
         super(MobileNetV3Unit, self).__init__()
         assert (exp_channels >= out_channels)
         self.residual = (in_channels == out_channels) and (stride == 1)
@@ -94,52 +121,33 @@ class MobileNetV3Unit(nn.Module):
         mid_channels = exp_channels
 
         if self.use_exp_conv:
-            self.exp_conv = conv1x1_block(
-                in_channels=in_channels,
-                out_channels=mid_channels,
-                activation=activation)
-        else :
+            self.exp_conv = conv1x1_block(in_channels=in_channels,
+                out_channels=mid_channels, activation=activation)
+        else:
             self.exp_conv = nn.Identity()
         if use_kernel3:
-            self.conv1 = dwconv3x3_block(
-                in_channels=mid_channels,
-                out_channels=mid_channels,
-                stride=stride,
+            self.conv1 = dwconv3x3_block(in_channels=mid_channels,
+                out_channels=mid_channels, stride=stride,
                 activation=activation)
         else:
-            self.conv1 = dwconv5x5_block(
-                in_channels=mid_channels,
-                out_channels=mid_channels,
-                stride=stride,
+            self.conv1 = dwconv5x5_block(in_channels=mid_channels,
+                out_channels=mid_channels, stride=stride,
                 activation=activation)
-        if self.use_se:
-            self.se = SqueezeExcite(
-                in_chs=mid_channels,
-                reduce_chs=4
-            )
-            # self.se = SEBlock(
-            #     channels=mid_channels,
-            #     reduction=4,
-            #     approx_sigmoid=True,
-            #     round_mid=True)
+        if use_se:
+            self.se = SqueezeExcite(in_channel=mid_channels, reduce_chs=4)
         else:
             self.se = nn.Identity()
-        self.conv2 = conv1x1_block(
-            in_channels=mid_channels,
-            out_channels=out_channels,
-            activation=None)
+        self.conv2 = conv1x1_block(in_channels=mid_channels,
+            out_channels=out_channels, activation=None)
 
     def forward(self, x):
         if self.residual:
             identity = x
         else:
             identity = torch.zeros_like(x)
-        # if self.use_exp_conv:
-            # x = self.exp_conv(x)
         x = self.exp_conv(x)
         x = self.conv1(x)
-        # if self.use_se:
-            # x = self.se(x)
+
         x = self.se(x)
         x = self.conv2(x)
         if self.residual:
@@ -159,34 +167,22 @@ class MobileNetV3FinalBlock(nn.Module):
     use_se : bool
         Whether to use SE-module.
     """
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 use_se):
+    def __init__(self, in_channels, out_channels, use_se):
         super(MobileNetV3FinalBlock, self).__init__()
-        self.use_se = use_se
 
         self.conv = conv1x1_block(
             in_channels=in_channels,
             out_channels=out_channels,
-            activation=hard_swish
-            # activation="hswish"
+            activation=get_act_layer('hard_swish')
         )
-        if self.use_se:
-            self.se = SqueezeExcite(
-                in_chs=out_channels,
-                reduce_chs=4
-            )
-            # self.se = SEBlock(
-            #     channels=out_channels,
-            #     reduction=4,
-            #     approx_sigmoid=True,
-            #     round_mid=True)
+        if use_se:
+            self.se = SqueezeExcite(in_channel=out_channels, reduce_chs=4)
+        else:
+            self.se = nn.Identity()
 
     def forward(self, x):
         x = self.conv(x)
-        if self.use_se:
-            x = self.se(x)
+        x = self.se(x)
         return x
 
 
@@ -210,16 +206,11 @@ class MobileNetV3Classifier(nn.Module):
                  mid_channels,
                  dropout_rate):
         super(MobileNetV3Classifier, self).__init__()
-        self.conv1 = conv1x1(
-            in_channels=in_channels,
-            out_channels=mid_channels)
-        # self.activ = HSwish(inplace=True)
-        self.activ = hard_swish
+        self.conv1 = conv1x1(in_channels=in_channels, out_channels=mid_channels)
+        self.activ = get_act_layer('hard_swish')()
         self.dropout = nn.Dropout(p=dropout_rate)
-        self.conv2 = conv1x1(
-            in_channels=mid_channels,
-            out_channels=out_channels,
-            bias=True)
+        self.conv2 = conv1x1(in_channels=mid_channels,
+            out_channels=out_channels, bias=True)
 
     def forward(self, x):
         x = F.avg_pool2d(x, kernel_size=[x.size(2), x.size(3)])
@@ -283,11 +274,8 @@ class MobileNetV3(nn.Module):
 
         self.features = nn.Sequential()
         self.features.add_module("init_block", conv3x3_block(
-            in_channels=in_channels,
-            out_channels=init_block_channels,
-            stride=2,
-            activation=hard_swish
-            # activation="hswish"
+            in_channels=in_channels, out_channels=init_block_channels,
+            stride=2, activation=get_act_layer('hard_swish')
         ))
         in_channels = init_block_channels
         for i, channels_per_stage in enumerate(channels):
@@ -296,28 +284,22 @@ class MobileNetV3(nn.Module):
                 exp_channels_ij = exp_channels[i][j]
                 stride = 2 if (j == 0) and ((i != 0) or first_stride) else 1
                 use_kernel3 = kernels3[i][j] == 1
-                # activation = "relu" if use_relu[i][j] == 1 else "hswish"
-                activation = F.relu if use_relu[i][j] else hard_swish
+                activation = nn.ReLU if use_relu[i][j] else get_act_layer('hard_swish')
                 use_se_flag = use_se[i][j] == 1
                 stage.add_module("unit{}".format(j + 1), MobileNetV3Unit(
-                    in_channels=in_channels,
-                    out_channels=out_channels,
-                    exp_channels=exp_channels_ij,
-                    use_kernel3=use_kernel3,
-                    stride=stride,
-                    activation=activation,
+                    in_channels=in_channels, out_channels=out_channels,
+                    exp_channels=exp_channels_ij, use_kernel3=use_kernel3,
+                    stride=stride, activation=activation,
                     use_se=use_se_flag))
                 in_channels = out_channels
             self.features.add_module("stage{}".format(i + 1), stage)
         self.features.add_module('final_block', MobileNetV3FinalBlock(
-            in_channels=in_channels,
-            out_channels=final_block_channels,
+            in_channels=in_channels, out_channels=final_block_channels,
             use_se=final_use_se))
         in_channels = final_block_channels
 
         self.output = MobileNetV3Classifier(
-            in_channels=in_channels,
-            out_channels=num_classes,
+            in_channels=in_channels, out_channels=num_classes,
             mid_channels=classifier_mid_channels,
             dropout_rate=0.2)
 
@@ -325,7 +307,7 @@ class MobileNetV3(nn.Module):
 
     @torch.jit.ignore
     def _init_params(self):
-        for name, module in self.named_modules():
+        for module in self.modules():
             if isinstance(module, nn.Conv2d):
                 init.kaiming_uniform_(module.weight)
                 if module.bias is not None:
@@ -350,8 +332,7 @@ def get_model_name_suffix_data(model_name):
 
 
 ## TODO : move to utility
-def get_model_file(model_name,
-                   local_model_store_dir_path=os.path.join("~", ".torch", "models")):
+def get_model_file(model_name, local_model_store_dir_path=os.path.join("~", ".torch", "models")):
     """
     Return location for the pretrained on local file system. This function will download from online model zoo when
     model cannot be found or has mismatch. The root directory will be created if it doesn't exist.
