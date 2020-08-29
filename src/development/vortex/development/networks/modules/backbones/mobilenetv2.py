@@ -1,6 +1,7 @@
 from torch import nn
 from .base_backbone import Backbone, ClassifierFeature
 from ..utils.arch_utils import load_pretrained
+from ..utils.layers import make_divisible
 
 
 __all__ = ['MobileNetV2', 'mobilenet_v2']
@@ -14,26 +15,6 @@ model_urls = {
 supported_models = [
     'mobilenet_v2'
 ]
-
-
-def _make_divisible(v, divisor, min_value=None):
-    """
-    This function is taken from the original tf repo.
-    It ensures that all layers have a channel number that is divisible by 8
-    It can be seen here:
-    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
-    :param v:
-    :param divisor:
-    :param min_value:
-    :return:
-    """
-    if min_value is None:
-        min_value = divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
-    if new_v < 0.9 * v:
-        new_v += divisor
-    return new_v
 
 
 class ConvBNReLU(nn.Sequential):
@@ -113,13 +94,13 @@ class MobileNetV2(nn.Module):
                              "or a 4-element list, got {}".format(inverted_residual_setting))
 
         # building first layer
-        stem_size = _make_divisible(stem_size * width_mult, round_nearest)
-        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        stem_size = make_divisible(stem_size * width_mult, round_nearest)
+        self.last_channel = make_divisible(last_channel * max(1.0, width_mult), round_nearest)
         features = [ConvBNReLU(input_channel, stem_size, stride=2)]
         input_channel = stem_size
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
-            output_channel = _make_divisible(c * width_mult, round_nearest)
+            output_channel = make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
                 features.append(
