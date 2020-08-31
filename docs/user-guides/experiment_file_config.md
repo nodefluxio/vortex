@@ -214,6 +214,7 @@ trainer: {
     },
     epoch: 200,
     save_epoch: 1,
+    save_best_metrics: [loss,mean_ap],
     driver: {
         module: DefaultTrainer,
         args: {
@@ -236,7 +237,28 @@ Arguments :
     - `args` (dict) : the corresponding arguments to the respective scheduler `method`
 
 - `epoch` (int) : number of dataset iteration (epoch) being done on the training dataset. 1 epoch is 1 dataset iteration
-- `save_epoch` (int) : number of epoch before a model checkpoint being saved for backup
+- `save_epoch` (int,optional) : number of epoch before a model checkpoint being saved for backup.
+- `save_best_metrics` (list.optional) : list of metrics to be monitored to save the best weight. Available options :
+
+    - `loss` : per-epoch training loss
+
+    For detection task :
+
+    - `mean_ap` : validation mean-average precision metrics
+    
+    For classification task :
+
+    - `accuracy` : validation accuracy metrics
+    - `precision (micro)` : validation micro-average precision metrics
+    - `precision (macro)` : validation macro-average precision metrics
+    - `precision (weighted)` : validation weighted-average precision metrics
+    - `recall (micro)` : validation micro-average recall metrics
+    - `recall (macro)` : validation macro-average recall metrics
+    - `recall (weighted)` : validation weighted-average recall metrics
+    - `f1_score (micro)` : validation micro-average f1_score metrics
+    - `f1_score (macro)` : validation macro-average f1_score metrics
+    - `f1_score (weighted)` : validation weighted-average f1_score metrics
+
 - `driver` (dict) : the mechanism on how a training is done in a loop ( iterated over `n` epochs ). Sub-arguments :
 
     - `module` (str) : training driver identifier. Supported training driver methods is provided at [training driver section](../modules/train_driver.md)

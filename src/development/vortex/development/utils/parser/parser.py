@@ -227,8 +227,10 @@ def __trainer_tree(required: bool = True, exp_step: ExperimentType = ExperimentT
     elif exp_step == ExperimentType.TRAIN:
         validation = __validation_tree(required=False)
         validation.parent = trainer
-        save_epoch = ExperimentNode('save_epoch', parent=trainer, 
+        save_epoch = ExperimentNode('save_epoch', parent=trainer, required=False,
             docstring='every `save_epoch` epoch step, we will save the weights')
+        save_best = ExperimentNode('save_best_metrics', parent=trainer, required=False,
+            docstring='metric name to save the best model')
     device = ExperimentNode('device', parent=trainer, required=False,
                             docstring='on which device we should train?')
     if (exp_step == ExperimentType.TRAIN) or (exp_step == ExperimentType.HYPOPT):
@@ -329,6 +331,7 @@ def __get_config(experiment_type: str):
                          for enum in ExperimentType])
     if not supported_exp:
         raise RuntimeError('unsupported experiment : %s' % experiment_type)
+    exp_req = None
     if experiment_type == 'train':
         exp_req = __train_config()
     elif experiment_type == 'validate':

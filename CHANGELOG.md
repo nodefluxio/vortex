@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - learning rate scheduler value plan visualizer script in [`scripts/visualize_learning_rate.py`](scripts/visualize_learning_rate.py)
+- `save_best_metrics` config to save model checkpoint on best metrics
 
 ### Changed
+- model checkpoint not save on hyperparameter optimization
+- `save_epoch` config is not required
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
+
 
 ## 0.2.0
 

@@ -131,17 +131,23 @@ class TestTrainingPipeline():
         assert len(learning_rates) == config.trainer.epoch
 
         # Make sure every desired output exist
+        run_dir = Path(train_executor.run_directory)
+        experiment_dir = Path(train_executor.experiment_directory)
 
         # Check experiment directory and run directory exist
-        assert Path(train_executor.run_directory).exists()
+        assert run_dir.exists()
 
         # Check if config is duplicated as backup in run directory
-        backup_config = Path(train_executor.run_directory)/'config.yml'
-        assert Path(backup_config).exists()
+        assert run_dir.joinpath('config.yml').exists()
 
-        # Check if final weight is generated when training ends
-        final_weight = Path(train_executor.experiment_directory) / '{}.pth'.format(config.experiment_name)
-        assert Path(final_weight).exists()
+        # Check saved weight
+        final_weight = experiment_dir.joinpath('{}.pth'.format(config.experiment_name))
+        epoch_weight = run_dir.joinpath("{}-epoch-0.pth".format(config.experiment_name))
+        best_loss_weight = run_dir.joinpath("{}-best-loss.pth".format(config.experiment_name))
+        best_acc_weight = run_dir.joinpath("{}-best-accuracy.pth".format(config.experiment_name))
+        best_prec_weight = run_dir.joinpath("{}-best-precision (micro).pth".format(config.experiment_name))
+        assert final_weight.exists() and epoch_weight.exists() and best_loss_weight.exists()
+        assert best_acc_weight.exists() and best_prec_weight.exists()
 
         # Check local_runs log is generated
         assert Path('experiments/local_runs.log').exists()

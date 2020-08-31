@@ -74,7 +74,8 @@ trainer: {
     }
   },
   epoch: 3,
-  save_epoch: 1
+  save_epoch: 1,
+  save_best_metrics: [loss, accuracy, precision (micro)]
 }
 validator: {
   args: {},

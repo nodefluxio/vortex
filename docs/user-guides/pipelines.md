@@ -59,8 +59,15 @@ This pipeline will generate several outputs :
     The experiment directory is `test_torchvision_dataset` and the run directory is `601f45782a884286be310b1ffe562597`
 
 - **Backup experiment file** : Experiment file will be duplicated and stored under **run directory**
-- **Intermediate model file** : File containing model’s weight and training checkpoint will be dumped into **run directory** every *n*-epoch which is configured in `save_epoch` in experiment file with `.pth` extension
-- **Final model file** : File containing model's weight and training checkpoint after all training epoch is completed will be dumped in the **experiment directory** with `.pth` extension
+- **Intermediate model file** : File containing model’s weight and training checkpoint will be dumped into **run directory** with `.pth` extension,which can be controlled from 2 experiment file `trainer` parameter, `save_epoch` and `save_best_metrics` :
+
+    - `save_epoch` : save checkpoint every *n*-epoch
+    - `save_best_metrics` : save checkpoint based on monitored metrics
+
+- **Final model file** : File containing model's weight and training checkpoint after all training epoch is completed will be dumped in the **run directory** and **experiment directory** with `.pth` extension. 
+
+    **WARNING** : if you have multiple experiment run with the same `experiment_name`, each finished run will overwrite this final model file in the **experiment_directory**, however the original final model file will still exist on the **run_directory**
+
 - **Experiment log** : If logging is enabled, training metrics will be collected by the logging provider. Additionally if the config file is valid for validation, the validation metrics will also be collected.
 
 ---
