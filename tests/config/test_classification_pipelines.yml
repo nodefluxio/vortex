@@ -91,9 +91,9 @@ exporter : [
   {
     module : onnx,
     args : {
-      n_batch : 2,
+      n_batch : 8,
       opset_version : 11,
-      filename : test_classification_pipelines_bs2
+      filename : test_classification_pipelines_bs8
     },
   },
   {
@@ -103,8 +103,8 @@ exporter : [
   {
     module: torchscript,
     args: {
-      n_batch : 2,
-      filename : test_classification_pipelines_bs2
+      n_batch : 8,
+      filename : test_classification_pipelines_bs8
     },
   }
 ]

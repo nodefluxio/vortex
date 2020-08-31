@@ -1,7 +1,3 @@
-md5: 8bf8ff0b6958922b154e05667f084f66
 outs:
-- md5: fd828510f80c69858444a5ea5765f8cb
+- md5: ef5ea334f01187c41abba94f065e5960
   path: mobilenetv2_softmax_cifar10.pth
-  cache: true
-  metric: false
-  persist: false

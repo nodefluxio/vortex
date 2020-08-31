@@ -1,36 +1,28 @@
 import onnx
 import torch
 import numpy as np
-import os, sys, inspect
+import sys
+import warnings
 from pathlib import Path
 
-# repo_root = Path(__file__).parent.parent.parent.
-
-if __name__=='__main__' :
-    import os
-    import sys
-    from pathlib import Path
-    proj_path = Path(__file__).parents[2]
-    sys.path.append(proj_path.joinpath('src/development'))
-    sys.path.append(proj_path.joinpath('src/runtime'))
+proj_path = Path(__file__).parents[2]
+sys.path.append(str(proj_path.joinpath('src', 'development')))
+sys.path.append(str(proj_path.joinpath('src', 'runtime')))
 
 from math import isclose
 from datetime import datetime
 from easydict import EasyDict
-# from networks.models import create_model_components
+from typing import Type,List,Dict
+
+warnings.filterwarnings("ignore")
 from vortex.development.networks.modules.backbones import all_models as all_backbones
 from vortex.development.utils.profiler.resource import get_uname, get_cpu_info, get_gpu_info
-# from runtime_predict import model_runtime_map
 from vortex.runtime import model_runtime_map
-# from runtime_predict import create_model as create_onnx_model
-# from runtime_predict import predict as onnx_predict
-# from predict import predict as torch_predict
-# from export import create_exporter, create_predictor
 from vortex.development.predictor import create_predictor, get_prediction_results
 from vortex.development.core.factory import create_model,create_runtime_model,create_exporter
-from typing import Type,List,Dict
 from vortex.runtime.basic_runtime import BaseRuntime
 from vortex.development.predictor.base_module import BasePredictor
+warnings.resetwarnings()
 
 np.random.seed(0)
 torch.manual_seed(0)
@@ -418,6 +410,7 @@ def main(test_opset_version=[9, 10, 11], example_image=None) :
             backbone_reports = []
             for backbone_idx, backbone in enumerate(supported_backbones) :
                 model_args.network_args.backbone = backbone
+                ok = True
                 try :
                     print_export_progress(
                         msg='trying to export {}-{}: '.format(backbone, model_name),
@@ -427,8 +420,10 @@ def main(test_opset_version=[9, 10, 11], example_image=None) :
                         export_args.args.pop('filename')
                     ok = export_check(model_name, model_args, export_args, suffix=suffix, example_image=example_image)
                 except RuntimeError as e:
-                    print(e)
+                    print(e, "\n")
                     ok = False
+                if ok:
+                    print("done\n")
                 status = backbone, ok
                 tested_model[model_name] = [status] if model_name not in tested_model else [*tested_model[model_name], status]
                 backbone_reports.append(
@@ -442,8 +437,8 @@ def main(test_opset_version=[9, 10, 11], example_image=None) :
                     backbones='\n'.join(backbone_reports)
                 ))
             )
-        print(tested_model)
-        
+        print("result: ", tested_model, "\n")
+
         ## runtime tests
         tested_runtime = {}
         runtime_reports = []
@@ -471,6 +466,7 @@ def main(test_opset_version=[9, 10, 11], example_image=None) :
                             msg=eval_status.msg,
                         ))
                     )
+                    print("\n")
             tested_runtime[runtime_name] = [tested_model] if runtime_name not in tested_runtime else [*tested_runtime[runtime_name], tested_model]
             runtime_reports.append(
                 runtime_report_template.format_map(dict(
@@ -478,7 +474,7 @@ def main(test_opset_version=[9, 10, 11], example_image=None) :
                     result='\n'.join(runtime_model_reports)
                 ))
             )
-        print(tested_runtime)
+        print("result: ", tested_runtime)
 
         with Path('COMPATIBILITY_REPORT_opset{}.md'.format(opset_version)).open('w+') as f :
             docs = docs_report_template.format_map(dict(
@@ -510,14 +506,17 @@ if __name__=='__main__' :
     parser.add_argument('--exclude-backbones', default=[], choices=all_backbones, nargs='+', help='exclude this backbone(s) when testing')
     parser.add_argument('--exclude-models', default=[], choices=list(model_argmap.keys()), nargs='+', help='model(s) to exclude')
     args = parser.parse_args()
+
     test_opset_version = args.opset_version
     if test_opset_version is None:
         test_opset_version = [9,10,11]
     assert all(op in [9,10,11] for op in test_opset_version)
+
     print("warning : this check might be strorage and memory intensive")
     # global test_backbones, model_argmap, exclude_backbones, exclude_models
     test_backbones = args.backbones
     model_argmap = {model : model_argmap[model] for model in args.models}
     exclude_backbones = args.exclude_backbones
     exclude_models = args.exclude_models
+
     main(test_opset_version, args.example_image)

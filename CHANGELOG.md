@@ -5,15 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-
 ## [Unreleased]
 
 ### Added
+- learning rate scheduler value plan visualizer script in [`scripts/visualize_learning_rate.py`](scripts/visualize_learning_rate.py)
 - `save_best_metrics` config to save model checkpoint on best metrics
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
 - `save_epoch` config is not required
+
+### Fixed
+- Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
+
 
 ## 0.2.0
 
@@ -67,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Change output type of BaseRuntime `__call__` method to list of orderedDict
 - It is now possible to override image auto padding in dataset object by adding and set `self.disable_image_auto_pad = True` attribute on the `collate_fn` object provided by the `model_components`
 - Refactor package into 2 namespace packages : `vortex.runtime` and `vortex.development`. In which case `vortex.development` is depend on `vortex.runtime`, but `vortex.runtime` can be installed as a standalone package for minimal requirement inferencing library
+
 
 ## v0.1.0
 

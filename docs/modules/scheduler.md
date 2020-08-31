@@ -1,6 +1,32 @@
 # Learning Rates Scheduler
 
-This section listed all available `lr_scheduler` configuration. Part of [`trainer` configurations](../user-guides/experiment_file_config.md#trainer) in experiment file.
+This section listed all available `lr_scheduler` configuration. Part of [`trainer` configurations](../user-guides/experiment_file_config.md#trainer) in experiment file. 
+
+Additionally, we have a utility script `scripts/visualize_learning_rate.py` on our repository to help user visualize their learning rate scheduler. 
+
+```console
+usage: visualize_learning_rate.py [-h] [-c CONFIG] [--epochs EPOCHS] [CFG]
+
+Visualize learning rate scheduler
+
+positional arguments:
+  CFG                   experiment configuration file path (.yml)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        experiment configuration file path (choose either one
+                        of this or positional argument)
+  --epochs EPOCHS       number of epoch of learning rate to be calculated,
+                        override epoxh in experiment file
+```
+
+E.g. :
+
+```console
+python3 scripts/visualize_learning_rate.py -c experiments/configs/shufflenetv2x100_retinaface_frontal_fddb_640.yml --epochs 300
+```
+
 
 ---
 
@@ -33,14 +59,14 @@ Reference :
 lr_scheduler: {
     method: CosineLRScheduler,
     args: {
-        t_initial: 200,
+        t_initial: 100,
         t_mul: 1.0,
         lr_min: 0.00001,
         warmup_lr_init: 0.00001,
         warmup_t: 5,
-        cycle_limit: 1,
+        cycle_limit: 3,
         t_in_epochs: True,
-        decay_rate: 0.1,
+        decay_rate: 0.75,
     }
 },
 ```
@@ -56,6 +82,12 @@ Arguments :
 - `t_in_epochs` (bool) : if True, update learning rate per epoch, if not, update per step. default : True
 - `decay_rate` (float) : learning rate decay rate. default : 1
 
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CosineLR Visualization](../images/cosine_lr.jpg)
+
 ---
 
 ## TanhLR
@@ -70,16 +102,16 @@ Reference :
 lr_scheduler: {
     method: TanhLRScheduler,
     args: {
-        t_initial: 200,
+        t_initial: 100,
         t_mul: 1.0,
         lb: -6.,
         ub: 4.,
         lr_min: 0.00001,
         warmup_lr_init: 0.00001,
         warmup_t: 5,
-        cycle_limit: 1,
+        cycle_limit: 3,
         t_in_epochs: True,
-        decay_rate: 0.1,
+        decay_rate: 0.75,
     }
 }
 ```
@@ -96,6 +128,12 @@ Arguments :
 - `cycle_limit` (int) : number of cosine cycle. default : 0
 - `t_in_epochs` (bool) : if True, update learning rate per epoch, if not, update per step. default : True
 - `decay_rate` (float) : learning rate decay rate. default : 1
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![TanhLR Visualization](../images/tanh_lr.jpg)
 
 ---
 
@@ -126,4 +164,8 @@ Arguments :
 - `scales` (list) : scale of the reduced learning rate, e.g. [0.1,0.1] --> e.g. initial lr == 0.01 , on epoch 180 will be reduced to 0.1 * 0.01 = 0.001 and on epoch 190 will be reduced to 0.1 * 0.001 = 0.0001
 - `last_epoch` (int) : last epoch number. default : -1
 
+Example Visualization :
 
+Using above configuration, and epoch of 200,
+
+![StepLRWithBurnIn Visualization](../images/step_lr_with_burnin.jpg)
