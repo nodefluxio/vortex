@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+### Fixed
+- Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
 
 ## 0.2.0
 
