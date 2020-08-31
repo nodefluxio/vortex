@@ -90,22 +90,24 @@ class CondConv2d(nn.Module):
 
         self.reset_parameters()
 
-    def _initializer(self, weight, initializer, expert_shape):
+    @staticmethod
+    def _initializer(weight, initializer, num_experts, expert_shape):
         """CondConv initializer function."""
         num_params = np.prod(expert_shape)
-        if (len(weight.shape) != 2 or weight.shape[0] != self.num_experts or
+        if (len(weight.shape) != 2 or weight.shape[0] != num_experts or
                 weight.shape[1] != num_params):
-            raise (ValueError(
-                'CondConv variables must have shape [num_experts, num_params]'))
-        for i in range(self.num_experts):
+            raise (ValueError('CondConv variables must have shape [num_experts, num_params]'))
+        for i in range(num_experts):
             initializer(weight[i].view(expert_shape))
 
     def reset_parameters(self):
-        self._initializer(self.weight, partial(nn.init.kaiming_uniform_, a=math.sqrt(5)), self.weight_shape)
+        self._initializer(self.weight, partial(nn.init.kaiming_uniform_, a=math.sqrt(5)), 
+                          self.num_experts, self.weight_shape)
         if self.bias is not None:
             fan_in = np.prod(self.weight_shape[1:])
             bound = 1 / math.sqrt(fan_in)
-            self._initializer(self.bias, partial(nn.init.uniform_, a=-bound, b=bound), self.bias_shape)
+            self._initializer(self.bias, partial(nn.init.uniform_, a=-bound, b=bound), 
+                              self.num_experts, self.bias_shape)
 
     def forward(self, x, routing_weights):
         B, C, H, W = x.shape
