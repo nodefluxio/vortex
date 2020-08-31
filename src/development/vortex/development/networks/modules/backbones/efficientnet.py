@@ -10,7 +10,7 @@ from torch._six import container_abcs
 from ..utils.activations import Swish
 from ..utils.arch_utils import make_divisible, round_channels
 from ..utils.layers import DropPath, SqueezeExcite
-from ..utils.conv2d import create_conv2d
+from ..utils.conv2d import create_conv2d, CondConv2d
 from .base_backbone import Backbone, ClassifierFeature
 
 from copy import deepcopy
@@ -235,64 +235,33 @@ class EdgeResidual(nn.Module):
         return x
 
 
-class EfficientNet(nn.Module):
-    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
-                 stem_size = 32, fix_stem=False, num_features=None, fix_block_first_last=False,
-                 **kwargs):
-        super(EfficientNet, self).__init__()
-        assert isinstance(global_params, dict)
-
-        self.in_channel = in_channel
+class EfficientNetBuilder(nn.Module):
+    def __init__(self, block_def, arch_params, global_params, stem_size=32,
+                 fix_first_last_block=False, **kwargs):
         self.arch_params = arch_params
         self.block_def = block_def
         self.global_params = global_params
-        self.num_features = self._round_channel(1280) if num_features is None else num_features
-
-        norm_kwargs = global_params['norm_kwargs']
-        act_layer = global_params['act_layer']
-        pad_type = global_params['pad_type']
-
-        if not fix_stem:
-            stem_size = self._round_channel(stem_size)
-        self.conv_stem = create_conv2d(in_channel, stem_size, 3, stride=2, 
-            padding=pad_type, bias=False)
-        self.bn1 = nn.BatchNorm2d(stem_size, **norm_kwargs)
-        self.act1 = act_layer(inplace=True)
-
+        self.fix_first_last_block = fix_first_last_block
+        self.in_channel = stem_size     ## just an initial value
         self.out_channels = [stem_size]
-        self.blocks = self._make_blocks(stem_size, fix_first_last=fix_block_first_last)
-        last_channel = self.in_channel
 
-        self.conv_head = create_conv2d(last_channel, self.num_features, 1, padding=pad_type, bias=False)
-        self.bn2 = nn.BatchNorm2d(self.num_features, **norm_kwargs)
-        self.act2 = act_layer(inplace=True)
+        self.blocks_args = self._decode_block_def()
+        self.total_layers = sum(len(x) for x in self.blocks_args)
+        self.layer_idx = 0
 
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-        self.flatten = nn.Flatten(start_dim=1)
-        dropout_rate = self.arch_params[3]
-        self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
-        self.classifier = nn.Linear(self.num_features, num_classes)
-
-        self.out_channels.extend([self.num_features, num_classes])
-
-        ## TODO: init weight
-
-    
     def _round_channel(self, channel):
         channel_multiplier = self.arch_params[0]
-        channel_divisor = self.global_params['channel_divisor']
-        channel_min = self.global_params['channel_min']
-        return round_channels(channel, channel_multiplier, channel_divisor, channel_min)
+        return round_channels(channel, channel_multiplier, 
+            self.global_params['channel_divisor'], self.global_params['channel_min'])
 
-    def _decode_block_def(self, fix_first_last=False):
+    def _decode_block_def(self):
         block_def = self.block_def
-        depth_multiplier = self.arch_params[1]
         blocks_args = []
         for idx, stage_strings in enumerate(block_def):
             assert isinstance(stage_strings, container_abcs.Sequence)
             stage_args = [self._decode_str_def(stage_str) for stage_str in stage_strings]
             repeats = [arg.pop('repeat') for arg in stage_args]
-            if not (fix_first_last and (idx == 0 or idx == len(block_def)-1)):
+            if not (self.fix_first_last_block and (idx == 0 or idx == len(block_def)-1)):
                 stage_args = self._scale_stage_depth(stage_args, repeats)
             blocks_args.append(stage_args)
         return blocks_args
@@ -341,26 +310,6 @@ class EfficientNet(nn.Module):
             stage_args_scaled.extend([deepcopy(sa) for _ in range(rep)])
         return stage_args_scaled
 
-    def _make_blocks(self, in_channel, fix_first_last=False):
-        blocks_args = self._decode_block_def(fix_first_last)
-
-        self.in_channel = in_channel
-        self.total_layers = sum(len(x) for x in blocks_args)
-        self.layer_idx = 0
-        blocks = []
-        for stage_args in blocks_args:
-            assert isinstance(stage_args, list)
-            stage = []
-            for idx, args in enumerate(stage_args):
-                assert args['stride'] in (1, 2)
-                if idx > 0:
-                    args['stride'] = 1
-                layer = self._make_layer(args)
-                stage.append(layer)
-            blocks.append(nn.Sequential(*stage))
-            self.out_channels.append(self.in_channel)
-        return nn.Sequential(*blocks)
-
     def _make_layer(self, layer_args):
         assert isinstance(layer_args, dict)
         block_map = {
@@ -386,6 +335,110 @@ class EfficientNet(nn.Module):
         self.layer_idx += 1
         return layer
 
+    def __call__(self):
+        blocks = []
+        for stage_args in self.blocks_args:
+            assert isinstance(stage_args, list)
+            stage = []
+            for idx, args in enumerate(stage_args):
+                assert args['stride'] in (1, 2)
+                if idx > 0:
+                    args['stride'] = 1
+                layer = self._make_layer(args)
+                stage.append(layer)
+            blocks.append(nn.Sequential(*stage))
+            self.out_channels.append(self.in_channel)
+        return nn.Sequential(*blocks)
+
+
+class EfficientNet(nn.Module):
+    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
+                 stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
+                 **kwargs):
+        super(EfficientNet, self).__init__()
+        assert isinstance(global_params, dict)
+
+        self.in_channel = in_channel
+        self.arch_params = arch_params
+        self.block_def = block_def
+        self.global_params = global_params
+        self.num_features = self._round_channel(1280) if num_features is None else num_features
+
+        norm_kwargs = global_params['norm_kwargs']
+        act_layer = global_params['act_layer']
+        pad_type = global_params['pad_type']
+
+        if not fix_stem:
+            stem_size = self._round_channel(stem_size)
+        self.conv_stem = create_conv2d(in_channel, stem_size, 3, stride=2, 
+            padding=pad_type, bias=False)
+        self.bn1 = nn.BatchNorm2d(stem_size, **norm_kwargs)
+        self.act1 = act_layer(inplace=True)
+
+        blocks_builder = EfficientNetBuilder(block_def, arch_params, global_params, 
+            stem_size=stem_size, fix_first_last_block=fix_block_first_last)
+        self.blocks = blocks_builder()
+        last_channel = blocks_builder.in_channel
+        self.out_channels = blocks_builder.out_channels
+
+        self.conv_head = create_conv2d(last_channel, self.num_features, 1, padding=pad_type, bias=False)
+        self.bn2 = nn.BatchNorm2d(self.num_features, **norm_kwargs)
+        self.act2 = act_layer(inplace=True)
+
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.flatten = nn.Flatten(start_dim=1)
+        dropout_rate = self.arch_params[3]
+        self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
+        self.classifier = nn.Linear(self.num_features, num_classes)
+
+        self.out_channels.extend([self.num_features, num_classes])
+        self._init_weights()
+
+    def _round_channel(self, channel):
+        channel_multiplier = self.arch_params[0]
+        channel_divisor = self.global_params['channel_divisor']
+        channel_min = self.global_params['channel_min']
+        return round_channels(channel, channel_multiplier, channel_divisor, channel_min)
+
+    def _init_weights(self, fix_group_fanout=True):
+        """ Weight initialization as per Tensorflow official implementations.
+
+        Args:
+            m (nn.Module): module to init
+            n (str): module name
+            fix_group_fanout (bool): enable correct (matching Tensorflow TPU impl) fanout calculation w/ group convs
+
+        Handles layers in EfficientNet, EfficientNet-CondConv, MixNet, MnasNet, MobileNetV3, etc:
+        * https://github.com/tensorflow/tpu/blob/master/models/official/mnasnet/mnasnet_model.py
+        * https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
+        """
+        for n, m in self.named_modules():
+            if isinstance(m, CondConv2d):
+                fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                if fix_group_fanout:
+                    fan_out //= m.groups
+                CondConv2d._initializer(m.weight,lambda w: w.data.normal_(0, math.sqrt(2.0 / fan_out)), 
+                    m.num_experts, m.weight_shape)
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.Conv2d):
+                fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                if fix_group_fanout:
+                    fan_out //= m.groups
+                m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
+                if m.bias is not None:
+                    m.bias.data.zero_()
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1.0)
+                m.bias.data.zero_()
+            elif isinstance(m, nn.Linear):
+                fan_out = m.weight.size(0)  # fan-out
+                fan_in = 0
+                if 'routing_fn' in n:
+                    fan_in = m.weight.size(1)
+                init_range = 1.0 / math.sqrt(fan_in + fan_out)
+                m.weight.data.uniform_(-init_range, init_range)
+                m.bias.data.zero_()
 
     def forward(self, x):
         x = self.conv_stem(x)
