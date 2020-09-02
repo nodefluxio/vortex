@@ -1,3 +1,4 @@
+from numpy.core.records import ndarray
 import torch
 import logging
 import warnings
@@ -348,10 +349,10 @@ class BaseValidator:
         format output
         """
         if isinstance(results, torch.Tensor):
-            results = [results.cpu().numpy()]
+            results = results.cpu().numpy()
         elif isinstance(results, (list, tuple)):
             results = list(map(lambda x: x.cpu().numpy() if isinstance(x,torch.Tensor) else x, results))
-        if isinstance(results, (list, tuple)) \
+        if isinstance(results, (np.ndarray, list, tuple)) \
                 and not isinstance(results[0], (dict,OrderedDict)):
             ## actually perform output formatting
             results = get_prediction_results(results, self.result_fmt)
