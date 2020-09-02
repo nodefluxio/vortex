@@ -106,19 +106,6 @@ class BaseTrainer(object):
         """
         create scheduler
         """
-        # if isinstance(scheduler, tuple):
-        #     warnings.warn("creating scheduler from tuple is deprecated", PendingDeprecationWarning)
-        #     if scheduler[0] is None:
-        #         return None
-        #     assert len(scheduler) == 2, "expect lenth of scheduler is 2 if type of tuple"
-        #     assert isinstance(scheduler[0], str), "expect scheduler is type of Tuple[str,Dict], got scheduler[0] : %s" % (
-        #         type(scheduler[0]))
-        #     assert isinstance(scheduler[1], dict), "expect scheduler is type of Tuple[str,Dict], got scheduler[1] : %s" % (
-        #         type(scheduler[1]))
-        #     scheduler = dict(
-        #         module=scheduler[0],
-        #         args=scheduler[1],
-        #     )
         if isinstance(scheduler, dict):
             if 'method' in scheduler and not 'module' in scheduler:
                 scheduler.update({'module': scheduler['method']})
@@ -127,14 +114,14 @@ class BaseTrainer(object):
                 "unsupported lr_scheduler {}".format(sch_method)
             kwargs.update({'optimizer': optimizer})
             scheduler = getattr(lr_scheduler, sch_method)(**kwargs)
-        
-        # Assign scheduler type update type
-        scheduler.step_update = None
-        for step_update_type in lr_scheduler.step_update_map:
-            if type(scheduler).__name__ in lr_scheduler.step_update_map[step_update_type]:
-                scheduler.step_update = step_update_type
-        if scheduler.step_update == None:
-            raise RuntimeError('Currently, scheduler {} is not supported, please select other scheduler'.format(type(scheduler).__name__))
+
+            # Assign scheduler type update type
+            scheduler.step_update = None
+            for step_update_type in lr_scheduler.step_update_map:
+                if type(scheduler).__name__ in lr_scheduler.step_update_map[step_update_type]:
+                    scheduler.step_update = step_update_type
+            if scheduler.step_update == None:
+                raise RuntimeError('Currently, scheduler {} is not supported, please select other scheduler'.format(type(scheduler).__name__))
         return scheduler
     
     @staticmethod

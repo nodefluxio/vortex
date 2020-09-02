@@ -3,6 +3,8 @@ test case for core trainer
 """
 import sys
 sys.path.append('src/development')
+sys.path.append('src/runtime')
+
 
 import pytest
 import torch
