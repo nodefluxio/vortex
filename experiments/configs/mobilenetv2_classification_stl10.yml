@@ -60,7 +60,7 @@ trainer: {
     }
   },
   lr_scheduler: {
-    method : CosineLRScheduler,
+    method : CosineLRWithWarmUp,
     args : {
       t_initial : 20,
       t_mul : 1.0,

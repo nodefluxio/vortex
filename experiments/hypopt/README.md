@@ -2,8 +2,8 @@
 
 ### Experiments
 
-- [learning_rate_search.yml](learning_rate_search.yml) : find `lr` for `SGD` and `warmup_t` for `CosineLRScheduler` should work with config that use `SGD` and `CosineLRScheduler`
-- [optimizer_search.yml](optimizer_search.yml): find best optimizer (`SGD` or `Adam`) and scheduler (`CosineLRScheduler` or None)
+- [learning_rate_search.yml](learning_rate_search.yml) : find `lr` for `SGD` and `warmup_t` for `CosineLRWithWarmUp` should work with config that use `SGD` and `CosineLRWithWarmUp`
+- [optimizer_search.yml](optimizer_search.yml): find best optimizer (`SGD` or `Adam`) and scheduler (`CosineLRWithWarmUp` or None)
 
 ### Example Results
 

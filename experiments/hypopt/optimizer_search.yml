@@ -28,7 +28,7 @@ parameters : [
     args : {
       choices : [
         {
-          method : CosineLRScheduler,
+          method : CosineLRWithWarmUp,
           args : {
             t_initial : 10,
             t_mul : 1.0,
