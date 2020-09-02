@@ -1,12 +1,16 @@
+from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).joinpath('src', 'development')))
+
 import torch
 import copy
 
-from vortex.networks.models.detection.detr import (
+from vortex.development.networks.models.detection.detr import (
     DETR, HungarianMatcher,
     DETRLoss, DETRPostProcess,
     NestedTensor, cxcywh_to_xyxy
 )
-from vortex.utils.data.collater.detr import DETRColatte
+from vortex.development.utils.data.collater.detr import DETRColatte
 
 
 pred_bbox = torch.tensor([
