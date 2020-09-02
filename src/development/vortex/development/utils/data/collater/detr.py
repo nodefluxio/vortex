@@ -1,6 +1,6 @@
 import torch
 
-from vortex.development.networks.models.detection.detr import NestedTensor
+from vortex.networks.models.detection.detr import NestedTensor
 from easydict import EasyDict
 
 class DETRColatte:
