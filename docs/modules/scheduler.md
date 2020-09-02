@@ -32,27 +32,188 @@ python3 scripts/visualize_learning_rate.py -c experiments/configs/shufflenetv2x1
 
 ## Pytorch Scheduler
 
-You can use several Pytorch original scheduler implementation. The following example configuration uses the `StepLR` scheduler. You can use the other scheduler by following similar fashion (describing the scheduler arguments without passing the `optimizer` argument).
+Vortex support several Pytorch original scheduler implementation. User only need to specify the arguments beside the `optimizer` arguments which have already handled internally
+
+---
+
+### StepLR
+
+[`StepLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.StepLR)
+
+E.g. :
 
 ```yaml
 lr_scheduler: {
     method: StepLR,
     args: {
-        step_size: 50,
-        gamma: 0.1
+        step_size: 100,
+        gamma: .1,
+        last_epoch: -1
     }
 },
 ```
 
-Supported Pytorch scheduler listed below:
+Example Visualization :
 
-- [`StepLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.StepLR)
-- [`MultiStepLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.MultiStepLR)
-- [`ExponentialLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.ExponentialLR)
-- [`CosineAnnealingLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR)
-- [`CosineAnnealingWarmRestarts`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingWarmRestarts)
-- [`CyclicLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CyclicLR)
-- [`OneCycleLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.OneCycleLR)
+Using above configuration, and epoch of 300,
+
+![StepLR Visualization](../images/step_lr.jpg)
+
+---
+
+### MultiStepLR
+
+[`MultiStepLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.MultiStepLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: MultiStepLR,
+    args: {
+        milestones: [225,275],
+        gamma: .1,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![MultiStepLR Visualization](../images/multistep_lr.jpg)
+
+---
+
+### ExponentialLR
+
+[`ExponentialLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.ExponentialLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: ExponentialLR,
+    args: {
+        gamma: .98,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![ExponentialLR Visualization](../images/exponential_lr.jpg)
+
+---
+
+### CosineAnnealingLR
+
+[`CosineAnnealingLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CosineAnnealingLR,
+    args: {
+        T_max: 100,
+        eta_min: 0.00001,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CosineAnnealingLR Visualization](../images/cosine_annealing_lr.jpg)
+
+---
+
+### CosineAnnealingWarmRestarts
+
+[`CosineAnnealingWarmRestarts` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingWarmRestarts)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CosineAnnealingWarmRestarts,
+    args: {
+        T_0: 50,
+        T_mult: 2,
+        eta_min: .00001,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CosineAnnealingWarmRestarts Visualization](../images/cosine_annealing_warm_restarts.jpg)
+
+---
+
+### CyclicLR
+
+[`CyclicLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CyclicLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CyclicLR,
+    args: {
+        base_lr: 0.00001,
+        max_lr: 0.001,
+        step_size_up: 2000,
+        mode: triangular,
+        gamma: 1.0,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CyclicLR Visualization](../images/cyclic_lr.jpg)
+
+---
+
+### OneCycleLR
+
+[`OneCycleLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.OneCycleLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: OneCycleLR,
+    args: {
+        max_lr: 0.001,
+        steps_per_epoch: 200,
+        epochs: 300,
+        pct_start: .3,
+        anneal_strategy: cos,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![OneCycleLR Visualization](../images/one_cycle_lr.jpg)
 
 ---
 

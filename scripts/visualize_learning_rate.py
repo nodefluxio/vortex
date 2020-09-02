@@ -49,7 +49,7 @@ def calculate_lr(lr_config, epochs=100, optimizer_config=None):
     scheduler = BaseTrainer.create_scheduler(lr_config,optimizer)
 
     ## grad accumulation
-    accumulation_step = 4
+    accumulation_step = 1
 
     ## steps_per_epoch
     batch_iter = 200
