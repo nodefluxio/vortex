@@ -32,7 +32,7 @@ python3 scripts/visualize_learning_rate.py -c experiments/configs/shufflenetv2x1
 
 ## Pytorch Scheduler
 
-The following example configuration uses the Pytorch `StepLR` scheduler. You can use the other scheduler by following similar fashion. List of Pytorch supported scheduler can be found in [this link](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
+You can use several Pytorch original scheduler implementation. The following example configuration uses the `StepLR` scheduler. You can use the other scheduler by following similar fashion (describing the scheduler arguments without passing the `optimizer` argument).
 
 ```yaml
 lr_scheduler: {
@@ -43,6 +43,16 @@ lr_scheduler: {
     }
 },
 ```
+
+Supported Pytorch scheduler listed below:
+
+- [`StepLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.StepLR)
+- [`MultiStepLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.MultiStepLR)
+- [`ExponentialLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.ExponentialLR)
+- [`CosineAnnealingLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR)
+- [`CosineAnnealingWarmRestarts`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingWarmRestarts)
+- [`CyclicLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CyclicLR)
+- [`OneCycleLR`](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.OneCycleLR)
 
 ---
 
@@ -57,7 +67,7 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: CosineLRScheduler,
+    method: CosineLRWithWarmUp,
     args: {
         t_initial: 100,
         t_mul: 1.0,
@@ -86,7 +96,7 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-![CosineLR Visualization](../images/cosine_lr.jpg)
+![CosineLRWithWarmUp Visualization](../images/cosine_lr_with_warmup.jpg)
 
 ---
 
@@ -100,7 +110,7 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: TanhLRScheduler,
+    method: TanhLRWithWarmUp,
     args: {
         t_initial: 100,
         t_mul: 1.0,
@@ -133,7 +143,7 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-![TanhLR Visualization](../images/tanh_lr.jpg)
+![TanhLRWithWarmUp Visualization](../images/tanh_lr_with_warmup.jpg)
 
 ---
 
@@ -147,9 +157,9 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: StepLRWithBurnIn,
+    method: StepLRWithWarmUp,
     args: {
-        burn_in: 5,
+        warm_up: 5,
         steps: [180,190],
         scales: [.1,.1],
         last_epoch: -1
@@ -159,7 +169,7 @@ lr_scheduler: {
 
 Arguments :
 
-- `burn_in` (int) : number of epochs for warm up
+- `warm_up` (int) : number of epochs for warm up
 - `steps` (list) : list of epoch when the learning rate will be reduced, e.g. [180,190] --> learning rate will be reduced on epoch 180 and epoch 190
 - `scales` (list) : scale of the reduced learning rate, e.g. [0.1,0.1] --> e.g. initial lr == 0.01 , on epoch 180 will be reduced to 0.1 * 0.01 = 0.001 and on epoch 190 will be reduced to 0.1 * 0.001 = 0.0001
 - `last_epoch` (int) : last epoch number. default : -1
@@ -168,4 +178,4 @@ Example Visualization :
 
 Using above configuration, and epoch of 200,
 
-![StepLRWithBurnIn Visualization](../images/step_lr_with_burnin.jpg)
+![StepLRWithWarmUp Visualization](../images/step_lr_with_warmup.jpg)

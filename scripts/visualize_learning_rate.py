@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from matplotlib.pyplot import plot
+import math
 
 from torch import optim
 sys.path.append(str(Path(__file__).parents[1].joinpath('src', 'development')))
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 
 warnings.filterwarnings('ignore')
 from vortex.development.utils.parser import load_config
-from vortex.development.core.engine.trainer import lr_scheduler
+from vortex.development.core.engine.trainer.base_trainer import BaseTrainer
 warnings.resetwarnings()
 
 
@@ -42,18 +43,31 @@ def calculate_lr(lr_config, epochs=100, optimizer_config=None):
     if 'method' in lr_config and not 'module' in lr_config:
         lr_config.update({'module': lr_config['method']})
     sch_method, kwargs = lr_config['module'], lr_config['args']
-    assert hasattr(lr_scheduler, sch_method), "unsupported lr_scheduler {}".format(sch_method)
-    kwargs.update({'optimizer': optimizer})
-    scheduler = getattr(lr_scheduler, sch_method)(**kwargs)
+    # assert hasattr(lr_scheduler, sch_method), "unsupported lr_scheduler {}".format(sch_method)
+    # kwargs.update({'optimizer': optimizer})
+    # scheduler = getattr(lr_scheduler, sch_method)(**kwargs)
+    scheduler = BaseTrainer.create_scheduler(lr_config,optimizer)
+
+    ## grad accumulation
+    accumulation_step = 4
+
+    ## steps_per_epoch
+    batch_iter = 200
 
     print("Visualizing {} lr scheduler for {} epoch".format(sch_method, epochs))
     lr_data = []
     for ep in range(epochs):
-        optimizer.step()
-        try:
-            scheduler.step()
-        except:
-            scheduler.step(ep)
+
+        for i in range(batch_iter):
+
+            if (i+1) % accumulation_step == 0:
+                optimizer.step()
+                BaseTrainer.apply_scheduler_step(scheduler,
+                                                epoch = ep,
+                                                step = i,
+                                                steps_per_epoch = batch_iter,
+                                                accumulation_step = accumulation_step)
+                optimizer.zero_grad()
         lr_data.append(scheduler.get_last_lr())
     return np.array(lr_data)
 

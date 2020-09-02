@@ -9,7 +9,7 @@ from .scheduler import Scheduler
 logger = logging.getLogger(__name__)
 
 
-class TanhLRScheduler(Scheduler):
+class TanhLRWithWarmUp(Scheduler):
     """
     Hyberbolic-Tangent decay with restarts.
     This is described in the paper https://arxiv.org/abs/1806.01593

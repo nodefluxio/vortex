@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - model checkpoint not save on hyperparameter optimization
 - `save_epoch` config is not required
+- Fix bug on scheduler.step() placement on trainer
+- Update docs on supported Pytorch scheduler
+- changed `StepLRWithBurnIn` to `StepLRWithWarmUp` scheduler
+- changed `CosineLRScheduler` to `CosineLRWithWarmUp` scheduler
+- changed `TanhLRScheduler` to `TanhLRWithWarmUp` scheduler
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
