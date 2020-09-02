@@ -56,7 +56,11 @@ Supported Pytorch scheduler listed below:
 
 ---
 
-## CosineLR
+## Custom Implementation
+
+---
+
+### CosineLR With Warm Up
 
 Implement Cosine decay scheduler with warm restarts
 
@@ -100,7 +104,7 @@ Using above configuration, and epoch of 300,
 
 ---
 
-## TanhLR
+### TanhLR With Warm Up
 
 Implement Hyperbolic-Tangent decay with warm restarts
 
@@ -147,7 +151,7 @@ Using above configuration, and epoch of 300,
 
 ---
 
-## StepLRWithBurnIn
+### StepLR With Warm Up
 
 Implement StepLR scheduler with burn in (warm start), adapted from YOLOv3 training method
 
