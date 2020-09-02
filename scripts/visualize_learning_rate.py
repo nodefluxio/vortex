@@ -123,32 +123,32 @@ if __name__ == "__main__":
     # Get accumulation step
     accumulation_step = 1
     
-    ## Try to get accumulation_step from experiment config
-    try:
-        accumulation_step = config.trainer.driver.args.accumulation_step
-    except:
-        pass
-
-    ## Override if accumulation step described in args
+    ## Try to get accumulation_step from argparse or experiment config
     if args.accumulation_step is not None:
         accumulation_step = args.accumulation_step
+    else:
+        try:
+            accumulation_step = config.trainer.driver.args.accumulation_step
+        except:
+            pass
 
     # Get steps per epoch
 
     steps_per_epoch = 100
 
-    ## Try to get accumulation_step from experiment config
-    try:
-        dataloader = create_dataloader(dataloader_config=config.dataloader,
-                                        dataset_config=config.dataset,
-                                        preprocess_config = config.model.preprocess_args,
-                                        collate_fn=None)
-        steps_per_epoch = len(dataloader)
-    except:
-        pass
-    ## Override if steps_per_epoch described in args
+    ## Try to get accumulation_step from argparse or experiment config
     if args.steps_per_epoch is not None:
         steps_per_epoch = args.steps_per_epoch
+    else:
+        try:
+            dataloader = create_dataloader(dataloader_config=config.dataloader,
+                                            dataset_config=config.dataset,
+                                            preprocess_config = config.model.preprocess_args,
+                                            collate_fn=None)
+            steps_per_epoch = len(dataloader)
+        except:
+            pass
+    
 
     lrs = calculate_lr(lr_scheduler_cfg, 
                         epochs=epochs, 
