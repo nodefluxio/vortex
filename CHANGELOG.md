@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
+- Fix error when `save_best_metrics` not present in experiment file
 
 
 ## 0.2.0
