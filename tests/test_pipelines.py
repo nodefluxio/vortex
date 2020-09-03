@@ -1,7 +1,7 @@
 import os
 import sys
-sys.path.append('src/runtime')
-sys.path.append('src/development')
+sys.path.insert(0,'src/runtime')
+sys.path.insert(0,'src/development')
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[3])
 sys.path.append(proj_path)

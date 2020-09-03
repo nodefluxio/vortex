@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
-sys.path.append('src/runtime')
-sys.path.append('src/development')
+sys.path.insert(0,'src/runtime')
+sys.path.insert(0,'src/development')
 
 from vortex.development.utils.parser.parser import load_config, check_config
 

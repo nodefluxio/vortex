@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
 
 from vortex.development.utils.prediction.tools import *
 from vortex.development.utils.prediction import BoundingBox

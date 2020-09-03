@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
 from easydict import EasyDict
 
 from vortex.development.utils.data.dataset import dataset
