@@ -317,7 +317,7 @@ class TrainingPipeline(BasePipeline):
                     metrics_log = EasyDict(dict(epoch=epoch, **val_results))
                     self.experiment_logger.log_on_validation_result(metrics_log)
 
-                if 'val_metric' in self.save_best_type:
+                if self.save_best_type and 'val_metric' in self.save_best_type:
                     for metric_name in self.save_best_metrics:
                         if not metric_name in val_results:
                             val_res_key = ", ".join(list(val_results.keys()))
@@ -331,7 +331,7 @@ class TrainingPipeline(BasePipeline):
                 print('epoch %s validation : %s' % (epoch, ', '.join(['{}:{:.4f}'.format(key, value) for key, value in val_results.items()])))
 
             ## save on best loss
-            if 'loss' in self.save_best_type and best_loss > loss.item() and save_model:
+            if self.save_best_type and 'loss' in self.save_best_type and best_loss > loss.item() and save_model:
                 best_loss = loss.item()
                 metrics = None
                 if self.valid_for_validation:
