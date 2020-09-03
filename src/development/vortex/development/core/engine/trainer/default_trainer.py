@@ -13,6 +13,7 @@ class DefaultTrainer(BaseTrainer):
             "accumulation_step should be >= 1, got {}".format(accumulation_step)
         self.accumulation_step = accumulation_step
         self.lr = self.optimizer.param_groups[0]['lr']
+        
 
     def train(self, dataloader, epoch):
         """
@@ -36,10 +37,12 @@ class DefaultTrainer(BaseTrainer):
             if (i+1) % self.accumulation_step == 0:
                 self.optimizer.step()
                 if self.scheduler:
-                    try:
-                        self.scheduler.step()
-                    except:
-                        self.scheduler.step(epoch)
+                    type(self).apply_scheduler_step(self.scheduler,
+                                                    epoch = epoch,
+                                                    step = i,
+                                                    steps_per_epoch = len(dataloader),
+                                                    accumulation_step = self.accumulation_step
+                                                    )
                 self.optimizer.zero_grad()
 
                 # Experiment Logging

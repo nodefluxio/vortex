@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
 
 import vortex.development.networks.modules.losses.utils.ssd as ssd_utils
 

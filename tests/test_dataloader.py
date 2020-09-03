@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
 
 from vortex.development.core.factory import create_dataloader
 from vortex.development.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper

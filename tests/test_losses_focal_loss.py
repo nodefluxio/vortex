@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
 
 from vortex.development.networks.modules.losses.utils.focal_loss import FocalLoss
 import numpy as np

@@ -32,21 +32,196 @@ python3 scripts/visualize_learning_rate.py -c experiments/configs/shufflenetv2x1
 
 ## Pytorch Scheduler
 
-The following example configuration uses the Pytorch `StepLR` scheduler. You can use the other scheduler by following similar fashion. List of Pytorch supported scheduler can be found in [this link](https://pytorch.org/docs/stable/optim.html#how-to-adjust-learning-rate)
+Vortex support several Pytorch original scheduler implementation. User only need to specify the arguments beside the `optimizer` arguments which have already handled internally
+
+---
+
+### StepLR
+
+[`StepLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.StepLR)
+
+E.g. :
 
 ```yaml
 lr_scheduler: {
     method: StepLR,
     args: {
-        step_size: 50,
-        gamma: 0.1
+        step_size: 100,
+        gamma: .1,
+        last_epoch: -1
     }
 },
 ```
 
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![StepLR Visualization](../images/step_lr.jpg)
+
 ---
 
-## CosineLR
+### MultiStepLR
+
+[`MultiStepLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.MultiStepLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: MultiStepLR,
+    args: {
+        milestones: [225,275],
+        gamma: .1,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![MultiStepLR Visualization](../images/multistep_lr.jpg)
+
+---
+
+### ExponentialLR
+
+[`ExponentialLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.ExponentialLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: ExponentialLR,
+    args: {
+        gamma: .98,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![ExponentialLR Visualization](../images/exponential_lr.jpg)
+
+---
+
+### CosineAnnealingLR
+
+[`CosineAnnealingLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CosineAnnealingLR,
+    args: {
+        T_max: 100,
+        eta_min: 0.00001,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CosineAnnealingLR Visualization](../images/cosine_annealing_lr.jpg)
+
+---
+
+### CosineAnnealingWarmRestarts
+
+[`CosineAnnealingWarmRestarts` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingWarmRestarts)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CosineAnnealingWarmRestarts,
+    args: {
+        T_0: 50,
+        T_mult: 2,
+        eta_min: .00001,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CosineAnnealingWarmRestarts Visualization](../images/cosine_annealing_warm_restarts.jpg)
+
+---
+
+### CyclicLR
+
+[`CyclicLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CyclicLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: CyclicLR,
+    args: {
+        base_lr: 0.00001,
+        max_lr: 0.001,
+        step_size_up: 2000,
+        mode: triangular,
+        gamma: 1.0,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![CyclicLR Visualization](../images/cyclic_lr.jpg)
+
+---
+
+### OneCycleLR
+
+[`OneCycleLR` Documentation](https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.OneCycleLR)
+
+E.g. :
+
+```yaml
+lr_scheduler: {
+    method: OneCycleLR,
+    args: {
+        max_lr: 0.001,
+        steps_per_epoch: 200,
+        epochs: 300,
+        pct_start: .3,
+        anneal_strategy: cos,
+        last_epoch: -1
+    }
+},
+```
+
+Example Visualization :
+
+Using above configuration, and epoch of 300,
+
+![OneCycleLR Visualization](../images/one_cycle_lr.jpg)
+
+---
+
+## Custom Implementation
+
+---
+
+### CosineLR With Warm Up
 
 Implement Cosine decay scheduler with warm restarts
 
@@ -57,7 +232,7 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: CosineLRScheduler,
+    method: CosineLRWithWarmUp,
     args: {
         t_initial: 100,
         t_mul: 1.0,
@@ -86,11 +261,11 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-![CosineLR Visualization](../images/cosine_lr.jpg)
+![CosineLRWithWarmUp Visualization](../images/cosine_lr_with_warmup.jpg)
 
 ---
 
-## TanhLR
+### TanhLR With Warm Up
 
 Implement Hyperbolic-Tangent decay with warm restarts
 
@@ -100,7 +275,7 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: TanhLRScheduler,
+    method: TanhLRWithWarmUp,
     args: {
         t_initial: 100,
         t_mul: 1.0,
@@ -133,11 +308,11 @@ Example Visualization :
 
 Using above configuration, and epoch of 300,
 
-![TanhLR Visualization](../images/tanh_lr.jpg)
+![TanhLRWithWarmUp Visualization](../images/tanh_lr_with_warmup.jpg)
 
 ---
 
-## StepLRWithBurnIn
+### StepLR With Warm Up
 
 Implement StepLR scheduler with burn in (warm start), adapted from YOLOv3 training method
 
@@ -147,9 +322,9 @@ Reference :
 
 ```yaml
 lr_scheduler: {
-    method: StepLRWithBurnIn,
+    method: StepLRWithWarmUp,
     args: {
-        burn_in: 5,
+        warm_up: 5,
         steps: [180,190],
         scales: [.1,.1],
         last_epoch: -1
@@ -159,7 +334,7 @@ lr_scheduler: {
 
 Arguments :
 
-- `burn_in` (int) : number of epochs for warm up
+- `warm_up` (int) : number of epochs for warm up
 - `steps` (list) : list of epoch when the learning rate will be reduced, e.g. [180,190] --> learning rate will be reduced on epoch 180 and epoch 190
 - `scales` (list) : scale of the reduced learning rate, e.g. [0.1,0.1] --> e.g. initial lr == 0.01 , on epoch 180 will be reduced to 0.1 * 0.01 = 0.001 and on epoch 190 will be reduced to 0.1 * 0.001 = 0.0001
 - `last_epoch` (int) : last epoch number. default : -1
@@ -168,4 +343,4 @@ Example Visualization :
 
 Using above configuration, and epoch of 200,
 
-![StepLRWithBurnIn Visualization](../images/step_lr_with_burnin.jpg)
+![StepLRWithWarmUp Visualization](../images/step_lr_with_warmup.jpg)

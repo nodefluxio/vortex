@@ -1,5 +1,6 @@
 import sys
-sys.path.append('src/development')
+sys.path.insert(0,'src/development')
+sys.path.insert(0,'src/runtime')
 
 import torch
 import pytest

@@ -48,24 +48,24 @@ trainer : {
     }
   },
   lr_scheduler : {
-    method : CosineLRScheduler,
+    method : CosineLRWithWarmUp,
     args : {
-      t_initial : 100,
-      t_mul : 1.0,
-      lr_min : 0.00001,
+      t_initial: 100,
+      t_mul: 1.0,
+      lr_min: 0.00001,
       warmup_lr_init: 0.00001,
-      warmup_t: 3,
-      cycle_limit : 1,
-      t_in_epochs : True,
-      decay_rate : 0.1,
-    }
+      warmup_t: 5,
+      cycle_limit: 3,
+      t_in_epochs: True,
+      decay_rate: 0.75,
+  }
   },
   epoch : 100,
   save_epoch : 5,
   driver : {
     module : DefaultTrainer,
     args : {
-      accumulation_step : 2,
+      accumulation_step : 4,
     },
   }
 }
