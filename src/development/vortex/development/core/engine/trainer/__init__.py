@@ -3,6 +3,7 @@ from copy import deepcopy
 from easydict import EasyDict
 
 from .default_trainer import DefaultTrainer
+from .amp_trainer import AMPTrainer
 from .base_trainer import BaseTrainer
 
 trainer_map = {}
@@ -19,6 +20,8 @@ def remove_trainer(trainer: str):
     return trainer_map.pop(trainer, None)
 
 register_trainer(DefaultTrainer)
+register_trainer(AMPTrainer)
+
 
 def create_trainer(trainer_config: Union[dict, EasyDict], **kwargs):
     trainer_config = EasyDict(trainer_config)
