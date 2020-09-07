@@ -1,4 +1,5 @@
 import os
+from os import name
 import shutil
 import pytz
 import warnings
@@ -208,19 +209,30 @@ class TrainingPipeline(BasePipeline):
 
         has_save = False
         self.save_best_metrics, self.save_best_type = None, None
+        self.best_metrics = None
         if 'save_best_metrics' in self.config.trainer and self.config.trainer.save_best_metrics is not None:
-            has_save = True
+            has_save = self.config.trainer.save_best_metrics is not None
             self.save_best_metrics = self.config.trainer.save_best_metrics
             if not isinstance(self.save_best_metrics, (list, tuple)):
                 self.save_best_metrics = [self.save_best_metrics]
+
             self.save_best_type = list({'loss' if m == 'loss' else 'val_metric' for m in self.save_best_metrics})
+            self.best_metrics = {name: float('inf') if name == 'loss' else float('-inf') for name in self.save_best_metrics}
             if 'loss' in self.save_best_metrics:
                 self.save_best_metrics.remove('loss')
 
-        self.save_epoch = None
+            if resume:
+                best_metrics_ckpt = checkpoint['best_metrics']
+                if isinstance(best_metrics_ckpt, dict):
+                    self.best_metrics.update(best_metrics_ckpt)
+
+        self.save_epoch, self.save_last_epoch = None, None
         if 'save_epoch' in self.config.trainer and self.config.trainer.save_epoch is not None:
             self.save_epoch = self.config.trainer.save_epoch
-            has_save = True
+            has_save = has_save or self.config.trainer.save_epoch is not None
+        if 'save_last_epoch' in self.config.trainer and self.config.trainer.save_last_epoch is not None:
+            self.save_last_epoch = bool(self.config.trainer.save_last_epoch)
+            has_save = has_save or self.config.trainer.save_last_epoch
         if not has_save:
             warnings.warn("No model checkpoint saving configuration is specified, the training would work "
                 "but the trained model will only be saved when training is complete.\nYou can configure "
@@ -282,10 +294,6 @@ class TrainingPipeline(BasePipeline):
         epoch_losses = []
         learning_rates = []
         last_epoch = 0
-        best_loss = float('inf')
-        best_metric = float('-inf')
-        if self.save_best_metrics is not None:
-            best_metric = {name: float('-inf') for name in self.save_best_metrics}
         for epoch in tqdm(range(self.start_epoch, self.config.trainer.epoch), desc="EPOCH",
                           total=self.config.trainer.epoch, initial=self.start_epoch, 
                           dynamic_ncols=True):
@@ -317,43 +325,39 @@ class TrainingPipeline(BasePipeline):
                     metrics_log = EasyDict(dict(epoch=epoch, **val_results))
                     self.experiment_logger.log_on_validation_result(metrics_log)
 
-                if self.save_best_type and 'val_metric' in self.save_best_type:
+                if self.save_best_type and 'val_metric' in self.save_best_type and save_model:
                     for metric_name in self.save_best_metrics:
                         if not metric_name in val_results:
                             val_res_key = ", ".join(list(val_results.keys()))
                             raise RuntimeError("'save_best_metric' value of ({}) is not found in validation "
                                 "result, choose either one of [{}]".format(metric_name, val_res_key))
-                        if best_metric[metric_name] < val_results[metric_name]:
-                            best_metric[metric_name] = val_results[metric_name]
+                        if self.best_metrics[metric_name] < val_results[metric_name]:
+                            self.best_metrics[metric_name] = val_results[metric_name]
                             model_fname = "{}-best-{}.pth".format(self.config.experiment_name, metric_name)
                             self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
 
                 print('epoch %s validation : %s' % (epoch, ', '.join(['{}:{:.4f}'.format(key, value) for key, value in val_results.items()])))
 
             ## save on best loss
-            if self.save_best_type and 'loss' in self.save_best_type and best_loss > loss.item() and save_model:
-                best_loss = loss.item()
-                metrics = None
-                if self.valid_for_validation:
-                    metrics = val_results
+            if self.save_best_type and 'loss' in self.save_best_type and \
+                    self.best_metrics['loss'] > loss.item() and save_model:
+                self.best_metrics['loss'] = loss.item()
                 model_fname = "{}-best-loss.pth".format(self.config.experiment_name)
-                self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+                self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
 
             # Save on several epoch
             if self.save_epoch and ((epoch+1) % self.save_epoch == 0) and save_model:
-                metrics = None
-                if self.valid_for_validation:
-                    metrics = val_results
                 model_fname = "{}-epoch-{}.pth".format(self.config.experiment_name, epoch)
-                self._save_checkpoint(epoch, metrics=metrics, filename=model_fname)
+                self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
+
+            if self.save_last_epoch and save_model:
+                model_fname = "{}.pth".format(self.config.experiment_name, epoch)
+                self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
 
         # Save final weights on after all epochs finished
         if save_model:
-            metrics = None
-            if self.valid_for_validation:
-                metrics = val_results
             model_fname = "{}.pth".format(self.config.experiment_name)
-            model_path = self._save_checkpoint(last_epoch, metrics=metrics, filename=model_fname)
+            model_path = self._save_checkpoint(last_epoch, metrics=val_results, filename=model_fname)
             # Copy final weight from runs directory to experiment directory
             shutil.copy(model_path, Path(self.experiment_directory))
 
@@ -441,6 +445,8 @@ class TrainingPipeline(BasePipeline):
                 checkpoint["class_names"] = self.dataloader.dataset.class_names
             if self.trainer.scheduler is not None:
                 checkpoint["scheduler_state"] = self.trainer.scheduler.state_dict()
+            if self.best_metrics is not None:
+                checkpoint["best_metrics"] = self.best_metrics
             filedir = self.run_directory
             if filename is None:
                 filename = "{}.pth".format(self.config.experiment_name)
