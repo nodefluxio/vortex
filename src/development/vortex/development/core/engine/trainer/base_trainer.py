@@ -6,9 +6,7 @@ from . import lr_scheduler
 import inspect
 from inspect import Signature, Parameter
 from collections import OrderedDict
-from copy import copy
 from typing import Tuple, List, Union, Type, Any, Dict
-from tqdm import tqdm
 import math
 
 from vortex.development.utils import type_utils
