@@ -230,13 +230,10 @@ class TrainingPipeline(BasePipeline):
         if 'save_epoch' in self.config.trainer and self.config.trainer.save_epoch is not None:
             self.save_epoch = self.config.trainer.save_epoch
             has_save = has_save or self.config.trainer.save_epoch is not None
-        if 'save_last_epoch' in self.config.trainer and self.config.trainer.save_last_epoch is not None:
-            self.save_last_epoch = bool(self.config.trainer.save_last_epoch)
-            has_save = has_save or self.config.trainer.save_last_epoch
         if not has_save:
             warnings.warn("No model checkpoint saving configuration is specified, the training would work "
-                "but the trained model will only be saved when training is complete.\nYou can configure "
-                "either one of 'config.trainer.save_epoch' or 'config.trainer.save_best_metric")
+                "but the training will only save the last epoch model.\nYou can configure either one of "
+                "'config.trainer.save_epoch' or 'config.trainer.save_best_metric")
 
         # Validation components creation
         try:
@@ -350,7 +347,7 @@ class TrainingPipeline(BasePipeline):
                 model_fname = "{}-epoch-{}.pth".format(self.config.experiment_name, epoch)
                 self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
 
-            if self.save_last_epoch and save_model:
+            if save_model: ## save this epoch
                 model_fname = "{}.pth".format(self.config.experiment_name, epoch)
                 self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
 
