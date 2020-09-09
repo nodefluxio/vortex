@@ -15,6 +15,7 @@ from easydict import EasyDict
 from scipy.optimize import linear_sum_assignment
 
 from ..base_connector import BackbonePoolConnector
+from ...modules.backbones import get_backbone
 
 supported_models = [
     'DETR'
@@ -426,7 +427,7 @@ class PositionEmbeddingLearned(nn.Module):
         return pos
 
 
-class DETR(BackbonePoolConnector):
+class DETR(nn.Module):
     def __init__(self, backbone, n_classes, num_queries=100, train_backbone=True, dilation=False, 
                  aux_loss=False, hidden_dim=256, position_embedding='sine', nhead=8, 
                  num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, dropout=0.1, 
@@ -441,16 +442,49 @@ class DETR(BackbonePoolConnector):
             kwargs['replace_stride_with_dilation'] = [False, False, dilation]
         elif dilation:
             warnings.warn("'dilation' argument is not yet used for backbone other than resnet.")
-        super().__init__(backbone, feature_type='tri_stage_fpn', pretrained_backbone=pretrained_backbone,
-            freeze_backbone=False, **kwargs)
+        # super().__init__(backbone, feature_type='tri_stage_fpn', pretrained_backbone=pretrained_backbone,
+        #     freeze_backbone=False, **kwargs)
+        # ## always freeze stage1 and stage2 or freeze all when not train_backbone
+        # if lr_backbone <= 0:
+        #     train_backbone = False
+        # for name, p in self.backbone.named_parameters():
+        #     if not train_backbone or 'stage3' not in name and 'stage4' not in name and 'stage5' not in name:
+        #         p.requires_grad_(False)
+        # backbone_num_channels = self.backbone.out_channels[-1]
 
-        ## always freeze layer1 or freeze all when not train_backbone
+        super().__init__()
+        backbone = get_backbone(backbone, pretrained=pretrained_backbone, **kwargs)
+        ## always freeze stage1 and stage2 or freeze all when not train_backbone
         if lr_backbone <= 0:
             train_backbone = False
-        for name, p in self.backbone.named_parameters():
+        for name, p in backbone.named_parameters():
             if not train_backbone or 'stage3' not in name and 'stage4' not in name and 'stage5' not in name:
                 p.requires_grad_(False)
-        backbone_num_channels = self.backbone.out_channels[-1]
+        backbone_num_channels = backbone.out_channels[-1]
+        self.backbone = nn.Sequential(
+            backbone.stage1,
+            backbone.stage2,
+            backbone.stage3,
+            backbone.stage4,
+            backbone.stage5
+        )
+
+        # backbone = getattr(torchvision.models.resnet, backbone)(pretrained=True,
+        #     replace_stride_with_dilation=[False, False, dilation],
+        #     norm_layer=FrozenBatchNorm2d)
+        # if lr_backbone <= 0:
+        #     train_backbone = False
+        # for name, parameter in backbone.named_parameters():
+        #     if not train_backbone or 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
+        #         parameter.requires_grad_(False)
+        # self.backbone = nn.Sequential(
+        #     backbone.conv1, backbone.bn1, backbone.relu, backbone.maxpool,
+        #     backbone.layer1,
+        #     backbone.layer2,
+        #     backbone.layer3,
+        #     backbone.layer4
+        # )
+        # backbone_num_channels = 512 * backbone.layer1[0].expansion
 
         if position_embedding in ('v2', 'sine'):
             self.position_embedding = PositionEmbeddingSine(hidden_dim//2, normalize=True)
