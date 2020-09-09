@@ -143,11 +143,12 @@ class TestTrainingPipeline():
         # Check saved weight
         final_weight = experiment_dir.joinpath('{}.pth'.format(config.experiment_name))
         epoch_weight = run_dir.joinpath("{}-epoch-0.pth".format(config.experiment_name))
+        last_weight = run_dir.joinpath("{}-last.pth".format(config.experiment_name))
         best_loss_weight = run_dir.joinpath("{}-best-loss.pth".format(config.experiment_name))
         best_acc_weight = run_dir.joinpath("{}-best-accuracy.pth".format(config.experiment_name))
         best_prec_weight = run_dir.joinpath("{}-best-precision (micro).pth".format(config.experiment_name))
-        assert final_weight.exists() and epoch_weight.exists() and best_loss_weight.exists()
-        assert best_acc_weight.exists() and best_prec_weight.exists()
+        assert final_weight.exists() and epoch_weight.exists() and last_weight.exists()
+        assert best_loss_weight.exists() and best_acc_weight.exists() and best_prec_weight.exists()
 
         # Check local_runs log is generated
         assert Path('experiments/local_runs.log').exists()
