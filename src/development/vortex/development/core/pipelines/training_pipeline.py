@@ -351,9 +351,11 @@ class TrainingPipeline(BasePipeline):
                 model_fname = "{}-last.pth".format(self.config.experiment_name)
                 model_path = self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
                 if epoch == self.config.trainer.epoch-1:
-                    # Copy final weight from runs directory to experiment directory
+                    ## Copy final weight from runs directory to experiment directory
                     final_path = self.experiment_directory.joinpath("{}.pth".format(self.config.experiment_name))
                     shutil.copy(model_path, final_path)
+                    ## rename last epoch weight
+                    shutil.move(model_path, model_path.replace('-last', ''))
 
         return EasyDict({
             'epoch_losses' : epoch_losses, 
