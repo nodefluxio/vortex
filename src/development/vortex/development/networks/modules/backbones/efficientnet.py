@@ -533,6 +533,19 @@ def resolve_norm_layer(kwargs, default=nn.BatchNorm2d):
         raise RuntimeError("'norm_layer' arguments should be nn.Module instance")
     return norm_layer
 
+def resolve_norm_args(kwargs):
+    bn_args = {}
+    if kwargs.pop('bn_tf', False):
+        bn_args = dict(momentum=TF_BN_MOMENTUM, eps=TF_BN_EPSILON)
+    bn_momentum = kwargs.pop('bn_momentum', None)
+    if bn_momentum is not None:
+        bn_args['momentum'] = bn_momentum
+    bn_eps = kwargs.pop('bn_eps', None)
+    if bn_eps is not None:
+        bn_args['eps'] = bn_eps
+    return bn_args
+
+
 def _create_model(variant, block_def, global_params, arch_params, num_classes,
         override_params, pretrained, progress, **kwargs):
     assert isinstance(arch_params, container_abcs.Sequence), \
