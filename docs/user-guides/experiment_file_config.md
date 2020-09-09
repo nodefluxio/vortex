@@ -215,7 +215,6 @@ trainer: {
     epoch: 200,
     save_epoch: 1,
     save_best_metrics: [loss,mean_ap],
-    save_last_epoch: True,
     driver: {
         module: DefaultTrainer,
         args: {
@@ -239,7 +238,6 @@ Arguments :
 
 - `epoch` (int) : number of dataset iteration (epoch) being done on the training dataset. 1 epoch is 1 dataset iteration
 - `save_epoch` (int, optional) : number of epoch before a model checkpoint being saved for backup.
-- `save_last_epoch` (bool, optional) : save last epoch model, this is useful when you are planning to resume training later on but doesn't want to use `save_epoch`.
 - `save_best_metrics` (str, list, optional) : list of metrics or single metrics name to be monitored to save the best weight. Available options:
 
     - `loss` : per-epoch training loss
