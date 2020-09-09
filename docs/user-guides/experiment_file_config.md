@@ -237,8 +237,8 @@ Arguments :
     - `args` (dict) : the corresponding arguments to the respective scheduler `method`
 
 - `epoch` (int) : number of dataset iteration (epoch) being done on the training dataset. 1 epoch is 1 dataset iteration
-- `save_epoch` (int,optional) : number of epoch before a model checkpoint being saved for backup.
-- `save_best_metrics` (list.optional) : list of metrics to be monitored to save the best weight. Available options :
+- `save_epoch` (int, optional) : number of epoch before a model checkpoint being saved for backup.
+- `save_best_metrics` (str, list, optional) : list of metrics or single metrics name to be monitored to save the best weight. Available options:
 
     - `loss` : per-epoch training loss
 

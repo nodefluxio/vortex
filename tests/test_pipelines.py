@@ -143,11 +143,12 @@ class TestTrainingPipeline():
         # Check saved weight
         final_weight = experiment_dir.joinpath('{}.pth'.format(config.experiment_name))
         epoch_weight = run_dir.joinpath("{}-epoch-0.pth".format(config.experiment_name))
+        last_weight = run_dir.joinpath("{}-last.pth".format(config.experiment_name))
         best_loss_weight = run_dir.joinpath("{}-best-loss.pth".format(config.experiment_name))
         best_acc_weight = run_dir.joinpath("{}-best-accuracy.pth".format(config.experiment_name))
         best_prec_weight = run_dir.joinpath("{}-best-precision (micro).pth".format(config.experiment_name))
-        assert final_weight.exists() and epoch_weight.exists() and best_loss_weight.exists()
-        assert best_acc_weight.exists() and best_prec_weight.exists()
+        assert final_weight.exists() and epoch_weight.exists() and last_weight.exists()
+        assert best_loss_weight.exists() and best_acc_weight.exists() and best_prec_weight.exists()
 
         # Check local_runs log is generated
         assert Path('experiments/local_runs.log').exists()
@@ -157,8 +158,15 @@ class TestTrainingPipeline():
         required_ckpt = ('epoch', 'state_dict', 'optimizer_state', 'class_names', 'config')
         assert all((k in ckpt) for k in required_ckpt)
         assert ckpt['config'] == cfg
+        assert ckpt['epoch'] == cfg.trainer.epoch
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
         assert not 'scheduler_state' in ckpt if not scheduler else 'scheduler_state' in ckpt
+        assert 'best_metrics' in ckpt
+
+        ckpt = torch.load(best_loss_weight)
+        assert ckpt['best_metrics']['loss'] == train_executor.best_metrics['loss']
+        ckpt = torch.load(best_acc_weight)
+        assert ckpt['best_metrics']['accuracy'] == train_executor.best_metrics['accuracy']
 
     def test_fresh_train_with_ckpt(self):
         # Instantiate Training
@@ -218,10 +226,11 @@ class TestTrainingPipeline():
             cfg = deepcopy(config)
             info_holder = train_info
         cfg.checkpoint = info_holder.run_directory/'test_classification_pipelines-epoch-0.pth'
-        train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False,resume=True)
+        train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False, resume=True)
 
         ckpt = torch.load(cfg.checkpoint)
         assert state_dict_is_equal(ckpt['state_dict'], train_executor.model_components.network.state_dict())
+        assert ckpt['best_metrics'] == train_executor.best_metrics
 
         output = train_executor.run()
 

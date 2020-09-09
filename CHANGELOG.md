@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - learning rate scheduler value plan visualizer script in [`scripts/visualize_learning_rate.py`](scripts/visualize_learning_rate.py)
 - `save_best_metrics` config to save model checkpoint on best metrics
+- always save checkpoint of last epoch model
+- save `best_metrics` value in model checkpoint
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
