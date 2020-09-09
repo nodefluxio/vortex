@@ -519,7 +519,8 @@ class DETR(nn.Module):
     def forward(self, samples):
         if isinstance(samples, (list, torch.torch.Tensor)):
             samples = NestedTensor.from_batch_tensor(samples)
-        _,_,x = self.backbone(samples.tensors)
+        # _,_,x = self.backbone(samples.tensors)
+        x = self.backbone(samples.tensors)
         mask = F.interpolate(samples.mask[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
         features = NestedTensor(x, mask)
         pos = self.position_embedding(features).to(x.dtype)
