@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `save_best_metrics` config to save model checkpoint on best metrics
 - always save checkpoint of last epoch model
 - save `best_metrics` value in model checkpoint
+- support for experimental [DETR model](https://github.com/facebookresearch/detr), this model is still unable to be exported caused by the limitation in current exporter design
+- support for per parameter options (see [PyTorch Optimizer](https://pytorch.org/docs/stable/optim.html#per-parameter-options)) 
+using `'param_groups'` key in model components.
+
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
@@ -21,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - changed `StepLRWithBurnIn` to `StepLRWithWarmUp` scheduler
 - changed `CosineLRScheduler` to `CosineLRWithWarmUp` scheduler
 - changed `TanhLRScheduler` to `TanhLRWithWarmUp` scheduler
+- `BaseTrainer.create_optimizer` only accept model parameters dict (e.g. from `model.parameters()`) instead of the model itself
+
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
