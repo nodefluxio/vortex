@@ -14,9 +14,9 @@ from sklearn.metrics import precision_recall_fscore_support
 
 from vortex.development.predictor.base_module import BasePredictor
 
-from .base_validator import BaseValidator
+from .base_validator import BaseMetricValidator
 
-class ClassificationValidator(BaseValidator):
+class ClassificationValidator(BaseMetricValidator):
     ## TODO : read from core task definition
     __output_format__ = ['class_label', 'class_confidence']
     def __init__(self, predictor, dataset, device = torch.device('cpu'), *args, **kwargs):
