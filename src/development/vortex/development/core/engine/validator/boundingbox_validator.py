@@ -27,10 +27,10 @@ from vortex.development.core.factory import create_runtime_model
 from vortex.development.predictor.base_module import BasePredictor, create_predictor
 from vortex.development.predictor.utils import get_prediction_results
 
-from .base_validator import BaseValidator
+from .base_validator import BaseMetricValidator
 from vortex.runtime.basic_runtime import BaseRuntime
 
-class BoundingBoxValidator(BaseValidator):
+class BoundingBoxValidator(BaseMetricValidator):
     __output_format__ = ['bounding_box', 'class_label', 'class_confidence']
     ## model output format requirements
     def __init__(self, 

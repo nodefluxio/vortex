@@ -6,7 +6,7 @@ from typing import Type
 from functools import singledispatch
 
 from vortex.development.predictor import create_predictor
-from .base_validator import BaseRuntime, BaseValidator
+from .base_validator import BaseRuntime, BaseMetricValidator
 from .boundingbox_validator import BoundingBoxValidator
 from .classification_validator import ClassificationValidator
 from vortex.development.core.factory import create_runtime_model
@@ -16,7 +16,7 @@ from vortex.development.core.factory import create_runtime_model
 ## TODO : for each task, make sure output_format requirements is unique
 task_validator_map = dict()
 
-def register_validator(task: str, validator_type : Type[BaseValidator]):
+def register_validator(task: str, validator_type : Type[BaseMetricValidator]):
     assert task not in task_validator_map
     task_validator_map.update({task: validator_type})
     return validator_type

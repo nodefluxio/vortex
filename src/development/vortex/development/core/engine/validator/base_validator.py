@@ -15,7 +15,7 @@ from easydict import EasyDict
 from collections import OrderedDict
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Union, List, Dict, Type, Any
+from typing import Union, List, Dict, Type, Any, Iterable
 
 from vortex.development.predictor.base_module import BasePredictor, create_predictor
 from vortex.development.predictor.utils import get_prediction_results
@@ -23,6 +23,7 @@ from vortex.development.predictor.utils import get_prediction_results
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.development.core.factory import create_runtime_model
+from vortex.development.utils.data.loader 
 # from vortex.development.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex.runtime.basic_runtime import BaseRuntime
@@ -73,7 +74,7 @@ class ResourceMonitorWrapper(object):
         for i in range(len(self.monitors)):
             self.monitors[i].stop()
 
-class BaseValidator:
+class BaseMetricValidator:
     """
     base class for validation
     """
@@ -385,3 +386,32 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor) :
             self.predictor.train(is_training)
         return self.metrics
+
+class LossValidator:
+    def __init__(self, model: Type[nn.Module],criterion: Type[nn.Module],dataloader: Iterable):
+        self.model = model
+        if not isinstance(self.model, torch.nn.Module):
+            raise RuntimeError("`LossValidator` class only accept torch.nn.Module object as model")
+        self.dataloader = dataloader
+        self.criterion = criterion
+
+    @torch.no_grad()
+    def calc_val_loss(self):
+        epoch_loss = 0.
+        device = list(self.model.parameters())[0].device
+        for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),desc=" val", leave=False):
+            inputs = inputs.to(device)
+            if isinstance(targets, torch.Tensor):
+                targets = targets.to(device)
+            preds = self.model(inputs)
+            batch_loss = self.criterion(preds, targets)
+            epoch_loss += batch_loss.detach()
+        return (epoch_loss / len(dataloader))
+
+    def __call__(self):
+        is_training = self.model.training
+        self.model.eval()
+        val_loss = self.calc_val_loss()
+        self.model.train(is_training)
+        return val_loss
+            
