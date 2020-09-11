@@ -1,5 +1,13 @@
 experiment_name: shufflenetv2x100_softmax_cifar10
-logging: None
+logging: {
+  module: comet_ml,
+  args: {
+      api_key: 0kZ5vwvCG7xBToHOeptFxtyxu,
+      project_name: vortex-classification,
+      workspace: hyperion-rg
+  },
+  pytz_timezone: Asia/Jakarta
+}
 checkpoint: None
 device: 'cuda:0'
 output_directory: experiments/outputs
@@ -24,7 +32,7 @@ dataset: {
 dataloader: {
   module: PytorchDataLoader,
   args: {
-    num_workers: 0,
+    num_workers: 4,
     batch_size: 256,
     shuffle: True,
   },
@@ -38,7 +46,7 @@ model: {
     freeze_backbone: False
   },
   preprocess_args: {
-    input_size: 32,
+    input_size: 224,
     input_normalization: {
       mean: [0.4914, 0.4822, 0.4465],
       std: [0.2023, 0.1994, 0.2010],
@@ -52,24 +60,9 @@ model: {
 }
 trainer: {
   optimizer: {
-    method: SGD,
+    method: Adam,
     args: {
-      lr: 0.0263,
-      momentum: 0.9,
-      weight_decay: 0.0005,
-    }
-  },
-  lr_scheduler : {
-    method : CosineLRWithWarmUp,
-    args : {
-      t_initial : 20,
-      t_mul : 1.0,
-      lr_min : 0.00001,
-      warmup_lr_init: 0.00001,
-      warmup_t: 2,
-      cycle_limit : 1,
-      t_in_epochs : True,
-      decay_rate : 0.1,
+      lr: 0.001
     }
   },
   driver: {
@@ -81,7 +74,7 @@ trainer: {
 }
 validator: {
   args: {},
-  val_epoch: 1,
+  val_epoch: 4,
 }
 exporter : {
   module : onnx,
