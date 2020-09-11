@@ -20,11 +20,10 @@ from typing import Union, List, Dict, Type, Any, Iterable
 
 from vortex.development.predictor.base_module import BasePredictor, create_predictor
 from vortex.development.predictor.utils import get_prediction_results
-
+from vortex.development.networks.modules.preprocess.normalizer import to_tensor,normalize
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.development.core.factory import create_runtime_model
-from vortex.development.utils.data.loader 
 # from vortex.development.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex.runtime.basic_runtime import BaseRuntime
@@ -370,7 +369,7 @@ class BaseMetricValidator:
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" eval", leave=True):
+                                                desc=" VAL METRICS", leave=True):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
@@ -389,25 +388,33 @@ class BaseMetricValidator:
         return self.metrics
 
 class LossValidator:
-    def __init__(self, model: Type[nn.Module],criterion: Type[nn.Module],dataloader: Iterable):
+    def __init__(self, model: Type[torch.nn.Module],criterion: Type[torch.nn.Module],dataloader: Iterable):
         self.model = model
         if not isinstance(self.model, torch.nn.Module):
             raise RuntimeError("`LossValidator` class only accept torch.nn.Module object as model")
         self.dataloader = dataloader
+        self.preprocess_args = dataloader.dataset.preprocess_args
+        if 'scaler' not in self.preprocess_args.input_normalization:
+            self.preprocess_args.input_normalization.scaler = 255
         self.criterion = criterion
 
     @torch.no_grad()
     def calc_val_loss(self):
         epoch_loss = 0.
         device = list(self.model.parameters())[0].device
-        for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),desc=" val", leave=False):
+        for i, (inputs, targets) in tqdm(enumerate(self.dataloader), total=len(self.dataloader),desc=" VAL LOSS", leave=False):
+            inputs = to_tensor(inputs,scaler=self.preprocess_args.input_normalization.scaler)
+            inputs = normalize(
+                inputs, 
+                self.preprocess_args.input_normalization.mean, 
+                self.preprocess_args.input_normalization.std)
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
             preds = self.model(inputs)
             batch_loss = self.criterion(preds, targets)
             epoch_loss += batch_loss.detach()
-        return (epoch_loss / len(dataloader))
+        return (epoch_loss / len(self.dataloader))
 
     def __call__(self):
         is_training = self.model.training
