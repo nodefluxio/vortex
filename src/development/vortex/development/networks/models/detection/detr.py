@@ -442,15 +442,6 @@ class DETR(nn.Module):
             kwargs['replace_stride_with_dilation'] = [False, False, dilation]
         elif dilation:
             warnings.warn("'dilation' argument is not yet used for backbone other than resnet.")
-        # super().__init__(backbone, feature_type='tri_stage_fpn', pretrained_backbone=pretrained_backbone,
-        #     freeze_backbone=False, **kwargs)
-        # ## always freeze stage1 and stage2 or freeze all when not train_backbone
-        # if lr_backbone <= 0:
-        #     train_backbone = False
-        # for name, p in self.backbone.named_parameters():
-        #     if not train_backbone or 'stage3' not in name and 'stage4' not in name and 'stage5' not in name:
-        #         p.requires_grad_(False)
-        # backbone_num_channels = self.backbone.out_channels[-1]
 
         super().__init__()
         backbone = get_backbone(backbone, pretrained=pretrained_backbone, **kwargs)
@@ -468,23 +459,6 @@ class DETR(nn.Module):
             backbone.stage4,
             backbone.stage5
         )
-
-        # backbone = getattr(torchvision.models.resnet, backbone)(pretrained=True,
-        #     replace_stride_with_dilation=[False, False, dilation],
-        #     norm_layer=FrozenBatchNorm2d)
-        # if lr_backbone <= 0:
-        #     train_backbone = False
-        # for name, parameter in backbone.named_parameters():
-        #     if not train_backbone or 'layer2' not in name and 'layer3' not in name and 'layer4' not in name:
-        #         parameter.requires_grad_(False)
-        # self.backbone = nn.Sequential(
-        #     backbone.conv1, backbone.bn1, backbone.relu, backbone.maxpool,
-        #     backbone.layer1,
-        #     backbone.layer2,
-        #     backbone.layer3,
-        #     backbone.layer4
-        # )
-        # backbone_num_channels = 512 * backbone.layer1[0].expansion
 
         if position_embedding in ('v2', 'sine'):
             self.position_embedding = PositionEmbeddingSine(hidden_dim//2, normalize=True)
