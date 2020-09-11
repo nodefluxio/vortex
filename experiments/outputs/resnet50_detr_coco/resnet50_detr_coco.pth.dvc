@@ -1,0 +1,3 @@
+outs:
+- md5: 72b5e3ca054e12b59c00edffe95f137e
+  path: resnet50_detr_coco.pth
