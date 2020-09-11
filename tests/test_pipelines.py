@@ -1,11 +1,5 @@
 import os
 import sys
-sys.path.insert(0,'src/runtime')
-sys.path.insert(0,'src/development')
-from pathlib import Path
-proj_path = os.path.abspath(Path(__file__).parents[3])
-sys.path.append(proj_path)
-
 import shutil
 import pytest
 import numpy as np
@@ -17,6 +11,10 @@ from pathlib import Path
 from easydict import EasyDict
 from collections import OrderedDict
 from copy import deepcopy
+
+project_path = Path(__file__).parents[2]
+sys.path.insert(0, str(project_path.joinpath('src', 'runtime')))
+sys.path.insert(0, str(project_path.joinpath('src', 'development')))
 
 from vortex.development.core.pipelines import (
     TrainingPipeline,
@@ -143,7 +141,7 @@ class TestTrainingPipeline():
         # Check saved weight
         final_weight = experiment_dir.joinpath('{}.pth'.format(config.experiment_name))
         epoch_weight = run_dir.joinpath("{}-epoch-0.pth".format(config.experiment_name))
-        last_weight = run_dir.joinpath("{}-last.pth".format(config.experiment_name))
+        last_weight = run_dir.joinpath("{}.pth".format(config.experiment_name))
         best_loss_weight = run_dir.joinpath("{}-best-loss.pth".format(config.experiment_name))
         best_acc_weight = run_dir.joinpath("{}-best-accuracy.pth".format(config.experiment_name))
         best_prec_weight = run_dir.joinpath("{}-best-precision (micro).pth".format(config.experiment_name))
