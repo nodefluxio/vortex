@@ -319,7 +319,7 @@ class TrainingPipeline(BasePipeline):
                 self.experiment_logger.log_on_epoch_update(metrics_log)
             
             # Do validation process if configured
-            if self.valid_for_validation and (((epoch+1) % self.val_epoch == 0) or epoch == 0):
+            if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.metric_validator.predictor.model is self.model_components.network)
                 val_results = self.metric_validator()
                 val_loss = self.loss_validator()
