@@ -321,9 +321,9 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             cls_names = ckpt['class_names']
         else:
             dataset_name = None
-            if 'name' in config.dataset.train:
+            if 'dataset' in config and 'name' in config.dataset.train:
                 dataset_name = config.dataset.train.name
-            elif 'dataset' in config.dataset.train:
+            elif 'dataset' in config and 'dataset' in config.dataset.train:
                 dataset_name = config.dataset.train.dataset
 
             if dataset_name:
@@ -348,7 +348,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
                             "'class_names' to None.")
             else:
                 warnings.warn("Dataset {} is not available, setting 'class_names' to None.".format(
-                    config.dataset))
+                    config.dataset if 'dataset' in config else ''))
         self.model.class_names = cls_names
 
     def _run_inference(self,
