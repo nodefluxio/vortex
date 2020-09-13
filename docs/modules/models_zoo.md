@@ -277,3 +277,106 @@ List of dictionary of `np.ndarray` pair, output key :
 **NOTES** : row orders are consistent : `bounding_box[i]` is associated with `class_label[i]`, etc..
 
 ---
+
+### DETR
+
+Implementation of [facebook research's DETR model](https://github.com/facebookresearch/detr)
+
+**DISCLAIMER : THIS MODEL STILL COULD NOT BE EXPORTED**
+
+Reference : 
+
+- [End-to-End Object Detection with Transformers](https://arxiv.org/abs/2005.12872)
+
+Example config:
+
+```yaml
+model : {
+  name : DETR,
+  preprocess_args : {
+    input_size : 800,
+    input_normalization : {
+      mean : [0.485, 0.456, 0.406],
+      std : [0.229, 0.224, 0.225],
+      scaler : 255
+    }
+  },
+  network_args : {
+    backbone : resnet50,
+    n_classes : 20,
+    pretrained_backbone: True,
+    num_decoder_layers: 6,
+    aux_loss: True,
+    lr_backbone: 0.00001,
+  },
+  loss_args : {},
+  postprocess_args : {}
+}
+```
+
+#### Arguments
+
+- `preprocess_args` : 
+
+    see [this section](../user-guides/experiment_file_config.md#model)
+
+- `network_args` :
+
+    - `backbone` (str): backbone name.
+        supported backbones network is provided at [backbones network section](../modules/backbones.md)
+    - `n_classes` (int): number of object classes.
+    - `pretrained_backbone` (bool) : using the provided pretrained backbone for weight initialization (transfer learning)
+    - `train_backbone `(bool, optional) : whether to train the backbones or not.
+        Default: True
+    - `num_queries` (int, optional): number of object queries, i.e. detection slot. This is the maximum number of objects
+        DETR can detect in a single image. Default: 100
+    - `aux_loss` (bool, optional): whether to use auxiliary decoding losses (loss at each decoder layer).
+        Default: True
+    - `position_embedding` (str, optional): position embedding layer to be used.
+        Available: [`sine`, `learned`]. Default: `sine`
+    - `hidden_dim` (int, optional): number of hidden dimension of position embedding, transformer, and MLP layer.
+        Default: 256
+    - `nhead` (int, optional): number of heads in the multiheadattention models.
+        Default: 8
+    - `num_encoder_layers` (int, optional): number of sub-encoder-layers of encoder in transformer layer.
+        Default: 6
+    - `num_decoder_layers` (int, optional): number of sub-decoder-layers of decoder in transformer layer.
+        Deafult: 6
+    - `dim_feedforward` (int, optional): dimension of the feedforward transformer layer.
+        Default: 2048
+    - `dropout` (float, optional): dropout value of transformer model.
+        Deafult: 0.1
+    - `activation` (str, optional): activation layer name.
+        Available: ['relu', 'gelu', 'glu']. Deafult: 'relu'
+    - `lr_backbone` (float, optional): backbone network learning rate value.
+        Default: 1e-5
+
+- `loss_args` :
+
+    - `matcher` (str, optional): matcher name to compute a matching between targets and proposals.
+        Available: 'hungairan'. Default: 'hungarian'
+    - `eos_coef` (float, optional): relative classification weight applied to the no-object category.
+        Default: 0.1
+    - `weight_ce` (float, optional): cross entropy loss weight.
+        Default: 1.0
+    - `weight_bbox`: bounding box loss weight.
+        Default: 5.0
+    - `weight_giou`: generalized iou loss weight.
+        Default: 2.0
+
+- `postprocess_args` :
+
+    No available arguments
+
+#### Outputs
+
+List of dictionary of `np.ndarray` pair, output key :
+
+- `bounding_box` (`np.ndarray`) : array with size `n_detections * 4`, each column on `x_min,y_min,x_max,y_max` format
+- `class_label` (`np.ndarray`) : array with size of `n_detectionx * 1`, each column represents class label
+- `class_confidence` (`np.ndarray`) : array with size of `n_detections * 1`, each column represents class confidence
+
+
+**NOTES** : row orders are consistent : `bounding_box[i]` is associated with `class_label[i]`, etc..
+
+---
