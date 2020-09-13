@@ -1,3 +1,12 @@
+""" EfficientNet
+Paper: EfficientNet: Rethinking Model Scaling for CNNs - https://arxiv.org/abs/1905.11946
+
+Heavily inspired by Ross Wightman's definition
+https://github.com/rwightman/pytorch-image-models/tree/master/timm/models
+
+Hacked together by Vortex Team
+"""
+
 import re
 import math
 import torch
