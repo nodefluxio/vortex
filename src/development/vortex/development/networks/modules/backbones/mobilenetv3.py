@@ -13,11 +13,8 @@ import torch.nn.functional as F
 from torch.hub import load_state_dict_from_url
 from torch._six import container_abcs
 
-from .efficientnet import (
-    EfficientNetBuilder, effnet_init_weights, 
-    resolve_act_layer, resolve_norm_layer,
-    resolve_norm_args
-)
+from .efficientnet import EfficientNetBuilder, effnet_init_weights
+from ..utils.layers import resolve_act_layer, resolve_norm_args, resolve_norm_layer
 from ..utils.arch_utils import round_channels
 from ..utils.conv2d import create_conv2d
 from ..utils.activations import get_act_fn
@@ -155,8 +152,8 @@ def _create_model(variant, block_def, global_params, num_classes, channel_multip
     drop_rate = 0.
     if 'dropout_rate' in kwargs:
         drop_rate = kwargs['dropout_rate']
-    if 'drop_parh_rate' in kwargs:
-        global_params['drop_path_rate'] = kwargs.pop('drop_parh_rate')
+    if 'drop_path_rate' in kwargs:
+        global_params['drop_path_rate'] = kwargs.pop('drop_path_rate')
     arch_params = (channel_multiplier, 1.0, drop_rate, 224)
     model = MobileNetV3(block_def, arch_params, global_params, **kwargs)
     if pretrained:
@@ -234,7 +231,7 @@ def _mobilenet_v3(variant, num_classes=1000, channel_multiplier=1.0, override_pa
             ]
     else:
         num_features = 1280
-        if 'minimal':
+        if 'minimal' in variant:
             act_layer_def = 'relu'
             block_def = [
                 ['ds_r1_k3_s1_e1_c16'],
