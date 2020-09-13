@@ -7,37 +7,53 @@ Edited by Vortex Team
 import torch
 import torch.nn as nn
 
+from copy import deepcopy
+
 from .conv2d import create_conv2d
 from .activations import sigmoid, get_act_layer
 from .arch_utils import make_divisible
 
-_SE_ARGS_DEFAULT = dict(
-    gate_fn=sigmoid,
-    act_layer=None,
-    reduce_mid=False,
-    divisor=1
-)
+TF_BN_MOMENTUM = 1 - 0.99
+TF_BN_EPSILON = 1e-3
 
-def resolve_se_args(kwargs, in_chs, act_layer=None):
-    se_kwargs = kwargs.copy() if kwargs is not None else {}
-    # fill in args that aren't specified with the defaults
-    for k, v in _SE_ARGS_DEFAULT.items():
-        se_kwargs.setdefault(k, v)
-    # some models, like MobilNetV3, calculate SE reduction chs from the containing block's mid_ch instead of in_ch
-    if not se_kwargs.pop('reduce_mid'):
-        se_kwargs['reduced_base_chs'] = in_chs
-    # act_layer override, if it remains None, the containing block's act_layer will be used
-    if se_kwargs['act_layer'] is None:
-        assert act_layer is not None
+def resolve_se_args(kwargs, in_channel, act_layer=None):
+    se_kwargs = {
+        'reduce_mid': False,
+        'divisor': 1,
+        'act_layer': None,
+        'gate_fn': sigmoid
+    }
+    if kwargs is not None:
+        se_kwargs.update(kwargs)
+    if not se_kwargs.get('reduce_mid', False):
+        se_kwargs['reduced_base_chs'] = in_channel
+    if not 'act_layer' in se_kwargs or se_kwargs['act_layer'] is None:
         se_kwargs['act_layer'] = act_layer
     return se_kwargs
-
 
 def resolve_act_layer(kwargs, default='relu'):
     act_layer = kwargs.pop('act_layer', default)
     if isinstance(act_layer, str):
         act_layer = get_act_layer(act_layer)
     return act_layer
+
+def resolve_norm_layer(kwargs, default=nn.BatchNorm2d):
+    norm_layer = kwargs.pop('norm_layer', default)
+    if isinstance(norm_layer, nn.Module):
+        raise RuntimeError("'norm_layer' arguments should be nn.Module instance")
+    return norm_layer
+
+def resolve_norm_args(kwargs):
+    bn_args = {}
+    if kwargs.pop('bn_tf', False):
+        bn_args = dict(momentum=TF_BN_MOMENTUM, eps=TF_BN_EPSILON)
+    bn_momentum = kwargs.pop('bn_momentum', None)
+    if bn_momentum is not None:
+        bn_args['momentum'] = bn_momentum
+    bn_eps = kwargs.pop('bn_eps', None)
+    if bn_eps is not None:
+        bn_args['eps'] = bn_eps
+    return bn_args
 
 
 class SqueezeExcite(nn.Module):

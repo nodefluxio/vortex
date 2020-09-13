@@ -10,6 +10,7 @@ from torch._six import container_abcs
 from ..utils.activations import get_act_layer
 from ..utils.arch_utils import make_divisible, round_channels
 from ..utils.layers import DropPath, SqueezeExcite
+from ..utils.layers import resolve_act_layer, resolve_norm_layer, resolve_se_args
 from ..utils.conv2d import create_conv2d, CondConv2d
 from .base_backbone import Backbone, ClassifierFeature
 
@@ -49,11 +50,6 @@ supported_models = list(model_urls.keys())
 
 TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
-_SE_KWARGS_DEFAULT = {
-    'reduce_mid': False,
-    'divisor': 1,
-    'act_layer': None
-}
 
 
 class ConvBnAct(nn.Module):
@@ -98,12 +94,7 @@ class DepthwiseSeparableConv(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            if se_kwargs is None:
-                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.get('reduce_mid', False):
-                se_kwargs['reduced_base_chs'] = in_channel
-            if se_kwargs['act_layer'] is None:
-                se_kwargs['act_layer'] = act_layer
+            se_kwargs = resolve_se_args(se_kwargs, in_channel, act_layer)
             self.se = SqueezeExcite(in_channel, se_ratio=se_ratio, **se_kwargs)
         else:
             self.se = nn.Identity()
@@ -165,12 +156,7 @@ class InvertedResidualBlock(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            if se_kwargs is None:
-                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.get('reduce_mid', False):
-                se_kwargs['reduced_base_chs'] = in_channel
-            if se_kwargs['act_layer'] is None:
-                se_kwargs['act_layer'] = act_layer
+            se_kwargs = resolve_se_args(se_kwargs, in_channel, act_layer)
             self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio, **se_kwargs)
         else:
             self.se = nn.Identity()
@@ -233,12 +219,7 @@ class EdgeResidual(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            if se_kwargs is None:
-                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.get('reduce_mid', False):
-                se_kwargs['reduced_base_chs'] = in_channel
-            if se_kwargs['act_layer'] is None:
-                se_kwargs['act_layer'] = act_layer
+            se_kwargs = resolve_se_args(se_kwargs, in_channel, act_layer)
             self.se = SqueezeExcite(mid_channel, se_ratio=se_ratio, **se_kwargs)
         else:
             self.se = nn.Identity()
@@ -522,31 +503,6 @@ def effnet_init_weights(model, fix_group_fanout=True):
             init_range = 1.0 / math.sqrt(fan_in + fan_out)
             m.weight.data.uniform_(-init_range, init_range)
             m.bias.data.zero_()
-
-
-def resolve_act_layer(kwargs, default='relu'):
-    act_layer = kwargs.pop('act_layer', default)
-    if isinstance(act_layer, str):
-        act_layer = get_act_layer(act_layer)
-    return act_layer
-
-def resolve_norm_layer(kwargs, default=nn.BatchNorm2d):
-    norm_layer = kwargs.pop('norm_layer', default)
-    if isinstance(norm_layer, nn.Module):
-        raise RuntimeError("'norm_layer' arguments should be nn.Module instance")
-    return norm_layer
-
-def resolve_norm_args(kwargs):
-    bn_args = {}
-    if kwargs.pop('bn_tf', False):
-        bn_args = dict(momentum=TF_BN_MOMENTUM, eps=TF_BN_EPSILON)
-    bn_momentum = kwargs.pop('bn_momentum', None)
-    if bn_momentum is not None:
-        bn_args['momentum'] = bn_momentum
-    bn_eps = kwargs.pop('bn_eps', None)
-    if bn_eps is not None:
-        bn_args['eps'] = bn_eps
-    return bn_args
 
 
 def _create_model(variant, block_def, global_params, arch_params, num_classes,
