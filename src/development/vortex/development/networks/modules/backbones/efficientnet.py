@@ -98,8 +98,9 @@ class DepthwiseSeparableConv(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            se_kwargs = se_kwargs if se_kwargs is not None else deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.pop('reduce_mid', False):
+            if se_kwargs is None:
+                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
+            if not se_kwargs.get('reduce_mid', False):
                 se_kwargs['reduced_base_chs'] = in_channel
             if se_kwargs['act_layer'] is None:
                 se_kwargs['act_layer'] = act_layer
@@ -164,8 +165,9 @@ class InvertedResidualBlock(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            se_kwargs = se_kwargs if se_kwargs is not None else deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.pop('reduce_mid', False):
+            if se_kwargs is None:
+                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
+            if not se_kwargs.get('reduce_mid', False):
                 se_kwargs['reduced_base_chs'] = in_channel
             if se_kwargs['act_layer'] is None:
                 se_kwargs['act_layer'] = act_layer
@@ -231,8 +233,9 @@ class EdgeResidual(nn.Module):
 
         # Squeeze-and-excitation
         if has_se:
-            se_kwargs = se_kwargs if se_kwargs is not None else deepcopy(_SE_KWARGS_DEFAULT)
-            if not se_kwargs.pop('reduce_mid', False):
+            if se_kwargs is None:
+                se_kwargs = deepcopy(_SE_KWARGS_DEFAULT)
+            if not se_kwargs.get('reduce_mid', False):
                 se_kwargs['reduced_base_chs'] = in_channel
             if se_kwargs['act_layer'] is None:
                 se_kwargs['act_layer'] = act_layer
@@ -369,7 +372,7 @@ class EfficientNetBuilder(nn.Module):
         }
         block_type = layer_args.pop('block_type')
 
-        if block_type != 'cn':
+        if block_type != 'cn' and 'drop_path_rate' in self.global_params:
             drop_rate = self.global_params['drop_path_rate'] * self.layer_idx / self.total_layers
             layer_args['drop_path_rate'] = drop_rate
 
