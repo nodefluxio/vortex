@@ -493,7 +493,6 @@ class DETR(nn.Module):
     def forward(self, samples):
         if isinstance(samples, (list, torch.torch.Tensor)):
             samples = NestedTensor.from_batch_tensor(samples)
-        # _,_,x = self.backbone(samples.tensors)
         x = self.backbone(samples.tensors)
         mask = F.interpolate(samples.mask[None].float(), size=x.shape[-2:]).to(torch.bool)[0]
         features = NestedTensor(x, mask)
@@ -639,7 +638,7 @@ class DETRLoss(nn.Module):
             n_classes: number of object categories, omitting the special no-object category
             mask: whether to include mask loss, i.e. for instance segmentation
             aux_loss: whether to also compute for auxilary loss
-            matcher: mather name to compute a matching between targets and proposals, available: 'hungairan'
+            matcher: matcher name to compute a matching between targets and proposals, available: 'hungairan'
             eos_coef: relative classification weight applied to the no-object category
             weight_ce: cross entropy loss weight
             weight_bbox: bounding box loss weight
