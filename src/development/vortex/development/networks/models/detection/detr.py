@@ -1034,7 +1034,7 @@ def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, l
     model_components = {
         'network': model,
         'loss': DETRLoss(**loss_args),
-        'collate_fn': 'DETRColatte',
+        'collate_fn': 'DETRCollate',
         'postprocess': DETRPostProcess(**postprocess_args),
         'param_groups': optim_params
     }
