@@ -87,6 +87,11 @@ class NestedTensor(object):
 
     @classmethod
     def from_batch_tensor(cls, tensor_list: List[torch.Tensor]):
+        if any(img.ndim == 4 and img.size(0) == 1 for img in tensor_list):
+            tensor_list = list(tensor_list)
+            for i in range(len(tensor_list)):
+                if tensor_list[i].ndim == 4 and tensor_list[i].size(0) == 1:
+                    tensor_list[i] = tensor_list[i][0]
         # TODO make this more general
         if tensor_list[0].ndim == 3:
             ## axis-wise max
@@ -102,7 +107,7 @@ class NestedTensor(object):
                 pad_img[: img.shape[0], : img.shape[1], : img.shape[2]].copy_(img)
                 m[: img.shape[1], :img.shape[2]] = False
         else:
-            raise ValueError('not supported')
+            raise ValueError("NestedTensor conversion only support 3")
         return cls(tensor, mask)
 
 
@@ -1034,7 +1039,7 @@ def create_model_components(preprocess_args: EasyDict, network_args: EasyDict, l
     model_components = {
         'network': model,
         'loss': DETRLoss(**loss_args),
-        'collate_fn': 'DETRColatte',
+        'collate_fn': 'DETRCollate',
         'postprocess': DETRPostProcess(**postprocess_args),
         'param_groups': optim_params
     }
