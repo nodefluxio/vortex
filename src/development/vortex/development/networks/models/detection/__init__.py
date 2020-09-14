@@ -66,27 +66,31 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
             model_components = module.create_model_components(
                 preprocess_args, network_args, loss_args, postprocess_args)
             if not isinstance(model_components, EasyDict):
-                raise TypeError(
-                    "return type from function create_model_components expected as EasyDict, got %s" % type(model_components))
+                raise TypeError("return type from function create_model_components "
+                    "expected as EasyDict, got {}".format(type(model_components)))
+            key_components = None
             if stage == 'train':
-                key_components = ['network', 'loss',
-                                  'collate_fn', 'postprocess']
+                key_components = ['network', 'loss', 'collate_fn', 'postprocess']
                 check_model_components_keys(
                     stage=stage, model_name=model_name,
                     key_components=key_components,
-                    returned_components=model_components)
+                    returned_components=model_components
+                )
+                if 'param_groups' in model_components:
+                    key_components.append('param_groups')
             elif stage == 'validate':
                 key_components = ['network', 'postprocess']
                 check_model_components_keys(
                     stage=stage, model_name=model_name,
                     key_components=key_components,
                     returned_components=model_components)
-            model_components = EasyDict({component: model_components[component] for component in key_components})
+            model_components = EasyDict({
+                component: model_components[component] for component in key_components
+            })
 
+            preprocess_args = {}
             if "input_normalization" in preprocess_args:
                 preprocess_args = preprocess_args.input_normalization
-            else:
-                preprocess_args = {}
             model_components.preprocess = get_preprocess('normalizer', **preprocess_args)
             model_components.network.task = 'detection' ## force
             if not hasattr(model_components.network, "output_format"):
@@ -103,11 +107,12 @@ def check_model_components_keys(stage: str, model_name: str,
         if key not in returned_components.keys():
             missing_keys.append(key)
     if len(missing_keys) > 0:
-        raise RuntimeError(
-            "dear maintainer, your returned value of create_model_components for stage '%s' on model '%s' is missing the following key(s) : %s" % (stage, model_name, repr(missing_keys)))
+        raise RuntimeError("Your returned value of create_model_components for stage '{}' on model '{}' "
+            "is missing the following key(s) : {}".format(stage, model_name, repr(missing_keys)))
 
 
 # for maintainer, register your module here :
 register_module('yolov3')
 register_module('fpn_ssd')
 register_module('retinaface')
+register_module('detr')

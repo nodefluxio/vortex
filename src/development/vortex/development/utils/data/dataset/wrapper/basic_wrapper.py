@@ -1,8 +1,9 @@
 from typing import Dict, List, Union, Callable, Tuple
 from easydict import EasyDict
-import numpy as np
-import cv2
 from pathlib import Path
+
+import numpy as np
+import warnings
 
 from ..dataset import get_base_dataset
 
@@ -44,7 +45,7 @@ class BasicDatasetWrapper():
                     duplicate_modules.append(module)
 
             if len(duplicate_modules)!=0:
-                raise RuntimeError('Detected duplicate declaration of augmentation modules in experiment file "augmentations" section, duplicate modules found = {}'.format(duplicate_module))
+                raise RuntimeError('Detected duplicate declaration of augmentation modules in experiment file "augmentations" section, duplicate modules found = {}'.format(duplicate_modules))
 
         self.dataset = get_base_dataset(
             dataset, dataset_args=dataset_args)

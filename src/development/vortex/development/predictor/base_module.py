@@ -95,7 +95,7 @@ class BasePredictor(nn.Module):
         for elem in required:
             if not elem in self.output_format:
                 raise RuntimeError("expects output_format for task %s to have `%s` key, "\
-                    "got output_format: %s" % (self.task, elem, output_format))
+                    "got output_format: %s" % (self.task, elem, self.output_format))
 
         self.eval()
 

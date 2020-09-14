@@ -1,32 +1,37 @@
 import torch
-import warnings
 import torch.nn as nn
 import torch.optim as optim
-from . import lr_scheduler
+
 import inspect
-from inspect import Signature, Parameter
+import warnings
+import types
+
 from collections import OrderedDict
 from typing import Tuple, List, Union, Type, Any, Dict
 import math
 
 from vortex.development.utils import type_utils
 from vortex.development.utils.logger.base_logger import ExperimentLogger
+from . import lr_scheduler
 
 class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']
     def __init__(self, model: Type[nn.Module], optimizer: Union[Type[optim.Optimizer], Tuple[str, Dict], Dict[str,Any]], 
                  scheduler: Union[Type[optim.lr_scheduler._LRScheduler], Tuple[str, Dict[str, Any]], Dict[str,Any]], 
-                 criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,check_annotations: bool = True):
+                 criterion: Type[nn.Module], experiment_logger : Union[Type[ExperimentLogger],None] = None,
+                 check_annotations: bool = True, param_groups: Union[List[dict]] = None):
 
         self.model = model
-        self.optimizer = type(self).create_optimizer(optimizer, self.model)
+        if param_groups is None:
+            param_groups = model.parameters()
+        self.optimizer = type(self).create_optimizer(optimizer, param_groups)
         self.scheduler = type(self).create_scheduler(scheduler, self.optimizer)
         self.criterion = criterion
         self.experiment_logger = experiment_logger
         self.global_step = 0
 
         self._check_model()
-    
+
     def _check_model(self, strict=False, check_annotations=True):
         """
         check model and loss, called after model, loss, optim, scheduler are assigned
@@ -63,16 +68,15 @@ class BaseTrainer(object):
         warn_or_error(args_exist,args_not_exist_msg)
         if not check_annotations:
             return
-        return_type_annotated = model_return_anno != Signature.empty
+        return_type_annotated = model_return_anno != inspect.Signature.empty
         loss_input_annotated = loss_input_anno is not None
         warn_or_error(return_type_annotated, "return type not annotated")
         warn_or_error(loss_input_annotated, "loss input not annotated")
         match = return_type_annotated and loss_input_annotated and type_utils.match_annotation(model_return_anno,loss_input_anno)
         warn_or_error(match, "annotation mismatch")
-            
-    
+
     @staticmethod
-    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], model: Type[nn.Module]):
+    def create_optimizer(optimizer: Union[optim.Optimizer, tuple, dict], param_groups: List[dict]):
         """
         create optimizer
         """
@@ -83,10 +87,7 @@ class BaseTrainer(object):
                 type(optimizer[0]))
             assert isinstance(optimizer[1], dict), "expect optimizer is type of Tuple[str,Dict], got optimizer[0] : %s" % (
                 type(optimizer[1]))
-            optimizer = dict(
-                module=optimizer[0],
-                args=optimizer[1],
-            )
+            optimizer = dict(module=optimizer[0], args=optimizer[1])
         if isinstance(optimizer, dict):
             if 'method' in optimizer and not 'module' in optimizer:
                 optimizer.update({'module': optimizer['method']})
@@ -95,7 +96,17 @@ class BaseTrainer(object):
                 opt_method = opt_method.replace('optim.','')
             assert hasattr(optim, opt_method), \
                 "unsupported optimizer {}".format(opt_method)
-            kwargs.update({'params' : model.parameters()})
+
+            if isinstance(param_groups, (list, tuple)):
+                assert isinstance(param_groups[0], dict), "'param_groups' should be list of dictionary, "\
+                    "got {} and contains {}".format(type(param_groups), type(param_groups[0]))
+                assert all('params' in m for m in param_groups), "all param_groups is required to have 'params' key"
+            elif not isinstance(param_groups, types.GeneratorType):
+                raise RuntimeError("'param_groups' argument should be 'model.parameters()' generator or "
+                    "a list of dictionary containing parameter groups, got type {}. See more details in "
+                    "https://pytorch.org/docs/stable/optim.html".format(type(param_groups)))
+
+            kwargs.update({'params' : param_groups})
             optimizer = getattr(optim, opt_method)(**kwargs)
         return optimizer
 
@@ -121,7 +132,7 @@ class BaseTrainer(object):
             if scheduler.step_update == None:
                 raise RuntimeError('Currently, scheduler {} is not supported, please select other scheduler'.format(type(scheduler).__name__))
         return scheduler
-    
+
     @staticmethod
     def apply_scheduler_step(scheduler,epoch,step,steps_per_epoch,accumulation_step):
         """ Apply scheduler step
@@ -144,7 +155,7 @@ class BaseTrainer(object):
 
     def train(self, dataloader, epoch: int):
         raise NotImplementedError
-    
+
     def __call__(self, dataloader, epoch: int):
         is_training = self.model.training
         self.model.train()

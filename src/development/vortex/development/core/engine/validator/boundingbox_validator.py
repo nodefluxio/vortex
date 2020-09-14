@@ -77,8 +77,7 @@ class BoundingBoxValidator(BaseValidator):
     
     def eval_init(self, *args, **kwargs):
         self.evaluator = Evaluator()
-        
-    
+
     def predict(self, image, *args, **kwargs):
         results = super(type(self),self).predict(
             image=image, **self.prediction_args
@@ -86,8 +85,7 @@ class BoundingBoxValidator(BaseValidator):
         return results
     
     def update_results(self, index, results, targets, last_index):
-        ## TODO : unify shape for single bat
-        # ch & multiple batch loader
+        ## TODO : unify shape for single batch & multiple batch loader
         if self.batch_size == 1 :
             targets = [targets]
 
@@ -106,7 +104,8 @@ class BoundingBoxValidator(BaseValidator):
     def _update_results(self, index, results, targets):
         results = results[0] # single batch
 
-        i = index
+        if results['class_label'] is not None and results['class_label'].max() >= len(self.class_names):
+            self.class_names.append('N/A') ## background
 
         self.logger('labels :')
         label_bboxes = []
@@ -117,10 +116,9 @@ class BoundingBoxValidator(BaseValidator):
         if not self.labels_fmt.class_label is None :
             class_labels = np.take(targets, self.labels_fmt.class_label.indices, 
                 axis=self.labels_fmt.class_label.axis)
-        
+
         class_labels_to_str = lambda class_label : self.class_names[class_label] \
-            if self.class_names is not None \
-                else 'class_{}'.format(class_label)
+            if self.class_names is not None else 'class_{}'.format(class_label)
 
         create_bbox = lambda gt : dict(x=gt[0],y=gt[1],w=gt[2],h=gt[3])
         to_xywh = lambda bbox : (bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1])
