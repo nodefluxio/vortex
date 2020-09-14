@@ -45,6 +45,7 @@ class BasePredictionPipeline(BasePipeline):
 
     def run(self,
             images : Union[List[str],np.ndarray],
+            coordinate: str = 'relative',
             visualize : bool = False,
             dump_visual : bool = False,
             output_dir : Union[str,Path] = '.',
@@ -140,14 +141,16 @@ class BasePredictionPipeline(BasePipeline):
             raise TypeError("'images' arguments must be provided with list of image path or list of "
                 "numpy ndarray, found {}".format(type(images[0])))
 
+        assert coordinate in ['relative', 'absolute'], "available 'coordinate': ['relative', 'absolute']"
+
         # Resize input images
         batch_vis = [mat.copy() for mat in batch_mat]
         batch_imgs = batch_mat
         results = self._run_inference(batch_imgs,**kwargs)
 
         # Transform coordinate-based result from relative coordinates to absolute value
-        results = self._check_and_transform(batch_vis = batch_vis,
-                                            batch_results = results)
+        if coordinate == 'relative':
+            results = self._check_and_transform(batch_vis = batch_vis, batch_results = results)
 
         # Visualize prediction
         if visualize:
@@ -209,23 +212,22 @@ class BasePredictionPipeline(BasePipeline):
             List: list of transformed prediction result(s) correspond to batch_vis
         """
 
-        for vis, results in zip(batch_vis, batch_results) :
+        for vis, result in zip(batch_vis, batch_results) :
             im_h, im_w, im_c = vis.shape
-            for result in [results] :
-                if 'bounding_box' in result :
-                    bounding_box = result['bounding_box']
-                    if bounding_box is None :
-                        continue
-                    bounding_box[...,0::2] *= im_w
-                    bounding_box[...,1::2] *= im_h
-                    result['bounding_box'] = bounding_box
-                if 'landmarks' in result :
-                    landmarks = result['landmarks']
-                    if landmarks is None :
-                        continue
-                    landmarks[...,0::2] *= im_w
-                    landmarks[...,1::2] *= im_h
-                    result['landmarks'] = landmarks
+            if 'bounding_box' in result:
+                bounding_box = result['bounding_box']
+                if bounding_box is None:
+                    continue
+                bounding_box[...,0::2] *= im_w
+                bounding_box[...,1::2] *= im_h
+                result['bounding_box'] = bounding_box
+            if 'landmarks' in result:
+                landmarks = result['landmarks']
+                if landmarks is None:
+                    continue
+                landmarks[...,0::2] *= im_w
+                landmarks[...,1::2] *= im_h
+                result['landmarks'] = landmarks
         return batch_results
 
 class PytorchPredictionPipeline(BasePredictionPipeline):
@@ -307,10 +309,16 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             assert isinstance(additional_inputs, tuple) and len(additional_inputs) > 0
             assert all(isinstance(additional_input, tuple) for additional_input in additional_inputs)
 
-        input_specs['input'] = {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}
+        if isinstance(img_size, int):
+            input_specs['input'] = {'shape': (1, img_size, img_size, 3), 'pos': 0, 'type': 'uint8'}
+        elif isinstance(img_size, (tuple, list)) and len(img_size) == 2:
+            input_specs['input'] = {'shape': (1, img_size[0], img_size[1], 3), 'pos': 0, 'type': 'uint8'}
+        else:
+            raise RuntimeError("Unknown config of model.preprocess_args.input_size of type {} with value {}"
+                .format(type(img_size), img_size))
         for n, (name, shape) in enumerate(additional_inputs):
             input_specs[name] = {
-                'shape': tuple(shape),
+                'shape': tuple(shape) if shape is not None else shape,
                 'pos': n+1,
                 'type': 'float'
             }
@@ -365,8 +373,8 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # TODO enable padding to keep aspect ratio
         # Resize input ( assuming square input, and stretch, no padding provided yet )
-        input_size = self.model.input_specs['input']['shape'][1]
-        batch_imgs = [cv2.resize(img, (input_size,input_size)) for img in batch_imgs]
+        input_size = self.model.input_specs['input']['shape']
+        batch_imgs = [cv2.resize(img, input_size[1:3]) for img in batch_imgs]
         batch_imgs = np.stack(batch_imgs)
 
         # Do model inference
@@ -379,10 +387,12 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
             additional_inputs = self.model.postprocess.additional_inputs
             assert isinstance(additional_inputs, tuple)
             for additional_input in additional_inputs :
-                key, _ = additional_input
-                if key in kwargs :
+                key, in_size = additional_input
+                if key in kwargs:
                     value = kwargs[key]
-                    inputs[key] = torch.from_numpy(np.asarray([value])).to(device)
+                    if in_size is not None:
+                        value = [value] if in_size[-1] == 1 and not isinstance(value, (tuple, list)) else value
+                    inputs[key] = torch.from_numpy(np.asarray(value)).to(device)
 
         with torch.no_grad() :
             results = self.model(**inputs)
