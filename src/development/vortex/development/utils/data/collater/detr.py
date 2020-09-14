@@ -6,7 +6,7 @@ from easydict import EasyDict
 class DETRCollate:
     def __init__(self, dataformat: dict):
         dataformat = {k: {n: torch.tensor(v, dtype=torch.long) if n == 'indices' else v for n,v in val.items()}
-            for k,val in dataformat.items() if val is not None}
+            if val else None for k,val in dataformat.items()}
         self.dataformat = EasyDict(dataformat)
         self.disable_image_auto_pad = True
 

@@ -10,7 +10,7 @@ from vortex.development.networks.models.detection.detr import (
     DETRLoss, DETRPostProcess,
     NestedTensor, cxcywh_to_xyxy
 )
-from vortex.development.utils.data.collater.detr import DETRColatte
+from vortex.development.utils.data.collater.detr import DETRCollate
 
 
 pred_bbox = torch.tensor([
@@ -118,7 +118,7 @@ def test_detr_collater():
         'bounding_box': {'indices': [2,3,4,5], 'axis': 1},
         'class_label': {'indices': [1], 'axis': 1}
     }
-    collater = DETRColatte(dataformat=dataformat)
+    collater = DETRCollate(dataformat=dataformat)
 
     dataset_targets = [
         torch.tensor([[ 0.0000, 14.0000,  0.4604,  0.1122,  0.2292,  0.4439],
