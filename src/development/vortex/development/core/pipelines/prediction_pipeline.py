@@ -464,8 +464,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
 
         # Check input batch size to match with IR model input specs
         input_shape = self.model.input_specs['input']['shape']
-        n, h, w, c = input_shape if input_shape[-1] == 3 \
-        else tuple(input_shape[i] for i in [0,3,1,2])
+        n = input_shape[0]
         assert len(batch_imgs) <= n, "expects 'images' <= n batch ({}) got {}".format(n, len(batch_imgs))
 
         # TODO add resize with pad in runtime

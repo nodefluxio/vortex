@@ -4,26 +4,27 @@ import logging
 import numpy as np
 
 from pathlib import Path
-from copy import copy, deepcopy
+from copy import deepcopy
 
 class BaseExporter :
     logger = logging.getLogger(__name__)
     def __init__(self, filename: str, image_size: int, input_dtype: str='uint8', n_channels=3, n_batch=1) :
         if isinstance(image_size, int) :
             image_size = (image_size, image_size)
-        if isinstance(image_size, tuple) and len(image_size)==2 :
+        if isinstance(image_size, (tuple, list)) and len(image_size) == 2:
             image_size = (n_batch, *image_size, n_channels)
         assert len(image_size) == 4
         self.image_size = image_size
         self.input_type = input_dtype
         self.filename = filename
-    
+
     def export(self, predictor, example_input, class_names, output_format, additional_inputs) :
         raise NotImplementedError
-    
+
     def __call__(self, predictor, class_names=None, example_image_path=None) :
-        predictor = deepcopy(predictor)
-        if example_image_path is None :
+        predictor = deepcopy(predictor).eval()
+
+        if example_image_path is None:
             example_input = torch.rand(*self.image_size)
             if self.input_type == 'uint8' :
                 example_input = (example_input * 255).long().type(torch.uint8)
@@ -42,13 +43,15 @@ class BaseExporter :
                 example_input = cv2.imread(example_image_path)
                 example_input = cv2.resize(example_input, self.image_size[1:-1])
                 example_inputs.append(torch.from_numpy(example_input).unsqueeze(0))
-            example_input = torch.cat(example_inputs,dim=0)
-        else :
-            raise RuntimeError()
+            example_input = torch.cat(example_inputs, dim=0)
+        else:
+            raise RuntimeError("Unknown 'example_image_path' type of {} with value {}, "
+                "expected [Path, str, list[str]]".format(type(example_image_path), example_image_path))
+
         class_names = [] if class_names is None else class_names
         assert all(isinstance(class_name, str) for class_name in class_names)
         additional_inputs = tuple()
-        if hasattr(predictor.postprocess, 'additional_inputs') :
+        if hasattr(predictor.postprocess, 'additional_inputs'):
             additional_inputs = predictor.postprocess.additional_inputs
             ## typecheck
             assert isinstance(additional_inputs, tuple)
