@@ -1,13 +1,5 @@
 experiment_name: shufflenetv2x100_softmax_cifar100_224
-logging: {
-  module: comet_ml,
-  args: {
-      api_key: 0kZ5vwvCG7xBToHOeptFxtyxu,
-      project_name: vortex-classification,
-      workspace: hyperion-rg
-  },
-  pytz_timezone: Asia/Jakarta
-}
+logging: None
 checkpoint: None
 device: 'cuda:0'
 output_directory: experiments/outputs
