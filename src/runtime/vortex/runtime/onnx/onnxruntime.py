@@ -82,6 +82,25 @@ class OnnxRuntime(BaseRuntime) :
         )
         return outputs[0]
 
+    @staticmethod
+    def resize_batch(images : List[np.ndarray], size : Tuple[int,int,int,int], resize_kind='stretch') :
+        """
+        helper function to resize list of 
+        np.ndarray (of possibly different size) 
+        to single np array of same size
+
+        this is the same as BaseRuntime implementation, apart from h,w is flipped
+        """
+        assert resize_kind in ['stretch'] and len(size) == 4
+        n, w, h, c = size if size[-1]==3 else tuple(size[i] for i in [0,3,1,2])
+        resize = lambda x: BaseRuntime.resize_stretch(x, (h,w))
+        dtype = images[0].dtype
+        n_pad = n - len(images)
+        batch_pad = [np.zeros((h,w,c),dtype=dtype)] * n_pad
+        batch_image = list(map(resize, images))
+        batch_image = batch_image + batch_pad
+        return np.stack(batch_image)
+
 class OnnxRuntimeCpu(OnnxRuntime) :
     def __init__(self, model : Union[str,Path], fallback : bool = False, *args, **kwargs) :
         import onnxruntime
