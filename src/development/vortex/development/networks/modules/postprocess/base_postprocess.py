@@ -2,6 +2,7 @@ import torch
 import torchvision
 import torch.nn as nn
 from typing import Type, List, Tuple, Dict, Callable, Union
+import warnings
 
 
 def check_annotations(lhs, rhs):
@@ -51,6 +52,16 @@ class BasicNMSPostProcess(nn.Module):
         self.decoder = decoder
         self.nms = BatchedNMS() if nms else NoNMS()
 
+        self._check_annotations()
+
+        self.additional_inputs = (
+            ('score_threshold', (1,)),
+            ('iou_threshold', (1,)),
+        )
+    
+    def _check_annotations(self):
+        # torch 1.6 seems to be doing something with annotations, 
+        # kindly emit warnings instead of throwing
         # check for decoder annotations
         try:
             annotations = self.decoder.forward.__annotations__
@@ -58,17 +69,17 @@ class BasicNMSPostProcess(nn.Module):
             try:
                 annotations = self.decoder.__annotations__
             except AttributeError as e:
-                raise RuntimeError("please annotate decoder or decoder.forward with %s" %
+                warnings.warn("please annotate decoder or decoder.forward with %s" %
                                    BasicNMSPostProcess.decoder_signature.keys())
         if not len(annotations):
-            raise RuntimeError("please annotate decoder with %s" %
+            warnings.warn("please annotate decoder with %s" %
                                BasicNMSPostProcess.decoder_signature.keys())
         # check for decoder type signature
         for key, value in BasicNMSPostProcess.decoder_signature.items():
             if not key in annotations.keys():
-                raise TypeError("missing decoder annotation(s) : %s" % key)
+                warnings.warn("missing decoder annotation(s) : %s" % key)
             if value != annotations[key]:
-                raise TypeError("decoder type mismatch for %s, expects %s got %s" % (
+                warnings.warn("decoder type mismatch for %s, expects %s got %s" % (
                     key, value, annotations[key]))
 
         # check for nms annotations
@@ -81,22 +92,18 @@ class BasicNMSPostProcess(nn.Module):
                 try:
                     annotations = self.nms.__call__.__annotations__
                 except AttributeError as e:
-                    raise TypeError("please annotate nms with %s" %
+                    warnings.warn("please annotate nms with %s" %
                                     BasicNMSPostProcess.nms_signature.keys())
         if not len(annotations):
-            raise TypeError("please annotate nms with %s" %
+            warnings.warn("please annotate nms with %s" %
                             BasicNMSPostProcess.nms_signature.keys())
         # check for decoder type signature
         for key, value in BasicNMSPostProcess.nms_signature.items():
             if not key in annotations.keys():
-                raise TypeError("missing nms annotation(s) : %s" % key)
+                warnings.warn("missing nms annotation(s) : %s" % key)
             if not check_annotations(value, annotations[key]):
-                raise TypeError("nms type mismatch for %s, expects %s got %s" % (
+                warnings.warn("nms type mismatch for %s, expects %s got %s" % (
                     key, value, annotations[key]))
-        self.additional_inputs = (
-            ('score_threshold', (1,)),
-            ('iou_threshold', (1,)),
-        )
 
     def _forward(self, input: torch.Tensor, score_threshold: torch.Tensor, iou_threshold: torch.Tensor) -> torch.Tensor:
         bboxes, scores, class_indexes, detections = self.decoder(
