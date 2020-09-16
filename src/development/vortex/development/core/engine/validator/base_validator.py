@@ -24,7 +24,6 @@ from vortex.development.networks.modules.preprocess.normalizer import to_tensor,
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.development.core.factory import create_runtime_model
-# from vortex.development.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex.runtime.basic_runtime import BaseRuntime
 
@@ -382,7 +381,7 @@ class BaseValidator:
         val_loss = 0.
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" VAL METRICS", leave=True):
+                                                desc=" VAL", leave=True):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
