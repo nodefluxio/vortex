@@ -52,7 +52,9 @@ class BasicNMSPostProcess(nn.Module):
         self.decoder = decoder
         self.nms = BatchedNMS() if nms else NoNMS()
 
-        self._check_annotations()
+        # skip for now, 
+        # TODO: fix or remove
+        # self._check_annotations()
 
         self.additional_inputs = (
             ('score_threshold', (1,)),
