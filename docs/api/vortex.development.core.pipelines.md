@@ -250,6 +250,7 @@ vortex_predictor = PytorchPredictionPipeline(config = config,
 def run(
       self,
       images : typing.Union[typing.List[str], numpy.ndarray],
+      coordinate: str = "relative",
       visualize : bool = False,
       dump_visual : bool = False,
       output_dir : typing.Union[str, pathlib.Path] = '.',
@@ -262,10 +263,16 @@ def run(
 **Arguments**:
 
 - `images` _Union[List[str],np.ndarray]_ - list of images path or array of image
+- `coordinate` _str, optional_ - output coordinate format, especially usefull for models that returns
+      coordinates in the input, e.g. bounding box, landmark, etc. Available: 
+      `'relative'`: the coordinate is relative to input size (have range of [0, 1]), so to visualize the output needs to be multplied by input size; 
+      `'absolute'`: the coordinate is absolute to input size (range of [widht, height]). 
+      Default `'relative'`.
 - `visualize` _bool, optional_ - option to return prediction visualization. Defaults to False.
 - `dump_visual` _bool, optional_ - option to dump prediction visualization. Defaults to False.
 - `output_dir` _Union[str,Path], optional_ - directory path to dump visualization. Defaults to '.' .
-- `kwargs` _optional_ - this kwargs is placement for additional input parameters specific to                                 models'task
+- `kwargs` _optional_ - forwarded to model's forward pass, so this kwargs is placement for additional input parameters, 
+      make sure to have this if your model needs an additional inputs, e.g. `score_threshold`, etc.
 
 
 **Returns**:
@@ -391,6 +398,7 @@ vortex_predictor=IRPredictionPipeline(model = model_file,
 def run(
       self,
       images : typing.Union[typing.List[str], numpy.ndarray],
+      coordinate: str = "relative",
       visualize : bool = False,
       dump_visual : bool = False,
       output_dir : typing.Union[str, pathlib.Path] = '.',
@@ -403,10 +411,16 @@ def run(
 **Arguments**:
 
 - `images` _Union[List[str],np.ndarray]_ - list of images path or array of image
+- `coordinate` _str, optional_ - output coordinate format, especially usefull for models that returns
+      coordinates in the input, e.g. bounding box, landmark, etc. Available: 
+      `'relative'`: the coordinate is relative to input size (have range of [0, 1]), so to visualize the output needs to be multplied by input size; 
+      `'absolute'`: the coordinate is absolute to input size (range of [widht, height]). 
+      Default `'relative'`.
 - `visualize` _bool, optional_ - option to return prediction visualization. Defaults to False.
 - `dump_visual` _bool, optional_ - option to dump prediction visualization. Defaults to False.
 - `output_dir` _Union[str,Path], optional_ - directory path to dump visualization. Defaults to '.' .
-- `kwargs` _optional_ - this kwargs is placement for additional input parameters specific to                                 models'task
+- `kwargs` _optional_ - forwarded to model's forward pass, so this kwargs is placement for additional input parameters, 
+      make sure to have this if your model needs an additional inputs, e.g. `score_threshold`, etc.
 
 
 **Returns**:
