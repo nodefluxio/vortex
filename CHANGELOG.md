@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - support for experimental [DETR model](https://github.com/facebookresearch/detr), this model is still unable to be exported caused by the limitation in current exporter design
 - support for per parameter options (see [PyTorch Optimizer](https://pytorch.org/docs/stable/optim.html#per-parameter-options)) 
 using `'param_groups'` key in model components.
-
+- support for None `additional_input` shape in model for scalar tensor input.
+- support for image size type of list (w,h), or non-square image, in predict and export.
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
@@ -26,7 +27,7 @@ using `'param_groups'` key in model components.
 - changed `CosineLRScheduler` to `CosineLRWithWarmUp` scheduler
 - changed `TanhLRScheduler` to `TanhLRWithWarmUp` scheduler
 - `BaseTrainer.create_optimizer` only accept model parameters dict (e.g. from `model.parameters()`) instead of the model itself
-
+- make `class_label` for detection not required
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
