@@ -125,34 +125,29 @@ class AlbumentationsWrapper:
 
         # Parse result back to tensor
         image = annotations['image']
-        ret_targets = albu_result_to_tensor(ret_targets,
-                                            annotations, albu_input, df)
+        ret_targets = albu_result_to_tensor(ret_targets,annotations, albu_input, df)
 
         if self.visual_debug:
             h, w, c = image.shape
             # VIZ DEBUG
-            try:
+            if 'bounding_box' in df:
                 box_indices, box_axis = df.bounding_box.indices, df.bounding_box.axis
                 allbboxes = np.take(ret_targets, axis=box_axis,
                                     indices=box_indices)
                 allbboxes[:, [0, 2]] *= w
                 allbboxes[:, [1, 3]] *= h
-            except:
-                pass
-            try:
+
+            if 'class_label' in df:
                 cls_indices, cls_axis = df.class_label.indices, df.class_label.axis
                 class_labels = np.take(
                     ret_targets, axis=cls_axis, indices=cls_indices)
-            except:
-                pass
-            try:
+
+            if 'landmarks' in df:
                 lmk_indices, lmk_axis = df.landmarks.indices, df.landmarks.axis
                 landmarks = np.take(
                     ret_targets, axis=lmk_axis,
                     indices=lmk_indices
                 )
-            except:
-                pass
             vis_image = image.copy()
 
             try:
@@ -298,17 +293,15 @@ def tensor_to_albu_input(image: np.ndarray, targets: np.ndarray, data_format: Ea
         bbox_local_info = np.arange(len(allbboxes)).reshape(-1, 1)
 
         # Prepare class_label if set
-        if data_format.class_label:
+        if 'class_label' in data_format and data_format.class_label:
             cls_indices, cls_axis = data_format.class_label.indices, data_format.class_label.axis
-            class_labels = np.take(
-                targets, axis=cls_axis, indices=cls_indices)
+            class_labels = np.take(targets, axis=cls_axis, indices=cls_indices)
             # Due to albumentations multi label fields bug, currently class_labels is concatenated with
             # bbox_local_info in the indice 1, axis 1
-            bbox_local_info = np.concatenate(
-                (bbox_local_info, class_labels), axis=1)
+            bbox_local_info = np.concatenate((bbox_local_info, class_labels), axis=1)
         # Insert bbox_local_info (bbox local index in an image and/or class_labels) into input augmentation data
         data.bbox_local_info = bbox_local_info
-    if 'landmarks' in data_format.keys():
+    if 'landmarks' in data_format:
         # Slice landmarks coordinates
         lmk_indices, lmk_axis = data_format.landmarks.indices, data_format.landmarks.axis
         landmarks = np.take(
