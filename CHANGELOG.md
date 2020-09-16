@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - learning rate scheduler value plan visualizer script in [`scripts/visualize_learning_rate.py`](scripts/visualize_learning_rate.py)
+- jit and export global context, see [`vortex/development/networks/modules/utils/config.py`](src/development/vortex/development/networks/modules/utils/config.py)
 
 ### Changed
+- update backbone components
+- use mobilenetv3 definition and pretrained from [rwightman](https://github.com/rwightman/pytorch-image-models)
 
 
 ## 0.2.0
