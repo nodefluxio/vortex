@@ -19,7 +19,6 @@ from vortex.development.core.factory import (
     create_experiment_logger
 )
 from vortex.development.utils.common import check_and_create_output_dir
-from vortex.development.core.engine.validator.base_validator import LossValidator
 from vortex.development.utils.parser import check_config
 from vortex.development.core.pipelines.base_pipeline import BasePipeline
 from vortex.development.core import engine
@@ -251,22 +250,16 @@ class TrainingPipeline(BasePipeline):
                 raise RuntimeError("'validator' field not found in config. Please specify properly in main level.")
 
             val_dataset = create_dataset(config.dataset, config.model.preprocess_args, stage='validate')
-            self.val_loader = create_dataloader(dataloader_config=dataloader_config,
-                                            dataset_config=config.dataset,
-                                            preprocess_config=config.model.preprocess_args,
-                                            collate_fn=self.model_components.collate_fn,
-                                            stage='validate')
+            
             ## use same batch-size as training by default
             validation_args = EasyDict({'batch_size' : self.dataloader.batch_size})
             validation_args.update(validator_cfg.args)
-            self.metric_validator = engine.create_validator(
+            self.validator = engine.create_validator(
                 self.model_components, 
                 val_dataset, validation_args, 
                 device=self.device
             )
-            self.loss_validator = LossValidator(model=self.model_components.network,
-                                                criterion=self.criterion,
-                                                dataloader=self.val_loader)
+            
             self.val_epoch = validator_cfg.val_epoch
             self.valid_for_validation = True
         except AttributeError as e:
@@ -325,10 +318,8 @@ class TrainingPipeline(BasePipeline):
             
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
-                assert(self.metric_validator.predictor.model is self.model_components.network)
-                val_results = self.metric_validator()
-                val_loss = self.loss_validator()
-                val_results.update(EasyDict({'val_loss' : val_loss.item()}))
+                assert(self.validator.predictor.model is self.model_components.network)
+                val_results = self.validator()
                 if 'pr_curves' in val_results :
                     val_results.pop('pr_curves')
                 val_metrics.append(val_results)

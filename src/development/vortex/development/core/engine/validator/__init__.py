@@ -6,7 +6,7 @@ from typing import Type
 from functools import singledispatch
 
 from vortex.development.predictor import create_predictor
-from .base_validator import BaseRuntime, BaseMetricValidator
+from .base_validator import BaseRuntime, BaseValidator
 from .boundingbox_validator import BoundingBoxValidator
 from .classification_validator import ClassificationValidator
 from vortex.development.core.factory import create_runtime_model
@@ -16,7 +16,7 @@ from vortex.development.core.factory import create_runtime_model
 ## TODO : for each task, make sure output_format requirements is unique
 task_validator_map = dict()
 
-def register_validator(task: str, validator_type : Type[BaseMetricValidator]):
+def register_validator(task: str, validator_type : Type[BaseValidator]):
     assert task not in task_validator_map
     task_validator_map.update({task: validator_type})
     return validator_type
@@ -101,7 +101,15 @@ def _(model_components, dataset, validation_args, predictor_args=None, device='c
     predictor = create_predictor(model_components, **predictor_args).to(device)
 
     task = model_components.network.task
-    return create_validator_instance(
-        task=task, predictor=predictor,
-        dataset=dataset, **validation_args
-    )
+    if 'loss' in model_components and 'collate_fn' in model_components:
+        return create_validator_instance(
+            task=task, predictor=predictor,
+            dataset=dataset,criterion = model_components.loss,
+            collate_fn = model_components.collate_fn,
+            **validation_args
+        )
+    else:
+        return create_validator_instance(
+            task=task, predictor=predictor,
+            dataset=dataset,**validation_args
+        )

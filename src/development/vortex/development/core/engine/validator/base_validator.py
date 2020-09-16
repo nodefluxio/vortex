@@ -16,7 +16,7 @@ from easydict import EasyDict
 from collections import OrderedDict
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Union, List, Dict, Type, Any, Iterable
+from typing import Union, List, Dict, Type, Any, Iterable, Callable
 
 from vortex.development.predictor.base_module import BasePredictor, create_predictor
 from vortex.development.predictor.utils import get_prediction_results
@@ -74,12 +74,12 @@ class ResourceMonitorWrapper(object):
         for i in range(len(self.monitors)):
             self.monitors[i].stop()
 
-class BaseMetricValidator:
+class BaseValidator:
     """
     base class for validation
     """
     def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', 
-                 batch_size=None, **prediction_args):
+                 batch_size=None, criterion: torch.nn.Module = None,collate_fn: Callable = None,**prediction_args):
         if not isinstance(predictor, (BasePredictor,BaseRuntime)):
             raise RuntimeError("expects `predictor` to have type of BasePredictor or BaseRuntime, " \
                 "got %s" % type(predictor))
@@ -91,6 +91,11 @@ class BaseMetricValidator:
         self.experiment_name = experiment_name
         self.output_directory = Path(output_directory)
         self.batch_size = batch_size
+        
+        # For validation loss calculation
+        self.criterion = criterion
+        self.collate_fn = torch.utils.data._utils.collate.default_collate if collate_fn is None else collate_fn
+        self.raw_model_output = None
 
         self.predictor_name = '{}'.format(self.predictor.__class__.__name__)
         if isinstance(self.predictor, BasePredictor):
@@ -184,6 +189,9 @@ class BaseMetricValidator:
         else:
             ## no problem
             pass
+
+    def raw_model_output_hook(self,module, module_in, module_out):
+        self.raw_model_output = module_out
 
     def validation_args(self) -> Dict[str,Any] :
         """
@@ -366,7 +374,12 @@ class BaseMetricValidator:
         if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
+            # Perform validation loss calculation if supported
+            if self.criterion:
+                validation_handler = self.predictor.model.register_forward_hook(self.raw_model_output_hook)
+
         self.eval_init(*args, **kwargs)
+        val_loss = 0.
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
                                                 desc=" VAL METRICS", leave=True):
@@ -382,44 +395,26 @@ class BaseMetricValidator:
                     targets=targets,
                     last_index=last_index
                 )
+                # Perform validation loss calculation if supported
+                # Some model behave differently on training on eval, validation loss calculation might failed
+                if self.criterion:
+                    try:
+                        raw_results = self.raw_model_output
+                        batch = list(zip(image,targets))
+                        _,targets = self.collate_fn(batch)
+                        targets = targets.to(raw_results.device)
+                        batch_loss = self.criterion(raw_results,targets)
+                        val_loss += batch_loss.detach()
+                        self.raw_model_output = None
+                    except Exception as e:
+                        print(e)
+                        pass
+
         self.metrics = self.compute_metrics()
         if isinstance(self.predictor, BasePredictor) :
             self.predictor.train(is_training)
+            if self.criterion:
+                validation_handler.remove()
+                val_loss /= len(self.dataset)
+        self.metrics.update(EasyDict({'val_loss' : val_loss}))
         return self.metrics
-
-class LossValidator:
-    def __init__(self, model: Type[torch.nn.Module],criterion: Type[torch.nn.Module],dataloader: Iterable):
-        self.model = model
-        if not isinstance(self.model, torch.nn.Module):
-            raise RuntimeError("`LossValidator` class only accept torch.nn.Module object as model")
-        self.dataloader = dataloader
-        self.preprocess_args = dataloader.dataset.preprocess_args
-        if 'scaler' not in self.preprocess_args.input_normalization:
-            self.preprocess_args.input_normalization.scaler = 255
-        self.criterion = criterion
-
-    @torch.no_grad()
-    def calc_val_loss(self):
-        epoch_loss = 0.
-        device = list(self.model.parameters())[0].device
-        for i, (inputs, targets) in tqdm(enumerate(self.dataloader), total=len(self.dataloader),desc=" VAL LOSS", leave=False):
-            inputs = to_tensor(inputs,scaler=self.preprocess_args.input_normalization.scaler)
-            inputs = normalize(
-                inputs, 
-                self.preprocess_args.input_normalization.mean, 
-                self.preprocess_args.input_normalization.std)
-            inputs = inputs.to(device)
-            if isinstance(targets, torch.Tensor):
-                targets = targets.to(device)
-            preds = self.model(inputs)
-            batch_loss = self.criterion(preds, targets)
-            epoch_loss += batch_loss.detach()
-        return (epoch_loss / len(self.dataloader))
-
-    def __call__(self):
-        is_training = self.model.training
-        self.model.eval()
-        val_loss = self.calc_val_loss()
-        self.model.train(is_training)
-        return val_loss
-            
