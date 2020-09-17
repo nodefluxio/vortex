@@ -43,7 +43,7 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
     inputs = get_inputs(model)
     outputs = get_outputs(model)
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
-    logger.info(f'found {len(nms_ops)} NonMaxSuppression ops')
+    logger.info(f'found {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     assert len(nms_ops) >= 1
     # scan all inputs in the graph, check if desired input (input_name) exists
     # by definition the name should be unique
@@ -71,7 +71,7 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
         nms.input[3] = value_info.name
         model = replace_node(model, idx, nms)
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
-    logger.info('found {} NonMaxSuppression : {}'.format(len(nms_ops), nms_ops))
+    logger.info(f'updated {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     return model
 
 def main(model_path, output) :
