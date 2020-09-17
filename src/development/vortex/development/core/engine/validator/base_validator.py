@@ -16,15 +16,14 @@ from easydict import EasyDict
 from collections import OrderedDict
 from collections.abc import Sequence
 from functools import singledispatch
-from typing import Union, List, Dict, Type, Any
+from typing import Union, List, Dict, Type, Any, Iterable, Callable
 
 from vortex.development.predictor.base_module import BasePredictor, create_predictor
 from vortex.development.predictor.utils import get_prediction_results
-
+from vortex.development.networks.modules.preprocess.normalizer import to_tensor,normalize
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
 from vortex.development.core.factory import create_runtime_model
-# from vortex.development.core.pipelines.prediction_pipeline import IRPredictionPipeline
 
 from vortex.runtime.basic_runtime import BaseRuntime
 
@@ -79,7 +78,7 @@ class BaseValidator:
     base class for validation
     """
     def __init__(self, predictor: Union[BasePredictor,BaseRuntime], dataset, experiment_name='validate', output_directory='.', 
-                 batch_size=None, **prediction_args):
+                 batch_size=None, criterion: torch.nn.Module = None,collate_fn: Callable = None,**prediction_args):
         if not isinstance(predictor, (BasePredictor,BaseRuntime)):
             raise RuntimeError("expects `predictor` to have type of BasePredictor or BaseRuntime, " \
                 "got %s" % type(predictor))
@@ -91,6 +90,11 @@ class BaseValidator:
         self.experiment_name = experiment_name
         self.output_directory = Path(output_directory)
         self.batch_size = batch_size
+        
+        # For validation loss calculation
+        self.criterion = criterion
+        self.collate_fn = torch.utils.data._utils.collate.default_collate if collate_fn is None else collate_fn
+        self.raw_model_output = None
 
         self.predictor_name = '{}'.format(self.predictor.__class__.__name__)
         if isinstance(self.predictor, BasePredictor):
@@ -184,6 +188,9 @@ class BaseValidator:
         else:
             ## no problem
             pass
+
+    def raw_model_output_hook(self,module, module_in, module_out):
+        self.raw_model_output = module_out
 
     def validation_args(self) -> Dict[str,Any] :
         """
@@ -366,10 +373,16 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
+            # Perform validation loss calculation if supported
+            if self.criterion:
+                validation_handler = self.predictor.model.register_forward_hook(self.raw_model_output_hook)
+                val_loss = 0.
+                val_loss_stats = True
+
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" eval", leave=True):
+                                                desc=" VAL", leave=True):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
@@ -380,7 +393,29 @@ class BaseValidator:
                     targets=targets,
                     last_index=(index == len(self.dataset)-1)
                 )
+                # Perform validation loss calculation if supported
+                # Some model behave differently on training on eval, validation loss calculation might failed
+                if self.criterion:
+                    try:
+                        raw_results = self.raw_model_output
+                        batch = list(zip(image,targets))
+                        _,targets = self.collate_fn(batch)
+                        targets = targets.to(raw_results.device)
+                        batch_loss = self.criterion(raw_results,targets)
+                        val_loss += batch_loss.detach()
+                        self.raw_model_output = None
+                    except Exception as e:
+                        val_loss_err_msg = e
+                        val_loss_stats = False
+
         self.metrics = self.compute_metrics()
         if isinstance(self.predictor, BasePredictor) :
             self.predictor.train(is_training)
+            if self.criterion:
+                validation_handler.remove()
+                if not val_loss_stats:
+                    print(val_loss_err_msg)
+                else:
+                    val_loss /= len(self.dataset)
+                    self.metrics.update(EasyDict({'val_loss' : val_loss}))
         return self.metrics

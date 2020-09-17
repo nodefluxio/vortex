@@ -250,6 +250,7 @@ class TrainingPipeline(BasePipeline):
                 raise RuntimeError("'validator' field not found in config. Please specify properly in main level.")
 
             val_dataset = create_dataset(config.dataset, config.model.preprocess_args, stage='validate')
+            
             ## use same batch-size as training by default
             validation_args = EasyDict({'batch_size' : self.dataloader.batch_size})
             validation_args.update(validator_cfg.args)
@@ -258,6 +259,7 @@ class TrainingPipeline(BasePipeline):
                 val_dataset, validation_args, 
                 device=self.device
             )
+            
             self.val_epoch = validator_cfg.val_epoch
             self.valid_for_validation = True
         except AttributeError as e:
@@ -313,7 +315,7 @@ class TrainingPipeline(BasePipeline):
                     'epoch_lr' : lr
                 })
                 self.experiment_logger.log_on_epoch_update(metrics_log)
-
+            
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.validator.predictor.model is self.model_components.network)
@@ -326,6 +328,9 @@ class TrainingPipeline(BasePipeline):
                 if not self.hypopt:
                     metrics_log = EasyDict(dict(epoch=epoch, **val_results))
                     self.experiment_logger.log_on_validation_result(metrics_log)
+
+                # Drop val loss from metric
+                val_results.pop('val_loss')
 
                 if self.save_best_type and 'val_metric' in self.save_best_type and save_model:
                     for metric_name in self.save_best_metrics:
