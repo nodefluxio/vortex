@@ -7,6 +7,8 @@ from pathlib import Path
 proj_path = os.path.abspath(Path(__file__).parents[1])
 sys.path.append(proj_path)
 sys.path.insert(0,'src/development')
+sys.path.insert(0,'src/runtime')
+
 from easydict import EasyDict
 
 from vortex.development.utils.data.dataset import dataset

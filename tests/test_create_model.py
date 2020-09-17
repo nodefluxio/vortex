@@ -1,6 +1,7 @@
 import os
 import sys
 sys.path.insert(0,'src/development')
+sys.path.insert(0, 'src/runtime')
 
 from vortex.development.core.factory import create_model
 from easydict import EasyDict
