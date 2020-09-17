@@ -376,9 +376,10 @@ class BaseValidator:
             # Perform validation loss calculation if supported
             if self.criterion:
                 validation_handler = self.predictor.model.register_forward_hook(self.raw_model_output_hook)
+                val_loss = 0.
+                val_loss_stats = True
 
         self.eval_init(*args, **kwargs)
-        val_loss = 0.
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
                                                 desc=" VAL", leave=True):
@@ -406,14 +407,17 @@ class BaseValidator:
                         val_loss += batch_loss.detach()
                         self.raw_model_output = None
                     except Exception as e:
-                        print(e)
-                        pass
+                        val_loss_err_msg = e
+                        val_loss_stats = False
 
         self.metrics = self.compute_metrics()
         if isinstance(self.predictor, BasePredictor) :
             self.predictor.train(is_training)
             if self.criterion:
                 validation_handler.remove()
-                val_loss /= len(self.dataset)
-        self.metrics.update(EasyDict({'val_loss' : val_loss}))
+                if not val_loss_stats:
+                    print(val_loss_err_msg)
+                else:
+                    val_loss /= len(self.dataset)
+                    self.metrics.update(EasyDict({'val_loss' : val_loss}))
         return self.metrics
