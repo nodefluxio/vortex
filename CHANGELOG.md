@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - support for experimental [DETR model](https://github.com/facebookresearch/detr), this model is still unable to be exported caused by the limitation in current exporter design
 - support for per parameter options (see [PyTorch Optimizer](https://pytorch.org/docs/stable/optim.html#per-parameter-options)) 
 using `'param_groups'` key in model components.
+- validation loss calculation to experiment logger
 
 
 ### Changed
