@@ -45,7 +45,7 @@ class BasePredictionPipeline(BasePipeline):
 
     def run(self,
             images : Union[List[str],np.ndarray],
-            coordinate: str = 'relative',
+            output_coordinate_format: str = 'relative',
             visualize : bool = False,
             dump_visual : bool = False,
             output_dir : Union[str,Path] = '.',
@@ -54,11 +54,16 @@ class BasePredictionPipeline(BasePipeline):
 
         Args:
             images (Union[List[str],np.ndarray]): list of images path or array of image
+            output_coordinate_format (str, optional) - output coordinate format, especially usefull for models that returns
+                coordinates in the input, e.g. bounding box, landmark, etc. Available: 
+                `'relative'`: the coordinate is relative to input size (have range of [0, 1]), so to visualize the output needs to be multplied by input size; 
+                `'absolute'`: the coordinate is absolute to input size (range of [widht, height]). 
+                Default `'relative'`.
             visualize (bool, optional): option to return prediction visualization. Defaults to False.
             dump_visual (bool, optional): option to dump prediction visualization. Defaults to False.
             output_dir (Union[str,Path], optional): directory path to dump visualization. Defaults to '.' .
-            kwargs (optional) : this kwargs is placement for additional input parameters specific to \
-                                models'task
+            kwargs (optional): forwarded to model's forward pass, so this kwargs is placement for additional input parameters, 
+                make sure to have this if your model needs an additional inputs, e.g. `score_threshold`, etc.
 
         Raises:
             TypeError: raise error if provided 'images' is not list of image path or array of images
@@ -141,7 +146,7 @@ class BasePredictionPipeline(BasePipeline):
             raise TypeError("'images' arguments must be provided with list of image path or list of "
                 "numpy ndarray, found {}".format(type(images[0])))
 
-        assert coordinate in ['relative', 'absolute'], "available 'coordinate': ['relative', 'absolute']"
+        assert output_coordinate_format in ['relative', 'absolute'], "available 'output_coordinate_format': ['relative', 'absolute']"
 
         # Resize input images
         batch_vis = [mat.copy() for mat in batch_mat]
@@ -149,7 +154,7 @@ class BasePredictionPipeline(BasePipeline):
         results = self._run_inference(batch_imgs,**kwargs)
 
         # Transform coordinate-based result from relative coordinates to absolute value
-        if coordinate == 'relative':
+        if output_coordinate_format == 'relative':
             results = self._check_and_transform(batch_vis = batch_vis, batch_results = results)
 
         # Visualize prediction
