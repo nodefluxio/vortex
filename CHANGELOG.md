@@ -32,6 +32,7 @@ using `'param_groups'` key in model components.
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample
 - Fix error when `save_best_metrics` not present in experiment file
+- lr scheduler bug when arguments changed and resumed
 
 
 ## 0.2.0
