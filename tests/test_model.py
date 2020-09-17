@@ -1,11 +1,8 @@
-import os
 import sys
 from pathlib import Path
-proj_path = str(Path(__file__).parents[1])
-sys.path.append(proj_path)
-sys.path.insert(0,'src/runtime')
-sys.path.insert(0,'src/development')
-
+proj_path = Path(__file__).parents[1]
+sys.path.insert(0, str(proj_path.joinpath('src', 'runtime')))
+sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 
 import torch
 import pytest
@@ -14,19 +11,19 @@ from vortex.development.networks.models import create_model_components
 from vortex.development.networks.modules.backbones import supported_models as supported_backbone
 from vortex.development.utils.parser.parser import load_config, check_config
 
-backbones = [bb[0] for bb in supported_backbone.values() if not 'mobilenetv3' in bb[0]]
-backbones.append("mobilenetv3_large_w1")
+backbones = [bb[0] for bb in supported_backbone.values()]
 backbones.remove('alexnet') if 'alexnet' in backbones else None
 backbones.remove('squeezenetv1.0') if 'squeezenetv1.0' in backbones else None
 backbones.remove('squeezenetv1.1') if 'squeezenetv1.1' in backbones else None
 tasks = ["detection", "classification"]
+
 
 @pytest.mark.parametrize(
     "task, backbone",
     [(t, bb) for t in tasks for bb in backbones]
 )
 def test_model(task, backbone):
-    config_path = os.path.join(proj_path, "tests", "config", "test_" + task + ".yml")
+    config_path = proj_path.joinpath("tests", "config", "test_{}.yml".format(task))
     config = load_config(config_path)
     check_result = check_config(config, experiment_type='train')
     assert check_result.valid, "config file %s for task %s is not valid, "\
@@ -51,6 +48,7 @@ def test_model(task, backbone):
     x = torch.randn(1, 3, 640, 640)
     x = model.network(x)
 
+    t = torch.tensor(0)
     if task == 'classification':
         t = torch.randint(0, num_classes, (1,))
         assert x.size() == torch.Size([1, num_classes]), \
@@ -65,7 +63,3 @@ def test_model(task, backbone):
             "torch.Size([*, %s]), got %s" % (num_classes+5, x[0].size())
     assert model.network.task == task
     l = model.loss(x, t)
-
-
-if __name__ == "__main__":
-    test_model(tasks[0], backbones[1])
