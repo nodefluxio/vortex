@@ -1,13 +1,5 @@
 experiment_name : shufflenetv2x100_retinaface_frontal_fddb_640
-logging : {
-  module : 'comet_ml',
-  args : {
-    api_key : Y6t9DbgKj7n2xLpUcN19qoMO4,
-    project_name : frontal-fddb,
-    workspace : hyperion-rg
-  },
-  pytz_timezone : 'Asia/Jakarta'
-}
+logging : None
 checkpoint: None
 device : 'cuda:0'
 output_directory : experiments/outputs
