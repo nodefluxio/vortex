@@ -1,3 +1,12 @@
+""" EfficientNet
+Paper: EfficientNet: Rethinking Model Scaling for CNNs - https://arxiv.org/abs/1905.11946
+
+Heavily inspired by Ross Wightman's definition
+https://github.com/rwightman/pytorch-image-models/tree/master/timm/models
+
+Hacked together by Vortex Team
+"""
+
 import re
 import math
 import torch
@@ -7,12 +16,17 @@ import numpy as np
 
 from torch.hub import load_state_dict_from_url
 from torch._six import container_abcs
-from ..utils.activations import Swish, sigmoid
-from ..utils.arch_utils import make_divisible, round_channels
-from ..utils.layers import DropPath
+
+from ..utils.layers import (
+    DepthwiseSeparableConv, InvertedResidualBlock, 
+    EdgeResidual, ConvBnAct
+)
+from ..utils.activations import get_act_layer
+from ..utils.arch_utils import round_channels
+from ..utils.layers import resolve_act_layer, resolve_norm_layer
+from ..utils.conv2d import create_conv2d, CondConv2d
 from .base_backbone import Backbone, ClassifierFeature
 
-from typing import List, Tuple, Optional
 from copy import deepcopy
 
 
@@ -51,342 +65,34 @@ TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
 
 
-def get_padding(padding, kernel_size, stride=1, dilation=1):
-    dynamic = False
-    if isinstance(padding, str):
-        padding = padding.lower()
-        if padding == 'same':
-            # TF compatible 'SAME' padding
-            # has a performance and GPU memory allocation overhead in dynamic
-            if (stride == 1 and (dilation * (kernel_size - 1)) % 2 == 0):
-                # static case, no extra overhead
-                padding = ((stride - 1) + dilation * (kernel_size - 1)) // 2
-            else:
-                # dynamic 'SAME' padding, has runtime/GPU memory overhead
-                padding = 0
-                dynamic = True
-        elif padding == 'valid':
-            # 'VALID' padding, same as padding=0
-            padding = 0
-        else:
-            # Default to PyTorch style 'same'-ish symmetric padding
-            padding = ((stride - 1) + dilation * (kernel_size - 1)) // 2
-    return padding, dynamic
-
-
-def create_conv2d(in_channel, out_channel, kernel_size, stride=1, dilation=1, padding='', 
-                  bias=True, depthwise=False):
-    padding, is_dynamic = get_padding(padding, kernel_size, stride, dilation)
-    groups = in_channel if depthwise else 1
-
-    conv_layer = Conv2dSame if is_dynamic else nn.Conv2d
-    return conv_layer(in_channel, out_channel, kernel_size, stride, padding=padding, 
-        dilation=dilation, groups=groups, bias=bias)
-
-
-_always_scalar = lambda x: x.item() if isinstance(x, torch.Tensor) else x
-
-
-def get_same_padding(x: int, k: int, s: int, d: int):
-    """ Calculate asymmetric TensorFlow-like 'same' padding for convolution
-    """
-    # convert to scalar as a workaround for onnx export to make it a constant
-    pad = _always_scalar((math.ceil(x / s) - 1) * s + (k - 1) * d + 1 - x)
-    return max(pad, 0)
-
-
-def pad_same(x, k: List[int], s: List[int], d: List[int] = (1, 1)):
-    """ Dynamically pad input x with 'same' padding for convolution
-    """
-    ih, iw = x.shape[-2:]
-    pad_h = get_same_padding(ih, k[0], s[0], d[0])
-    pad_w = get_same_padding(iw, k[1], s[1], d[1])
-    if pad_h > 0 or pad_w > 0:
-        x = F.pad(x, [pad_w // 2, pad_w - pad_w // 2, pad_h // 2, pad_h - pad_h // 2])
-    return x
-
-
-def conv2d_same(x, weight: torch.Tensor, bias: Optional[torch.Tensor] = None, stride: Tuple[int, int] = (1, 1),
-        padding: Tuple[int, int] = (0, 0), dilation: Tuple[int, int] = (1, 1), groups: int = 1):
-    x = pad_same(x, weight.shape[-2:], stride, dilation)
-    return F.conv2d(x, weight, bias, stride, (0, 0), dilation, groups)
-
-
-class Conv2dSame(nn.Conv2d):
-    """ Tensorflow like 'SAME' convolution wrapper for 2D convolutions
-    """
-
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, dilation=1, groups=1, bias=True):
-        super(Conv2dSame, self).__init__(
-            in_channels, out_channels, kernel_size, stride, 0, dilation, groups, bias)
-
-    def forward(self, x):
-        return conv2d_same(x, self.weight, self.bias, self.stride, self.padding, self.dilation, self.groups)
-
-
-class SqueezeExcite(nn.Module):
-    def __init__(self, in_channel, se_ratio=0.25, reduced_base_chs=None,
-                 act_layer=nn.ReLU, gate_fn=sigmoid, divisor=1, **_):
-        super(SqueezeExcite, self).__init__()
-        self.gate_fn = gate_fn
-        reduced_chs = make_divisible((reduced_base_chs or in_channel) * se_ratio, divisor)
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-        self.conv_reduce = nn.Conv2d(in_channel, reduced_chs, 1, bias=True)
-        self.act1 = act_layer(inplace=True)
-        self.conv_expand = nn.Conv2d(reduced_chs, in_channel, 1, bias=True)
-
-    def forward(self, x):
-        x_se = self.avg_pool(x)
-        x_se = self.conv_reduce(x_se)
-        x_se = self.act1(x_se)
-        x_se = self.conv_expand(x_se)
-        x = x * self.gate_fn(x_se)
-        return x
-
-
-class DepthwiseSeparableConv(nn.Module):
-    """ DepthwiseSeparable block
-    
-    See Figure 7 on https://arxiv.org/abs/1807.11626
-    Used for DS convs in MobileNet-V1 and in the place of IR blocks that have no expansion
-    (factor of 1.0). 
-    This is an alternative to having a IR with an optional first pw conv.
-    """
-    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, se_ratio=0., 
-                 pad_type='', act_layer=nn.ReLU, noskip=False, exp_ratio=1.0, 
-                 drop_path_rate=0., norm_kwargs=None):
-        super(DepthwiseSeparableConv, self).__init__()
-
-        assert kernel_size in [3, 5]
-        norm_kwargs = norm_kwargs or {}
-        has_se = se_ratio is not None and se_ratio > 0
-        self.has_residual = (stride == 1 and in_channel == out_channel) and not noskip
-
-        self.conv_dw = create_conv2d(in_channel, in_channel, kernel_size, stride=stride,
-            padding=pad_type, depthwise=True, bias=False)
-        self.bn1 = nn.BatchNorm2d(in_channel, **norm_kwargs)
-        self.act1 = act_layer(inplace=True)
-
-        # Squeeze-and-excitation
-        if has_se:
-            self.se = SqueezeExcite(in_channel, se_ratio=se_ratio, reduced_base_chs=in_channel, 
-                act_layer=act_layer)
-        else:
-            self.se = nn.Identity()
-
-        self.conv_pw = create_conv2d(in_channel, out_channel, 1, padding=pad_type, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_channel, **norm_kwargs)
-        if drop_path_rate > 0:
-            self.drop_path = DropPath(drop_path_rate)
-        else:
-            self.drop_path = nn.Identity()
-
-    def forward(self, x):
-        residual = x
-
-        x = self.conv_dw(x)
-        x = self.bn1(x)
-        x = self.act1(x)
-
-        x = self.se(x)
-
-        x = self.conv_pw(x)
-        x = self.bn2(x)
-
-        if self.has_residual:
-            x = self.drop_path(x)
-            x += residual
-        return x
-
-
-class InvertedResidualBlock(nn.Module):
-    """Mobile Inverted Residual Bottleneck Block
-    
-    See Figure 7 on https://arxiv.org/abs/1807.11626
-    Based on MNASNet
-    """
-
-    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, se_ratio=0., 
-                 pad_type='', act_layer=nn.ReLU, noskip=False, exp_ratio=1.0, 
-                 drop_path_rate=0., norm_kwargs=None):
-        super(InvertedResidualBlock, self).__init__()
-
-        assert kernel_size in [3, 5]
-        norm_kwargs = norm_kwargs or {}
-        has_se = se_ratio is not None and se_ratio > 0
-        self.has_residual = (in_channel == out_channel and stride == 1) and not noskip
-
-        ## Point-wise expansion -> _expand_conv in original implementation
-        # 'conv_pw' could be by-passed when 'exp_ratio' is 1
-        mid_chs = make_divisible(in_channel * exp_ratio)
-        self.conv_pw = create_conv2d(in_channel, mid_chs, 1, padding=pad_type, bias=False)
-        self.bn1 = nn.BatchNorm2d(mid_chs, **norm_kwargs)
-        self.act1 = act_layer(inplace=True)
-
-        # Depth-wise convolution
-        self.conv_dw = create_conv2d(mid_chs, mid_chs, kernel_size, stride=stride,
-            padding=pad_type, bias=False, depthwise=True)
-        self.bn2 = nn.BatchNorm2d(mid_chs, **norm_kwargs)
-        self.act2 = act_layer(inplace=True)
-
-        # Squeeze-and-excitation
-        if has_se:
-            self.se = SqueezeExcite(mid_chs, se_ratio=se_ratio, reduced_base_chs=in_channel, 
-                act_layer=act_layer)
-        else:
-            self.se = nn.Identity()
-
-        # Point-wise linear projection
-        self.conv_pwl = create_conv2d(mid_chs, out_channel, 1, padding=pad_type, bias=False)
-        self.bn3 = nn.BatchNorm2d(out_channel, **norm_kwargs)
-        if drop_path_rate > 0:
-            self.drop_path = DropPath(drop_path_rate)
-        else:
-            self.drop_path = nn.Identity()
-
-    def forward(self, x):
-        residual = x
-
-        # Point-wise expansion
-        x = self.conv_pw(x)
-        x = self.bn1(x)
-        x = self.act1(x)
-
-        # Depth-wise convolution
-        x = self.conv_dw(x)
-        x = self.bn2(x)
-        x = self.act2(x)
-
-        # Squeeze-and-excitation
-        x = self.se(x)
-
-        # Point-wise linear projection
-        x = self.conv_pwl(x)
-        x = self.bn3(x)
-
-        if self.has_residual:
-            x = self.drop_path(x)
-            x += residual
-        return x
-
-
-class EdgeResidual(nn.Module):
-    """ Residual block with expansion convolution followed by pointwise-linear w/ stride"""
-
-    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, se_ratio=0., 
-                 pad_type='', act_layer=nn.ReLU, noskip=False, exp_ratio=1.0, 
-                 mid_channel=0, drop_path_rate=0., norm_kwargs=None):
-        super(EdgeResidual, self).__init__()
-
-        assert kernel_size in [3, 5]
-        norm_kwargs = norm_kwargs or {}
-        has_se = se_ratio is not None and se_ratio > 0
-        self.has_residual = (in_channel == out_channel and stride == 1) and not noskip
-
-        # Expansion convolution
-        if mid_channel > 0:
-            mid_channel = make_divisible(mid_channel * exp_ratio)
-        else:
-            mid_channel = make_divisible(in_channel * exp_ratio)
-        self.conv_exp = create_conv2d(in_channel, mid_channel, kernel_size, padding=pad_type, bias=False)
-        self.bn1 = nn.BatchNorm2d(mid_channel, **norm_kwargs)
-        self.act1 = act_layer(inplace=True)
-
-        # Squeeze-and-excitation
-        if has_se:
-            self.se = SqueezeExcite(mid_channel, se_ratio=se_ratio, reduced_base_chs=in_channel, 
-                act_layer=act_layer)
-        else:
-            self.se = nn.Identity()
-
-        # Point-wise linear projection
-        self.conv_pwl = create_conv2d(mid_channel, out_channel, 1, stride=stride, padding=pad_type, bias=False)
-        self.bn2 = nn.BatchNorm2d(out_channel, **norm_kwargs)
-        if drop_path_rate > 0:
-            self.drop_path = DropPath(drop_path_rate)
-        else:
-            self.drop_path = nn.Identity()
-
-    def forward(self, x):
-        residual = x
-
-        # Expansion convolution
-        x = self.conv_exp(x)
-        x = self.bn1(x)
-        x = self.act1(x)
-
-        # Squeeze-and-excitation
-        x = self.se(x)
-
-        # Point-wise linear projection
-        x = self.conv_pwl(x)
-        x = self.bn2(x)
-
-        if self.has_residual:
-            x = self.drop_path(x)
-            x += residual
-        return x
-
-
-class EfficientNet(nn.Module):
-    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
-                 stem_size = 32, fix_stem=False, num_features=None, fix_block_first_last=False,
-                 **kwargs):
-        super(EfficientNet, self).__init__()
-        assert isinstance(global_params, dict)
-
-        self.in_channel = in_channel
+class EfficientNetBuilder(nn.Module):
+    def __init__(self, block_def, arch_params, global_params, stem_size=32,
+                 fix_first_last_block=False, **kwargs):
         self.arch_params = arch_params
         self.block_def = block_def
         self.global_params = global_params
-        self.num_features = self._round_channel(1280) if num_features is None else num_features
-
-        norm_kwargs = global_params['norm_kwargs']
-        act_layer = global_params['act_layer']
-        pad_type = global_params['pad_type']
-
-        if not fix_stem:
-            stem_size = self._round_channel(stem_size)
-        self.conv_stem = create_conv2d(in_channel, stem_size, 3, stride=2, 
-            padding=pad_type, bias=False)
-        self.bn1 = nn.BatchNorm2d(stem_size, **norm_kwargs)
-        self.act1 = act_layer(inplace=True)
-
+        self.fix_first_last_block = fix_first_last_block
+        self.last_channel = stem_size
         self.out_channels = [stem_size]
-        self.blocks = self._make_blocks(stem_size, fix_first_last=fix_block_first_last)
-        last_channel = self.in_channel
+        self.se_kwargs = global_params.pop('se_kwargs', None)
 
-        self.conv_head = create_conv2d(last_channel, self.num_features, 1, padding=pad_type, bias=False)
-        self.bn2 = nn.BatchNorm2d(self.num_features, **norm_kwargs)
-        self.act2 = act_layer(inplace=True)
+        self.blocks_args = self._decode_block_def()
+        self.total_layers = sum(len(x) for x in self.blocks_args)
+        self.layer_idx = 0
 
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-        self.flatten = nn.Flatten(start_dim=1)
-        dropout_rate = self.arch_params[3]
-        self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
-        self.classifier = nn.Linear(self.num_features, num_classes)
-
-        self.out_channels.extend([self.num_features, num_classes])
-
-        ## TODO: init weight
-
-    
     def _round_channel(self, channel):
         channel_multiplier = self.arch_params[0]
-        channel_divisor = self.global_params['channel_divisor']
-        channel_min = self.global_params['channel_min']
-        return round_channels(channel, channel_multiplier, channel_divisor, channel_min)
+        return round_channels(channel, channel_multiplier, 
+            self.global_params['channel_divisor'], self.global_params['channel_min'])
 
-    def _decode_block_def(self, fix_first_last=False):
+    def _decode_block_def(self):
         block_def = self.block_def
-        depth_multiplier = self.arch_params[1]
         blocks_args = []
         for idx, stage_strings in enumerate(block_def):
             assert isinstance(stage_strings, container_abcs.Sequence)
             stage_args = [self._decode_str_def(stage_str) for stage_str in stage_strings]
             repeats = [arg.pop('repeat') for arg in stage_args]
-            if not (fix_first_last and (idx == 0 or idx == len(block_def)-1)):
+            if not (self.fix_first_last_block and (idx == 0 or idx == len(block_def)-1)):
                 stage_args = self._scale_stage_depth(stage_args, repeats)
             blocks_args.append(stage_args)
         return blocks_args
@@ -403,12 +109,25 @@ class EfficientNet(nn.Module):
             'c': ('out_channel', int),
             'se': ('se_ratio', float)
         }
+        act_map = {
+            're': 'relu',
+            'r6': 'relu6',
+            'hw': 'hard_swish',
+            'sw': 'swish'
+        }
 
         args = {'block_type': stage_data[0]}
         noskip = False
         for op in stage_data[1:]:
             if op == 'noskip':
                 noskip = True
+            elif op.startswith('n'):
+                value = op[1:]
+                if value in act_map:
+                    value = get_act_layer(act_map[value])
+                else:
+                    value = get_act_layer(value)
+                args['act_layer'] = value
             else:
                 s = re.split(r'(\d.*)', op)
                 assert len(s) >= 2
@@ -435,14 +154,40 @@ class EfficientNet(nn.Module):
             stage_args_scaled.extend([deepcopy(sa) for _ in range(rep)])
         return stage_args_scaled
 
-    def _make_blocks(self, in_channel, fix_first_last=False):
-        blocks_args = self._decode_block_def(fix_first_last)
+    def _make_layer(self, layer_args):
+        assert isinstance(layer_args, dict)
+        block_map = {
+            'ds': DepthwiseSeparableConv,
+            'ir': InvertedResidualBlock,
+            'er': EdgeResidual,
+            'cn': ConvBnAct
+        }
+        block_type = layer_args.pop('block_type')
 
-        self.in_channel = in_channel
-        self.total_layers = sum(len(x) for x in blocks_args)
-        self.layer_idx = 0
+        if block_type != 'cn' and 'drop_path_rate' in self.global_params:
+            drop_rate = self.global_params['drop_path_rate'] * self.layer_idx / self.total_layers
+            layer_args['drop_path_rate'] = drop_rate
+
+        layer_args['in_channel'] = self.last_channel
+        layer_args['out_channel'] = self._round_channel(layer_args['out_channel'])
+        layer_args['pad_type'] = self.global_params['pad_type']
+        layer_args['norm_layer'] = self.global_params['norm_layer']
+        layer_args['norm_kwargs'] = self.global_params['norm_kwargs']
+        layer_args['act_layer'] = self.global_params['act_layer']
+        if 'mid_channel' in layer_args:
+            layer_args['mid_channel'] = self._round_channel(layer_args['mid_channel'])
+        if self.se_kwargs and block_type != 'cn':
+            layer_args['se_kwargs'] = self.se_kwargs
+
+        layer = block_map[block_type](**layer_args)
+
+        self.last_channel = layer_args['out_channel']
+        self.layer_idx += 1
+        return layer
+
+    def __call__(self):
         blocks = []
-        for stage_args in blocks_args:
+        for stage_args in self.blocks_args:
             assert isinstance(stage_args, list)
             stage = []
             for idx, args in enumerate(stage_args):
@@ -452,34 +197,60 @@ class EfficientNet(nn.Module):
                 layer = self._make_layer(args)
                 stage.append(layer)
             blocks.append(nn.Sequential(*stage))
-            self.out_channels.append(self.in_channel)
+            self.out_channels.append(self.last_channel)
         return nn.Sequential(*blocks)
 
-    def _make_layer(self, layer_args):
-        assert isinstance(layer_args, dict)
-        block_map = {
-            'ds': DepthwiseSeparableConv,
-            'ir': InvertedResidualBlock,
-            'er': EdgeResidual,
-        }
-        drop_rate = self.global_params['drop_path_rate'] * self.layer_idx / self.total_layers
 
-        layer_args['in_channel'] = self.in_channel
-        layer_args['out_channel'] = self._round_channel(layer_args['out_channel'])
-        layer_args['drop_path_rate'] = drop_rate
-        layer_args['pad_type'] = self.global_params['pad_type']
-        layer_args['norm_kwargs'] = self.global_params['norm_kwargs']
-        layer_args['act_layer'] = self.global_params['act_layer']
-        if 'mid_channel' in layer_args:
-            layer_args['mid_channel'] = self._round_channel(layer_args['mid_channel'])
+class EfficientNet(nn.Module):
+    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
+                 stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
+                 **kwargs):
+        super(EfficientNet, self).__init__()
+        assert isinstance(global_params, dict)
 
-        block_type = layer_args.pop('block_type')
-        layer = block_map[block_type](**layer_args)
+        self.in_channel = in_channel
+        self.arch_params = arch_params
+        self.block_def = block_def
+        self.global_params = global_params
+        self.num_features = self.num_features = self._round_channel(1280) if num_features is None else num_features
 
-        self.in_channel = layer_args['out_channel']
-        self.layer_idx += 1
-        return layer
+        norm_layer = global_params['norm_layer']
+        norm_kwargs = global_params['norm_kwargs']
+        act_layer = global_params['act_layer']
+        pad_type = global_params['pad_type']
 
+        if not fix_stem:
+            stem_size = self._round_channel(stem_size)
+        self.conv_stem = create_conv2d(in_channel, stem_size, 3, stride=2, 
+            padding=pad_type, bias=False)
+        self.bn1 = norm_layer(stem_size, **norm_kwargs)
+        self.act1 = act_layer(inplace=True)
+
+        blocks_builder = EfficientNetBuilder(block_def, arch_params, global_params, 
+            stem_size=stem_size, fix_first_last_block=fix_block_first_last)
+        self.blocks = blocks_builder()
+        last_channel = blocks_builder.last_channel
+        self.out_channels = blocks_builder.out_channels
+
+        self.conv_head = create_conv2d(last_channel, self.num_features, 1, padding=pad_type, bias=False)
+        self.bn2 = norm_layer(self.num_features, **norm_kwargs)
+        self.act2 = act_layer(inplace=True)
+
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.flatten = nn.Flatten(start_dim=1)
+        dropout_rate = self.arch_params[3]
+        self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
+        self.classifier = nn.Linear(self.num_features, num_classes)
+        self.num_classes = num_classes
+
+        self.out_channels.extend([self.num_features, num_classes])
+        effnet_init_weights(self)
+
+    def _round_channel(self, channel):
+        channel_multiplier = self.arch_params[0]
+        channel_divisor = self.global_params['channel_divisor']
+        channel_min = self.global_params['channel_min']
+        return round_channels(channel, channel_multiplier, channel_divisor, channel_min)
 
     def forward(self, x):
         x = self.conv_stem(x)
@@ -499,9 +270,50 @@ class EfficientNet(nn.Module):
         classifier = [self.conv_head, self.bn2, self.act2, self.global_pool,
             self.flatten, self.dropout, self.classifier]
         return nn.Sequential(*classifier)
-    
+
     def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
         self.classifier = nn.Linear(self.num_features, num_classes)
+
+
+def effnet_init_weights(model, fix_group_fanout=True):
+    """ Weight initialization as per Tensorflow official implementations.
+
+    Args:
+        model (nn.Module): model to initialize
+        fix_group_fanout (bool): enable correct (matching Tensorflow TPU impl) fanout calculation w/ group convs
+
+    Handles layers in EfficientNet, EfficientNet-CondConv, MixNet, MnasNet, MobileNetV3, etc:
+    * https://github.com/tensorflow/tpu/blob/master/models/official/mnasnet/mnasnet_model.py
+    * https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
+    """
+    for n, m in model.named_modules():
+        if isinstance(m, CondConv2d):
+            fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            if fix_group_fanout:
+                fan_out //= m.groups
+            CondConv2d._initializer(m.weight, lambda w: w.data.normal_(0, math.sqrt(2.0 / fan_out)), 
+                m.num_experts, m.weight_shape)
+            if m.bias is not None:
+                m.bias.data.zero_()
+        elif isinstance(m, nn.Conv2d):
+            fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            if fix_group_fanout:
+                fan_out //= m.groups
+            m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
+            if m.bias is not None:
+                m.bias.data.zero_()
+        elif isinstance(m, nn.BatchNorm2d):
+            m.weight.data.fill_(1.0)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.Linear):
+            fan_out = m.weight.size(0)  # fan-out
+            fan_in = 0
+            if 'routing_fn' in n:
+                fan_in = m.weight.size(1)
+            init_range = 1.0 / math.sqrt(fan_in + fan_out)
+            m.weight.data.uniform_(-init_range, init_range)
+            m.bias.data.zero_()
 
 
 def _create_model(variant, block_def, global_params, arch_params, num_classes,
@@ -559,8 +371,9 @@ def _efficientnet(variant, arch_params, num_classes=1000, override_params=None,
         'channel_divisor': 8,
         'channel_min': None,
         'drop_path_rate': 0.2,
-        'act_layer': Swish,
+        'act_layer': resolve_act_layer(kwargs, default='swish'),
         'pad_type': 'same',
+        'norm_layer': resolve_norm_layer(kwargs, default=nn.BatchNorm2d),
         'norm_kwargs': dict(eps=TF_BN_EPSILON, momentum=TF_BN_MOMENTUM)
     }
 
@@ -594,8 +407,9 @@ def _efficientnet_edge(variant, arch_params, num_classes=1000, override_params=N
         'channel_divisor': 8,
         'channel_min': None,
         'drop_path_rate': 0.2,
-        'act_layer': nn.ReLU,
+        'act_layer': resolve_act_layer(kwargs, default='relu'),
         'pad_type': 'same',
+        'norm_layer': resolve_norm_layer(kwargs, default=nn.BatchNorm2d),
         'norm_kwargs': dict(eps=TF_BN_EPSILON, momentum=TF_BN_MOMENTUM)
     }
 
@@ -632,8 +446,9 @@ def _efficientnet_lite(variant, arch_params, num_classes=1000, override_params=N
         'channel_divisor': 8,
         'channel_min': None,
         'drop_path_rate': 0.2,
-        'act_layer': nn.ReLU6,
+        'act_layer': resolve_act_layer(kwargs, 'relu6'),
         'pad_type': 'same',
+        'norm_layer': resolve_norm_layer(kwargs, default=nn.BatchNorm2d),
         'norm_kwargs': dict(eps=TF_BN_EPSILON, momentum=TF_BN_MOMENTUM)
     }
     kwargs['fix_stem'] = True
