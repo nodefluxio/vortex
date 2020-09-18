@@ -107,11 +107,12 @@ class OnnxExporter(BaseExporter):
             ## BatchedNMSPostProcess squeezed the output for each samples
             ## cast to super (BasicNMSPostProcess) to disable squeezing
             postprocess.__class__ = BasicNMSPostProcess
+
         input_names = ['input']
         inputs = [example_input]
-        for additional_input in additional_inputs :
+        for additional_input in additional_inputs:
             input_name, shape = additional_input
-            inputs.append(torch.zeros(*shape))
+            inputs.append(torch.tensor(0) if shape is None else torch.zeros(*shape))
             input_names.append(input_name)
         inputs = tuple(inputs)
         filename = str(self.filename)

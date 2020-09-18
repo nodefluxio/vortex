@@ -23,7 +23,7 @@ class RetinaFaceCollate:
             if not len(target.shape) == 2:
                 raise RuntimeError(
                     "expects dimensionality of target is 2 got %s" % len(target.shape))
-            if self.dataformat.class_label is None:
+            if not 'class_label' in self.dataformat or self.dataformat.class_label is None:
                 class_label_tensor = torch.from_numpy(
                     np.array([[0]]*target.shape[0])).float()
             else:

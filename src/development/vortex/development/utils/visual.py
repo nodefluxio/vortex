@@ -47,27 +47,31 @@ def draw_labels(vis, obj_classes, confidences, bls : Sequence[Tuple[int,int]], c
         vis = draw_label(vis, obj_class, confidence, bl, color, class_names=class_names)
     return vis
 
-def visualize_result(vis : np.ndarray, results : List[Dict[str,np.ndarray]] , class_names=None, color_map=colors) :
-    im_h, im_w, im_c = vis.shape
-    for result in results :
-        assert 'class_label' in result
-        class_label = result['class_label']
+def visualize_result(vis : np.ndarray, results : List[Dict[str,np.ndarray]] , class_names=None, color_map=colors):
+    for result in results:
+        class_label = None
+        if 'class_label' in result:
+            class_label = result['class_label']
+        else:
+            class_label = np.zeros((result['class_confidence'].shape[0], 1))
         class_confidence = result['class_confidence']
-        if class_label is None :
-            continue
-        if 'bounding_box' in result :
+
+        if 'bounding_box' in result:
             assert 'class_confidence' in result
             bounding_box = result['bounding_box']
-            if bounding_box is None :
+            if bounding_box is None:
                 continue
-            vis = draw_bboxes(vis, bounding_box, class_label, class_confidence, class_names=class_names, color_map=color_map)
-        else :
-            label_pts = np.asarray([[0, int(im_h*0.95)]]*len(class_label))
+            vis = draw_bboxes(vis, bounding_box, class_label, class_confidence, 
+                              class_names=class_names, color_map=color_map)
+        else:
+            label_pts = np.asarray([[0, int(vis.shape[0]*0.95)]] * len(class_label))
             label_pts = [tuple(label_pt) for label_pt in label_pts.tolist()]
-            vis = draw_labels(vis, class_label.astype(np.int), class_confidence, label_pts, color_map=color_map, class_names=class_names)
-        if 'landmarks' in result :
+            vis = draw_labels(vis, class_label.astype(np.int), class_confidence, label_pts, 
+                              color_map=color_map, class_names=class_names)
+
+        if 'landmarks' in result:
             landmarks = result['landmarks']
-            if landmarks is None :
+            if landmarks is None:
                 continue
             vis = draw_landmarks(vis, landmarks)
     return vis

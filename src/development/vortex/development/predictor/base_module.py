@@ -86,8 +86,8 @@ class BasePredictor(nn.Module):
 
         required, optional = None, None
         if self.task == "detection":
-            required = ["bounding_box", "class_label", "class_confidence"]
-            optional = ["landmarks"]
+            required = ["bounding_box", "class_confidence"]
+            optional = ["landmarks", "class_label"]
         elif self.task == "classification":
             required = ["class_label", "class_confidence"]
         else:

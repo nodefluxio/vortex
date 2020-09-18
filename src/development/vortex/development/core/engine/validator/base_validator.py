@@ -386,14 +386,12 @@ class BaseValidator:
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
-                last_index = False
-                if index == len(self.dataset) -1:
-                    last_index = True
+
                 self.update_results(
                     index=index,
                     results=results,
                     targets=targets,
-                    last_index=last_index
+                    last_index=(index == len(self.dataset)-1)
                 )
                 # Perform validation loss calculation if supported
                 # Some model behave differently on training on eval, validation loss calculation might failed

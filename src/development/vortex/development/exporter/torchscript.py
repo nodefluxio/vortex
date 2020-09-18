@@ -31,7 +31,7 @@ class TorchScriptExporter(BaseExporter):
         # input_spec -> (shape, position)
         input_spec = {'input': (torch.tensor(self.image_size), torch.tensor(0))}
         for n, (name, shape) in enumerate(additional_inputs):
-            inputs.append(torch.zeros(*shape))
+            inputs.append(torch.tensor(0) if shape is None else torch.zeros(*shape))
             input_spec[name] = (torch.tensor(shape), torch.tensor(n+1))
 
         ## this is a crude workaround for zero detection error in nms

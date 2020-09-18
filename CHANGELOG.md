@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - jit and export global context, see [`vortex/development/networks/modules/utils/config.py`](src/development/vortex/development/networks/modules/utils/config.py)
 - support for per parameter options (see [PyTorch Optimizer](https://pytorch.org/docs/stable/optim.html#per-parameter-options)) 
 using `'param_groups'` key in model components.
+- support for None `additional_input` shape in model for scalar tensor input.
+- support for image size type of list (w,h), or non-square image, in predict and export.
 - validation loss calculation to experiment logger
 
 
@@ -29,8 +31,10 @@ using `'param_groups'` key in model components.
 - changed `CosineLRScheduler` to `CosineLRWithWarmUp` scheduler
 - changed `TanhLRScheduler` to `TanhLRWithWarmUp` scheduler
 - `BaseTrainer.create_optimizer` only accept model parameters dict (e.g. from `model.parameters()`) instead of the model itself
+- make `class_label` for detection not required
 - update backbone components
 - use mobilenetv3 definition and pretrained from [rwightman](https://github.com/rwightman/pytorch-image-models)
+
 
 ### Fixed
 - Fix error when using ir_runtime_validate with uneven batch splitting caused by different batch size on the last batch sample

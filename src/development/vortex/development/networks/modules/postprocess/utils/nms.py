@@ -54,7 +54,7 @@ class NMS(nn.Module):
 
 
 def batched_nms(boxes, scores, idxs, iou_threshold):
-    # type: (Tensor, Tensor, Tensor, float)
+    # type: (torch.Tensor, torch.Tensor, torch.Tensor, float) -> torch.Tensor
     """
     adapted from torchvision.ops.boxes.batched_nms
     Performs non-maximum suppression in a batched fashion.
