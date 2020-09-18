@@ -70,16 +70,13 @@ Variants from reference [MobileNetV2: Inverted Residuals and Linear Bottlenecks]
 
 Variants from reference [Searching for MobileNetV3](https://arxiv.org/abs/1905.02244) :
 
-- `mobilenetv3_small_w7d20` 
-- `mobilenetv3_small_wd2` 
-- `mobilenetv3_small_w3d4` 
-- `mobilenetv3_small_w1`
-- `mobilenetv3_small_w5d4`
-- `mobilenetv3_large_w7d20`
-- `mobilenetv3_large_wd2`
-- `mobilenetv3_large_w3d4`
-- `mobilenetv3_large_w1`
-- `mobilenetv3_large_w5d4`
+- `mobilenetv3_large_075`
+- `mobilenetv3_large_100`
+- `mobilenetv3_large_minimal_100`
+- `mobilenetv3_small_075`
+- `mobilenetv3_small_100`
+- `mobilenetv3_small_minimal_100`
+- `mobilenetv3_rw`
 
 ---
 
