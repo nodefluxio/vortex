@@ -27,8 +27,11 @@ model_urls = {
 
 class VGG(nn.Module):
 
-    def __init__(self, features, num_classes=1000, init_weights=True):
+    def __init__(self, features, num_classes=1000, init_weights=True, norm_layer=None):
         super(VGG, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+
         self.features = features
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.flatten = nn.Flatten(start_dim=1)
@@ -75,7 +78,10 @@ class VGG(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, norm_layer=None):
+    if norm_layer is None:
+        norm_layer = nn.BatchNorm2d
+
     layers = []
     in_channels = 3
     for v in cfg:
@@ -84,7 +90,7 @@ def make_layers(cfg, batch_norm=False):
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+                layers += [conv2d, norm_layer(v), nn.ReLU(inplace=True)]
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
@@ -108,7 +114,10 @@ def _vgg(arch, batch_norm, pretrained, progress, **kwargs):
             num_classes = kwargs.pop("num_classes")
 
     arch_stripped = arch.split('_')[0]
-    model = VGG(make_layers(default_cfgs[arch_stripped], batch_norm=batch_norm), **kwargs)
+    norm_layer = None
+    if 'norm_layer' in kwargs:
+        norm_layer = kwargs['norm_layer']
+    model = VGG(make_layers(default_cfgs[arch_stripped], batch_norm=batch_norm, norm_layer=norm_layer), **kwargs)
     if pretrained:
         load_pretrained(model, model_urls[arch], num_classes=num_classes, 
             first_conv_name="features.0", progress=progress)

@@ -204,17 +204,23 @@ class EfficientNetBuilder(nn.Module):
 class EfficientNet(nn.Module):
     def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
-                 **kwargs):
+                 norm_layer=None, **kwargs):
         super(EfficientNet, self).__init__()
         assert isinstance(global_params, dict)
+
+        if norm_layer is None:
+            if 'norm_layer' in global_params:
+                norm_layer = global_params['norm_layer']
+            else:
+                global_params['norm_layer'] = nn.BatchNorm2d
+                norm_layer = nn.BatchNorm2d
 
         self.in_channel = in_channel
         self.arch_params = arch_params
         self.block_def = block_def
         self.global_params = global_params
-        self.num_features = self.num_features = self._round_channel(1280) if num_features is None else num_features
+        self.num_features = self._round_channel(1280) if num_features is None else num_features
 
-        norm_layer = global_params['norm_layer']
         norm_kwargs = global_params['norm_kwargs']
         act_layer = global_params['act_layer']
         pad_type = global_params['pad_type']

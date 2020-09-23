@@ -40,13 +40,14 @@ def channel_shuffle(x, groups):
 
     # flatten
     x = x.view(batchsize, -1, height, width)
-
     return x
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride):
+    def __init__(self, inp, oup, stride, norm_layer=None):
         super(InvertedResidual, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
 
         if not (1 <= stride <= 3):
             raise ValueError('illegal stride value')
@@ -59,10 +60,10 @@ class InvertedResidual(nn.Module):
             self.branch1 = nn.Sequential(
                 self.depthwise_conv(inp, inp, kernel_size=3,
                                     stride=self.stride, padding=1),
-                nn.BatchNorm2d(inp),
+                norm_layer(inp),
                 nn.Conv2d(inp, branch_features, kernel_size=1,
                           stride=1, padding=0, bias=False),
-                nn.BatchNorm2d(branch_features),
+                norm_layer(branch_features),
                 nn.ReLU(inplace=True),
             )
         else:
@@ -71,14 +72,14 @@ class InvertedResidual(nn.Module):
         self.branch2 = nn.Sequential(
             nn.Conv2d(inp if (self.stride > 1) else branch_features,
                       branch_features, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features),
             nn.ReLU(inplace=True),
             self.depthwise_conv(branch_features, branch_features,
                                 kernel_size=3, stride=self.stride, padding=1),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features),
             nn.Conv2d(branch_features, branch_features,
                       kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features),
             nn.ReLU(inplace=True),
         )
 
@@ -94,7 +95,6 @@ class InvertedResidual(nn.Module):
             out = torch.cat((self.branch1(x), self.branch2(x)), dim=1)
 
         out = channel_shuffle(out, 2)
-
         return out
 
 
@@ -110,8 +110,11 @@ class ShuffleNetV2Classifier(nn.Module):
 
 
 class ShuffleNetV2(nn.Module):
-    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, in_channel=3):
+    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, 
+                 in_channel=3, norm_layer=None):
         super(ShuffleNetV2, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
 
         if len(stages_repeats) != 3:
             raise ValueError(
@@ -125,7 +128,7 @@ class ShuffleNetV2(nn.Module):
         output_channels = self._stage_out_channels[0]
         self.conv1 = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(output_channels),
+            norm_layer(output_channels),
             nn.ReLU(inplace=True),
         )
         input_channels = output_channels
@@ -135,20 +138,19 @@ class ShuffleNetV2(nn.Module):
         stage_names = ['stage{}'.format(i) for i in [2, 3, 4]]
         for name, repeats, output_channels in zip(
                 stage_names, stages_repeats, self._stage_out_channels[1:]):
-            seq = [InvertedResidual(input_channels, output_channels, 2)]
+            seq = [InvertedResidual(input_channels, output_channels, 2, norm_layer=norm_layer)]
             for i in range(repeats - 1):
-                seq.append(InvertedResidual(
-                    output_channels, output_channels, 1))
+                seq.append(InvertedResidual(output_channels, output_channels, 
+                    stride=1, norm_layer=norm_layer))
             setattr(self, name, nn.Sequential(*seq))
             input_channels = output_channels
 
         output_channels = self._stage_out_channels[-1]
         self.conv5 = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(output_channels),
+            norm_layer(output_channels),
             nn.ReLU(inplace=True),
         )
-
         self.fc = nn.Linear(output_channels, num_classes)
 
     def forward(self, x):

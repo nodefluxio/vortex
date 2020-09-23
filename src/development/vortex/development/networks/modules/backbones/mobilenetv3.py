@@ -48,8 +48,16 @@ class MobileNetV3(nn.Module):
     """
 
     def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
-                 stem_size=16, num_features=1280, head_bias=True, dropout_rate=0., **kwargs):
+                 stem_size=16, num_features=1280, head_bias=True, dropout_rate=0., 
+                 norm_layer=None, **kwargs):
         super(MobileNetV3, self).__init__()
+
+        if norm_layer is None:
+            if 'norm_layer' in global_params:
+                norm_layer = global_params['norm_layer']
+            else:
+                global_params['norm_layer'] = nn.BatchNorm2d
+                norm_layer = nn.BatchNorm2d
 
         self.num_classes = num_classes
         self.num_features = num_features
