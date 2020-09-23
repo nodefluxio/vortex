@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 from .base_backbone import Backbone, ClassifierFeature
 from ..utils.arch_utils import load_pretrained
 from ..utils.layers import make_divisible
@@ -72,6 +73,8 @@ class MobileNetV2(nn.Module):
             Set to 1 to turn off rounding
         """
         super(MobileNetV2, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
         input_channel = in_channel
         stem_size = 32
         last_channel = 1280
@@ -112,6 +115,7 @@ class MobileNetV2(nn.Module):
         self.features = nn.Sequential(*features)
 
         # building classifier
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(self.last_channel, num_classes),
@@ -133,9 +137,21 @@ class MobileNetV2(nn.Module):
     def forward(self, x):
         x = self.features(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
-        x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
+        x = self.avgpool(x)
+        x = torch.flatten(x, start_dim=1)
         x = self.classifier(x)
         return x
+
+    def get_stages(self):
+        stages = nn.Sequential(
+            self.features[0],
+            self.features[1:3],
+            self.features[3:5],
+            self.features[5:12],
+            self.features[12:18]
+        )
+        channels = [16, 24, 32, 96, 320]
+        return stages, channels
 
     def get_classifier(self):
         return nn.Sequential(
@@ -176,18 +192,12 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
         raise RuntimeError("unsupported model: %s; supported in mobilenetv2: %s" %
                            (model_name, supported_models))
     model = mobilenet_v2(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)
-    channels = [16, 24, 32, 96, 320]
-    model_stages = nn.Sequential(
-        model.features[0],
-        model.features[1:3],
-        model.features[3:5],
-        model.features[5:12],
-        model.features[12:18]
-    )
+    stages, channels = model.get_stages()
+
     if feature_type == "tri_stage_fpn":
-        backbone = Backbone(model_stages, channels)
+        backbone = Backbone(stages, channels)
     elif feature_type == "classifier":
-        backbone = ClassifierFeature(model_stages, model.get_classifier(), n_classes)
+        backbone = ClassifierFeature(stages, model.get_classifier(), n_classes)
     else:
         raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
             "is not currently implemented, got %s" % (feature_type))

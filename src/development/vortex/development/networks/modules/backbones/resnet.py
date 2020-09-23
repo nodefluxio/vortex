@@ -157,9 +157,11 @@ class ResNet(nn.Module):
                                        dilate=replace_stride_with_dilation[1])
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.flatten = nn.Flatten(start_dim=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.num_classes = num_classes
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -221,13 +223,35 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         return self._forward_impl(x)
-    
+
+    def get_stages(self):
+        if isinstance(self.layer1[0], Bottleneck):
+            channels = [64, 256, 512, 1024, 2048]
+        else:
+            channels = [64, 64, 128, 256, 512]
+        stages = [
+            nn.Sequential(
+                self.conv1, self.bn1,
+                self.relu, self.maxpool
+            ),
+            self.layer1,
+            self.layer2,
+            self.layer3,
+            self.layer4
+        ]
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self):
         return nn.Sequential(
             self.avgpool,
             self.flatten,
             self.fc
         )
+
+    def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
+        expansion = self.layer1[0].expansion
+        self.fc = nn.Linear(512*expansion, num_classes)
 
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
@@ -355,26 +379,6 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
                    pretrained, progress, **kwargs)
 
 
-def _resnet_backbone(network: ResNet):
-    if isinstance(network.layer1[0], Bottleneck):
-        out_size = [64, 256, 512, 1024, 2048]
-    else:
-        out_size = [64, 64, 128, 256, 512]
-
-    return nn.Sequential(
-        nn.Sequential(
-            network.conv1,
-            network.bn1,
-            network.relu,
-            network.maxpool
-        ),
-        network.layer1,
-        network.layer2,
-        network.layer3,
-        network.layer4
-    ), out_size
-
-
 def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
@@ -383,7 +387,7 @@ def get_backbone(model_name : str, pretrained: bool = False, feature_type: str =
         import warnings
         warnings.warn("unused argument(s) in 'get_backbone': %s" % args)
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = _resnet_backbone(network)
+    stages, channels = network.get_stages()
 
     if feature_type == "tri_stage_fpn":
         backbone = Backbone(stages, channels)

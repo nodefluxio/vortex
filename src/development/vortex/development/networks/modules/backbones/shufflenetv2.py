@@ -152,6 +152,7 @@ class ShuffleNetV2(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.fc = nn.Linear(output_channels, num_classes)
+        self.num_classes = num_classes
 
     def forward(self, x):
         x = self.conv1(x)
@@ -163,7 +164,19 @@ class ShuffleNetV2(nn.Module):
         x = x.mean([2, 3])
         x = self.fc(x)
         return x
-    
+
+    def get_stages(self):
+        channels = self._stage_out_channels.copy()[:4]
+        channels.insert(0, channels[0])
+        stages = [
+            self.conv1,
+            self.maxpool,
+            self.stage2,
+            self.stage3,
+            self.stage4
+        ]
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self):
         return nn.Sequential(
             self.conv5,
@@ -171,6 +184,11 @@ class ShuffleNetV2(nn.Module):
             nn.Flatten(),
             self.fc
         )
+
+    def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
+        in_channel = self._stage_out_channels[-1]
+        self.fc = nn.Linear(in_channel, num_classes)
 
 
 def _shufflenetv2(arch, pretrained, progress, *args, **kwargs):
@@ -246,18 +264,6 @@ def shufflenetv2_x2_0(pretrained=False, progress=True, *args, **kwargs):
     return model
 
 
-def _shufflenetv2_stages(model: nn.Module):
-    out_channels = model._stage_out_channels.copy()[:4]
-    out_channels.insert(0, out_channels[0])
-    return nn.Sequential(           # x0.5
-        model._modules['conv1'],    # 24
-        model._modules['maxpool'],  # 24
-        model._modules['stage2'],   # 48
-        model._modules['stage3'],   # 92
-        model._modules['stage4'],   # 192
-    ), out_channels
-
-
 def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
@@ -266,7 +272,8 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
 
     model_name = model_name.replace('.', '_')
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)'.format(model_name))
-    stages, n_channels = _shufflenetv2_stages(network)
+    stages, n_channels = network.get_stages()
+
     if feature_type == "tri_stage_fpn":
         backbone = Backbone(stages, n_channels)
     elif feature_type == "classifier":
