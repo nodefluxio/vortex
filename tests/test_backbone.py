@@ -10,7 +10,7 @@ all_backbone = [m.__name__.split('.')[-1] for m in list(backbones.supported_mode
 exclude_test = [ ## exclude bigger models
     'efficientnet_b6', 'efficientnet_b7', 'efficientnet_b8', 
     'efficientnet_l2', 'efficientnet_l2_475', 
-    'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn', 'vgg19',
+    'vgg13', 'vgg16_bn', 'vgg19_bn', 'vgg19',
     'resnet101', 'resnet152', 'resnext101_32x8d', 'wide_resnet101_2'
 ]
 
@@ -28,6 +28,10 @@ def test_backbone(module, feature):
         pretrained = False
         if name not in no_pretrained and feature == "classifier":
             pretrained = True
+        elif name != 'darknet53' and feature == 'tri_stage_fpn':
+            network = backbones.get_backbone(name, pretrained=pretrained, feature_type=feature, 
+                n_classes=2, norm_layer=torch.nn.InstanceNorm2d, norm_kwargs={'eps': 1e-3})
+            assert all(not isinstance(m, torch.nn.BatchNorm2d) for m in network.modules())
         network = backbones.get_backbone(name, pretrained=pretrained, feature_type=feature, n_classes=2)
 
         x = torch.rand(1, 3, 224, 224)
