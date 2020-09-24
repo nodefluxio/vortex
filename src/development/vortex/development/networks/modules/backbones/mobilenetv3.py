@@ -49,7 +49,7 @@ class MobileNetV3(nn.Module):
 
     def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=16, num_features=1280, head_bias=True, dropout_rate=0., 
-                 norm_layer=None, **kwargs):
+                 norm_layer=None, norm_kwargs=None, **kwargs):
         super(MobileNetV3, self).__init__()
 
         if norm_layer is None:
@@ -58,14 +58,18 @@ class MobileNetV3(nn.Module):
             else:
                 global_params['norm_layer'] = nn.BatchNorm2d
                 norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            if 'norm_kwargs' in global_params and isinstance(norm_layer, nn.BatchNorm2d):
+                norm_kwargs = global_params['norm_kwargs']
+            else:
+                global_params['norm_kwargs'] = {}
+                norm_kwargs = {}
 
         self.num_classes = num_classes
         self.num_features = num_features
         self.block_def = block_def
         self.arch_params = arch_params
 
-        norm_layer = global_params['norm_layer']
-        norm_kwargs = global_params['norm_kwargs']
         act_layer = global_params['act_layer']
         pad_type = global_params['pad_type']
 

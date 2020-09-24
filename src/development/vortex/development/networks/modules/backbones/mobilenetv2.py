@@ -20,19 +20,19 @@ supported_models = [
 
 class ConvBNReLU(nn.Sequential):
     def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, 
-                 groups=1, norm_layer=nn.BatchNorm2d):
+                 groups=1, norm_layer=nn.BatchNorm2d, norm_kwargs={}):
         padding = (kernel_size - 1) // 2
 
         super(ConvBNReLU, self).__init__(
             nn.Conv2d(in_planes, out_planes, kernel_size, stride,
                       padding, groups=groups, bias=False),
-            norm_layer(out_planes),
+            norm_layer(out_planes, **norm_kwargs),
             nn.ReLU6(inplace=True)
         )
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=nn.BatchNorm2d):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=nn.BatchNorm2d, norm_kwargs={}):
         super(InvertedResidual, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -42,14 +42,15 @@ class InvertedResidual(nn.Module):
 
         layers = []
         if expand_ratio != 1: # pw
-            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, norm_layer=norm_layer))
+            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, 
+                norm_layer=norm_layer, norm_kwargs=norm_kwargs))
         layers.extend([
             # dw
-            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, 
-                       groups=hidden_dim, norm_layer=norm_layer),
+            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, 
+                       norm_layer=norm_layer, norm_kwargs=norm_kwargs),
             # pw-linear
             nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            norm_layer(oup),
+            norm_layer(oup, **norm_kwargs),
         ])
         self.conv = nn.Sequential(*layers)
 
@@ -62,7 +63,7 @@ class InvertedResidual(nn.Module):
 
 class MobileNetV2(nn.Module):
     def __init__(self, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, 
-                 round_nearest=8, in_channel=3, norm_layer=None):
+                 round_nearest=8, in_channel=3, norm_layer=None, norm_kwargs=None):
         """
         MobileNet V2 main class
         Args:
@@ -75,6 +76,8 @@ class MobileNetV2(nn.Module):
         super(MobileNetV2, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
         input_channel = in_channel
         stem_size = 32
         last_channel = 1280
@@ -99,7 +102,8 @@ class MobileNetV2(nn.Module):
         # building first layer
         stem_size = make_divisible(stem_size * width_mult, round_nearest)
         self.last_channel = make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features = [ConvBNReLU(input_channel, stem_size, stride=2, norm_layer=norm_layer)]
+        features = [ConvBNReLU(input_channel, stem_size, stride=2, 
+            norm_layer=norm_layer, norm_kwargs=norm_kwargs)]
         input_channel = stem_size
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
@@ -107,10 +111,11 @@ class MobileNetV2(nn.Module):
             for i in range(n):
                 stride = s if i == 0 else 1
                 features.append(InvertedResidual(input_channel, output_channel, 
-                    stride, expand_ratio=t, norm_layer=norm_layer))
+                    stride, expand_ratio=t, norm_layer=norm_layer, norm_kwargs=norm_kwargs))
                 input_channel = output_channel
         # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, norm_layer=norm_layer))
+        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, 
+            norm_layer=norm_layer, norm_kwargs=norm_kwargs))
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
