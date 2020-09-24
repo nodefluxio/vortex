@@ -20,6 +20,7 @@ using `'param_groups'` key in model components.
 - support for None `additional_input` shape in model for scalar tensor input.
 - support for image size type of list (w,h), or non-square image, in predict and export.
 - validation loss calculation to experiment logger
+- support for changing batch norm layer in all backbone with `norm_layer` argument.
 
 
 ### Changed
