@@ -1,5 +1,4 @@
 import os
-from os import name
 import shutil
 import pytz
 import warnings
@@ -102,8 +101,9 @@ class TrainingPipeline(BasePipeline):
                 raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
                     "in the config file. Please specify 'checkpoint' option in the top level "
                     "of your config file pointing to model path used for resume.")
-            checkpoint = torch.load(config.checkpoint)
-            state_dict = checkpoint['state_dict']
+            if resume or os.path.exists(config.checkpoint):
+                checkpoint = torch.load(config.checkpoint, map_location=torch.device('cpu'))
+                state_dict = checkpoint['state_dict']
 
             if resume:
                 self.start_epoch = checkpoint['epoch']
@@ -210,6 +210,11 @@ class TrainingPipeline(BasePipeline):
         if resume:
             self.trainer.optimizer.load_state_dict(checkpoint['optimizer_state'])
             if self.trainer.scheduler is not None:
+                scheduler_args = self.config.trainer.lr_scheduler.args
+                if isinstance(scheduler_args, dict):
+                    for name, v in scheduler_args.items():
+                        if name in checkpoint["scheduler_state"]:
+                            checkpoint["scheduler_state"][name] = v
                 self.trainer.scheduler.load_state_dict(checkpoint["scheduler_state"])
 
         has_save = False
@@ -236,8 +241,8 @@ class TrainingPipeline(BasePipeline):
             self.save_epoch = self.config.trainer.save_epoch
             has_save = has_save or self.config.trainer.save_epoch is not None
         if not has_save:
-            warnings.warn("No model checkpoint saving configuration is specified, the training would work "
-                "but the training will only save the last epoch model.\nYou can configure either one of "
+            warnings.warn("No model checkpoint saving configuration is specified, the training would still "
+                "work but will only save the last epoch model.\nYou can configure either one of "
                 "'config.trainer.save_epoch' or 'config.trainer.save_best_metric")
 
         # Validation components creation

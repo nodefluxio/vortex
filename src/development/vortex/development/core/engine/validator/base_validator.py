@@ -370,19 +370,21 @@ class BaseValidator:
         """
         default validation pipeline
         """
+        is_training = True
+        validation_handler, val_loss_err_msg = None, None
+        val_loss = 0.
         if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
             # Perform validation loss calculation if supported
             if self.criterion:
                 validation_handler = self.predictor.model.register_forward_hook(self.raw_model_output_hook)
-                val_loss = 0.
                 val_loss_stats = True
 
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
             for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" VAL", leave=True):
+                                                desc=" VAL", leave=True, dynamic_ncols=True):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
