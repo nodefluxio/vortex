@@ -36,7 +36,7 @@ def main(args):
     visualization = results.visualization
 
     # Convert class index to class names,obtain results
-    if 'class_label' in prediction[0]:
+    if 'class_label' in prediction[0] and vortex_predictor.model.class_names is not None:
         class_names = [[vortex_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
     else:
         class_names = [["class_0" for _ in result['class_confidence']] for result in prediction]

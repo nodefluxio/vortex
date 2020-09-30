@@ -88,10 +88,10 @@ def create_model_components(model_name: str, preprocess_args: EasyDict, network_
                 component: model_components[component] for component in key_components
             })
 
-            preprocess_args = {}
+            preprocess_norm_args = {}
             if "input_normalization" in preprocess_args:
-                preprocess_args = preprocess_args.input_normalization
-            model_components.preprocess = get_preprocess('normalizer', **preprocess_args)
+                preprocess_norm_args = preprocess_args.input_normalization
+            model_components.preprocess = get_preprocess('normalizer', **preprocess_norm_args)
             model_components.network.task = 'detection' ## force
             if not hasattr(model_components.network, "output_format"):
                 raise RuntimeError("model {} doesn't have 'output_format' attribute".format(model_name))
