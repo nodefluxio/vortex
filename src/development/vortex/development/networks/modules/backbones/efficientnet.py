@@ -204,18 +204,29 @@ class EfficientNetBuilder(nn.Module):
 class EfficientNet(nn.Module):
     def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
-                 **kwargs):
+                 norm_layer=None, norm_kwargs=None, **kwargs):
         super(EfficientNet, self).__init__()
         assert isinstance(global_params, dict)
+
+        if norm_layer is None:
+            if 'norm_layer' in global_params:
+                norm_layer = global_params['norm_layer']
+            else:
+                global_params['norm_layer'] = nn.BatchNorm2d
+                norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            if 'norm_kwargs' in global_params and isinstance(norm_layer, nn.BatchNorm2d):
+                norm_kwargs = global_params['norm_kwargs']
+            else:
+                global_params['norm_kwargs'] = {}
+                norm_kwargs = {}
 
         self.in_channel = in_channel
         self.arch_params = arch_params
         self.block_def = block_def
         self.global_params = global_params
-        self.num_features = self.num_features = self._round_channel(1280) if num_features is None else num_features
+        self.num_features = self._round_channel(1280) if num_features is None else num_features
 
-        norm_layer = global_params['norm_layer']
-        norm_kwargs = global_params['norm_kwargs']
         act_layer = global_params['act_layer']
         pad_type = global_params['pad_type']
 
@@ -266,9 +277,38 @@ class EfficientNet(nn.Module):
         x = self.classifier(x)
         return x
 
+    def get_stages(self):
+        """ get backbone stages
+
+        This stage division is based on EfficientDet Implementation 
+        (https://github.com/google/automl/tree/master/efficientdet),
+        which takes the layers with spatial reduction of 2
+        """
+        channels = np.array(self.out_channels[1:-2])[[0,1,2,4,-1]]
+        if len(self.blocks) == 6:
+            last_stage = self.blocks[5]
+        elif len(self.blocks) == 7:
+            last_stage = nn.Sequential(self.blocks[5], self.blocks[6])
+        else:
+            raise RuntimeError("Unable to get stages from efficientnet network, number of "
+                "blocks in efficientnet should be 6 or 7, got {}".format(len(self.blocks)))
+        stages = [
+            nn.Sequential(
+                self.conv_stem, self.bn1,
+                self.act1, self.blocks[0]
+            ),
+            self.blocks[1],
+            self.blocks[2],
+            nn.Sequential(self.blocks[3], self.blocks[4]),
+            last_stage
+        ]
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self):
-        classifier = [self.conv_head, self.bn2, self.act2, self.global_pool,
-            self.flatten, self.dropout, self.classifier]
+        classifier = [
+            self.conv_head, self.bn2, self.act2, self.global_pool,
+            self.flatten, self.dropout, self.classifier
+        ]
         return nn.Sequential(*classifier)
 
     def reset_classifier(self, num_classes):
@@ -707,43 +747,6 @@ def efficientnet_lite4(pretrained=False, progress=True, **kwargs):
     return model
 
 
-def _efficientnet_stages(network: EfficientNet):
-    """ get stages for Efficientnet backbone
-    
-    This stage division is based on EfficientDet Implementation 
-    (https://github.com/google/automl/tree/master/efficientdet),
-    which takes the layers with spatial reduction of 2
-    """
-    blocks_channels = network.out_channels[1:-2]
-    channels = np.array(blocks_channels)[[0,1,2,4,-1]]
-    if len(network.blocks) == 6:
-        last_stage = network.blocks[5]
-    elif len(network.blocks) == 7:
-        last_stage = nn.Sequential(
-            network.blocks[5],
-            network.blocks[6]
-        )
-    else:
-        raise RuntimeError("Unable to get stages from efficientnet network, " \
-            "number of blocks in efficientnet should be 6 or 7, got %s" % len(network.blocks))
-    stages = [
-        nn.Sequential(
-            network.conv_stem,
-            network.bn1,
-            network.act1,
-            network.blocks[0]
-        ),
-        network.blocks[1],
-        network.blocks[2],
-        nn.Sequential(
-            network.blocks[3],
-            network.blocks[4]
-        ),
-        last_stage
-    ]
-    return nn.Sequential(*stages), list(channels)
-
-
 def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, **kwargs):
     if not model_name in supported_models:
@@ -753,7 +756,7 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
         'drop_path_rate': 0.0
     }
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = _efficientnet_stages(network)
+    stages, channels = network.get_stages()
 
     if feature_type == "tri_stage_fpn":
         backbone = Backbone(stages, channels)

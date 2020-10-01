@@ -39,20 +39,23 @@ class BasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
+                 base_width=64, dilation=1, norm_layer=None, norm_kwargs=None):
         super(BasicBlock, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
+
         if groups != 1 or base_width != 64:
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = norm_layer(planes)
+        self.bn1 = norm_layer(planes, **norm_kwargs)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = norm_layer(planes)
+        self.bn2 = norm_layer(planes, **norm_kwargs)
         self.downsample = downsample
         self.stride = stride
 
@@ -85,18 +88,21 @@ class Bottleneck(nn.Module):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
-                 base_width=64, dilation=1, norm_layer=None):
+                 base_width=64, dilation=1, norm_layer=None, norm_kwargs=None):
         super(Bottleneck, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
+
         width = int(planes * (base_width / 64.)) * groups
         # Both self.conv2 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv1x1(inplanes, width)
-        self.bn1 = norm_layer(width)
+        self.bn1 = norm_layer(width, **norm_kwargs)
         self.conv2 = conv3x3(width, width, stride, groups, dilation)
-        self.bn2 = norm_layer(width)
+        self.bn2 = norm_layer(width, **norm_kwargs)
         self.conv3 = conv1x1(width, planes * self.expansion)
-        self.bn3 = norm_layer(planes * self.expansion)
+        self.bn3 = norm_layer(planes * self.expansion, **norm_kwargs)
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
         self.stride = stride
@@ -128,11 +134,14 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, in_channel=3):
+                 norm_layer=None, norm_kwargs=None, in_channel=3):
         super(ResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
         self._norm_layer = norm_layer
+        self._norm_kwargs = norm_kwargs
 
         self.inplanes = 64
         self.dilation = 1
@@ -147,7 +156,7 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
         self.conv1 = nn.Conv2d(in_channel, self.inplanes, kernel_size=7, stride=2, 
                                padding=3, bias=False)
-        self.bn1 = norm_layer(self.inplanes)
+        self.bn1 = norm_layer(self.inplanes, **norm_kwargs)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
@@ -157,9 +166,11 @@ class ResNet(nn.Module):
                                        dilate=replace_stride_with_dilation[1])
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
+
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.flatten = nn.Flatten(start_dim=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.num_classes = num_classes
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -180,6 +191,7 @@ class ResNet(nn.Module):
 
     def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
         norm_layer = self._norm_layer
+        norm_kwargs = self._norm_kwargs
         downsample = None
         previous_dilation = self.dilation
         if dilate:
@@ -188,18 +200,17 @@ class ResNet(nn.Module):
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes * block.expansion, stride),
-                norm_layer(planes * block.expansion),
+                norm_layer(planes * block.expansion, **norm_kwargs),
             )
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
-                            self.base_width, previous_dilation, norm_layer))
+                            self.base_width, previous_dilation, norm_layer, norm_kwargs=norm_kwargs))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups,
                                 base_width=self.base_width, dilation=self.dilation,
-                                norm_layer=norm_layer))
-
+                                norm_layer=norm_layer, norm_kwargs=norm_kwargs))
         return nn.Sequential(*layers)
 
     def _forward_impl(self, x):
@@ -221,13 +232,35 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         return self._forward_impl(x)
-    
+
+    def get_stages(self):
+        if isinstance(self.layer1[0], Bottleneck):
+            channels = [64, 256, 512, 1024, 2048]
+        else:
+            channels = [64, 64, 128, 256, 512]
+        stages = [
+            nn.Sequential(
+                self.conv1, self.bn1,
+                self.relu, self.maxpool
+            ),
+            self.layer1,
+            self.layer2,
+            self.layer3,
+            self.layer4
+        ]
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self):
         return nn.Sequential(
             self.avgpool,
             self.flatten,
             self.fc
         )
+
+    def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
+        expansion = self.layer1[0].expansion
+        self.fc = nn.Linear(512*expansion, num_classes)
 
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
@@ -355,26 +388,6 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
                    pretrained, progress, **kwargs)
 
 
-def _resnet_backbone(network: ResNet):
-    if isinstance(network.layer1[0], Bottleneck):
-        out_size = [64, 256, 512, 1024, 2048]
-    else:
-        out_size = [64, 64, 128, 256, 512]
-
-    return nn.Sequential(
-        nn.Sequential(
-            network.conv1,
-            network.bn1,
-            network.relu,
-            network.maxpool
-        ),
-        network.layer1,
-        network.layer2,
-        network.layer3,
-        network.layer4
-    ), out_size
-
-
 def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
@@ -383,7 +396,7 @@ def get_backbone(model_name : str, pretrained: bool = False, feature_type: str =
         import warnings
         warnings.warn("unused argument(s) in 'get_backbone': %s" % args)
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = _resnet_backbone(network)
+    stages, channels = network.get_stages()
 
     if feature_type == "tri_stage_fpn":
         backbone = Backbone(stages, channels)
