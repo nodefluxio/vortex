@@ -40,13 +40,16 @@ def channel_shuffle(x, groups):
 
     # flatten
     x = x.view(batchsize, -1, height, width)
-
     return x
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride):
+    def __init__(self, inp, oup, stride, norm_layer=None, norm_kwargs=None):
         super(InvertedResidual, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
 
         if not (1 <= stride <= 3):
             raise ValueError('illegal stride value')
@@ -59,10 +62,10 @@ class InvertedResidual(nn.Module):
             self.branch1 = nn.Sequential(
                 self.depthwise_conv(inp, inp, kernel_size=3,
                                     stride=self.stride, padding=1),
-                nn.BatchNorm2d(inp),
+                norm_layer(inp, **norm_kwargs),
                 nn.Conv2d(inp, branch_features, kernel_size=1,
                           stride=1, padding=0, bias=False),
-                nn.BatchNorm2d(branch_features),
+                norm_layer(branch_features, **norm_kwargs),
                 nn.ReLU(inplace=True),
             )
         else:
@@ -71,14 +74,14 @@ class InvertedResidual(nn.Module):
         self.branch2 = nn.Sequential(
             nn.Conv2d(inp if (self.stride > 1) else branch_features,
                       branch_features, kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features, **norm_kwargs),
             nn.ReLU(inplace=True),
             self.depthwise_conv(branch_features, branch_features,
                                 kernel_size=3, stride=self.stride, padding=1),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features, **norm_kwargs),
             nn.Conv2d(branch_features, branch_features,
                       kernel_size=1, stride=1, padding=0, bias=False),
-            nn.BatchNorm2d(branch_features),
+            norm_layer(branch_features, **norm_kwargs),
             nn.ReLU(inplace=True),
         )
 
@@ -94,7 +97,6 @@ class InvertedResidual(nn.Module):
             out = torch.cat((self.branch1(x), self.branch2(x)), dim=1)
 
         out = channel_shuffle(out, 2)
-
         return out
 
 
@@ -110,8 +112,13 @@ class ShuffleNetV2Classifier(nn.Module):
 
 
 class ShuffleNetV2(nn.Module):
-    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, in_channel=3):
+    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, 
+                 in_channel=3, norm_layer=None, norm_kwargs=None):
         super(ShuffleNetV2, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
 
         if len(stages_repeats) != 3:
             raise ValueError(
@@ -125,7 +132,7 @@ class ShuffleNetV2(nn.Module):
         output_channels = self._stage_out_channels[0]
         self.conv1 = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 3, 2, 1, bias=False),
-            nn.BatchNorm2d(output_channels),
+            norm_layer(output_channels, **norm_kwargs),
             nn.ReLU(inplace=True),
         )
         input_channels = output_channels
@@ -135,21 +142,22 @@ class ShuffleNetV2(nn.Module):
         stage_names = ['stage{}'.format(i) for i in [2, 3, 4]]
         for name, repeats, output_channels in zip(
                 stage_names, stages_repeats, self._stage_out_channels[1:]):
-            seq = [InvertedResidual(input_channels, output_channels, 2)]
+            seq = [InvertedResidual(input_channels, output_channels, 2, 
+                norm_layer=norm_layer, norm_kwargs=norm_kwargs)]
             for i in range(repeats - 1):
-                seq.append(InvertedResidual(
-                    output_channels, output_channels, 1))
+                seq.append(InvertedResidual(output_channels, output_channels, 
+                    stride=1, norm_layer=norm_layer, norm_kwargs=norm_kwargs))
             setattr(self, name, nn.Sequential(*seq))
             input_channels = output_channels
 
         output_channels = self._stage_out_channels[-1]
         self.conv5 = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(output_channels),
+            norm_layer(output_channels, **norm_kwargs),
             nn.ReLU(inplace=True),
         )
-
         self.fc = nn.Linear(output_channels, num_classes)
+        self.num_classes = num_classes
 
     def forward(self, x):
         x = self.conv1(x)
@@ -161,7 +169,19 @@ class ShuffleNetV2(nn.Module):
         x = x.mean([2, 3])
         x = self.fc(x)
         return x
-    
+
+    def get_stages(self):
+        channels = self._stage_out_channels.copy()[:4]
+        channels.insert(0, channels[0])
+        stages = [
+            self.conv1,
+            self.maxpool,
+            self.stage2,
+            self.stage3,
+            self.stage4
+        ]
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self):
         return nn.Sequential(
             self.conv5,
@@ -169,6 +189,11 @@ class ShuffleNetV2(nn.Module):
             nn.Flatten(),
             self.fc
         )
+
+    def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
+        in_channel = self._stage_out_channels[-1]
+        self.fc = nn.Linear(in_channel, num_classes)
 
 
 def _shufflenetv2(arch, pretrained, progress, *args, **kwargs):
@@ -244,18 +269,6 @@ def shufflenetv2_x2_0(pretrained=False, progress=True, *args, **kwargs):
     return model
 
 
-def _shufflenetv2_stages(model: nn.Module):
-    out_channels = model._stage_out_channels.copy()[:4]
-    out_channels.insert(0, out_channels[0])
-    return nn.Sequential(           # x0.5
-        model._modules['conv1'],    # 24
-        model._modules['maxpool'],  # 24
-        model._modules['stage2'],   # 48
-        model._modules['stage3'],   # 92
-        model._modules['stage4'],   # 192
-    ), out_channels
-
-
 def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
@@ -264,7 +277,8 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
 
     model_name = model_name.replace('.', '_')
     network = eval('{}(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)'.format(model_name))
-    stages, n_channels = _shufflenetv2_stages(network)
+    stages, n_channels = network.get_stages()
+
     if feature_type == "tri_stage_fpn":
         backbone = Backbone(stages, n_channels)
     elif feature_type == "classifier":

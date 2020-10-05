@@ -22,7 +22,7 @@ class SSDCollate:
             if not len(target.shape) == 2:
                 raise RuntimeError(
                     "expects dimensionality of target is 2 got %s" % len(target.shape))
-            if self.dataformat.class_label is None:
+            if not 'class_label' in self.dataformat or self.dataformat.class_label is None:
                 class_label_tensor = torch.from_numpy(
                     np.array([[0]]*target.shape[0])).float()
             else:
@@ -38,8 +38,7 @@ class SSDCollate:
                 index=torch.tensor(df.bounding_box.indices, dtype=torch.long)
             )
             bounding_box_tensor[:,2:] = bounding_box_tensor[:,:2] + bounding_box_tensor[:,2:]
-            target = torch.cat(
-                (bounding_box_tensor, class_label_tensor), axis=1)            
+            target = torch.cat((bounding_box_tensor, class_label_tensor), axis=1)            
             list_targets.append(target)
 
         return (torch.stack(imgs, 0), list_targets)

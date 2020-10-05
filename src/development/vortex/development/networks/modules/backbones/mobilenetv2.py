@@ -1,6 +1,8 @@
 from torch import nn
+import torch
 from .base_backbone import Backbone, ClassifierFeature
 from ..utils.arch_utils import load_pretrained
+from ..utils.layers import make_divisible
 
 
 __all__ = ['MobileNetV2', 'mobilenet_v2']
@@ -16,39 +18,21 @@ supported_models = [
 ]
 
 
-def _make_divisible(v, divisor, min_value=None):
-    """
-    This function is taken from the original tf repo.
-    It ensures that all layers have a channel number that is divisible by 8
-    It can be seen here:
-    https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet.py
-    :param v:
-    :param divisor:
-    :param min_value:
-    :return:
-    """
-    if min_value is None:
-        min_value = divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
-    if new_v < 0.9 * v:
-        new_v += divisor
-    return new_v
-
-
 class ConvBNReLU(nn.Sequential):
-    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, groups=1):
+    def __init__(self, in_planes, out_planes, kernel_size=3, stride=1, 
+                 groups=1, norm_layer=nn.BatchNorm2d, norm_kwargs={}):
         padding = (kernel_size - 1) // 2
+
         super(ConvBNReLU, self).__init__(
             nn.Conv2d(in_planes, out_planes, kernel_size, stride,
                       padding, groups=groups, bias=False),
-            nn.BatchNorm2d(out_planes),
+            norm_layer(out_planes, **norm_kwargs),
             nn.ReLU6(inplace=True)
         )
 
 
 class InvertedResidual(nn.Module):
-    def __init__(self, inp, oup, stride, expand_ratio):
+    def __init__(self, inp, oup, stride, expand_ratio, norm_layer=nn.BatchNorm2d, norm_kwargs={}):
         super(InvertedResidual, self).__init__()
         self.stride = stride
         assert stride in [1, 2]
@@ -57,16 +41,16 @@ class InvertedResidual(nn.Module):
         self.use_res_connect = self.stride == 1 and inp == oup
 
         layers = []
-        if expand_ratio != 1:
-            # pw
-            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1))
+        if expand_ratio != 1: # pw
+            layers.append(ConvBNReLU(inp, hidden_dim, kernel_size=1, 
+                norm_layer=norm_layer, norm_kwargs=norm_kwargs))
         layers.extend([
             # dw
-            ConvBNReLU(hidden_dim, hidden_dim,
-                       stride=stride, groups=hidden_dim),
+            ConvBNReLU(hidden_dim, hidden_dim, stride=stride, groups=hidden_dim, 
+                       norm_layer=norm_layer, norm_kwargs=norm_kwargs),
             # pw-linear
             nn.Conv2d(hidden_dim, oup, 1, 1, 0, bias=False),
-            nn.BatchNorm2d(oup),
+            norm_layer(oup, **norm_kwargs),
         ])
         self.conv = nn.Sequential(*layers)
 
@@ -79,7 +63,7 @@ class InvertedResidual(nn.Module):
 
 class MobileNetV2(nn.Module):
     def __init__(self, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, 
-                 round_nearest=8, in_channel=3):
+                 round_nearest=8, in_channel=3, norm_layer=None, norm_kwargs=None):
         """
         MobileNet V2 main class
         Args:
@@ -90,7 +74,10 @@ class MobileNetV2(nn.Module):
             Set to 1 to turn off rounding
         """
         super(MobileNetV2, self).__init__()
-        block = InvertedResidual
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
         input_channel = in_channel
         stem_size = 32
         last_channel = 1280
@@ -113,24 +100,27 @@ class MobileNetV2(nn.Module):
                              "or a 4-element list, got {}".format(inverted_residual_setting))
 
         # building first layer
-        stem_size = _make_divisible(stem_size * width_mult, round_nearest)
-        self.last_channel = _make_divisible(last_channel * max(1.0, width_mult), round_nearest)
-        features = [ConvBNReLU(input_channel, stem_size, stride=2)]
+        stem_size = make_divisible(stem_size * width_mult, round_nearest)
+        self.last_channel = make_divisible(last_channel * max(1.0, width_mult), round_nearest)
+        features = [ConvBNReLU(input_channel, stem_size, stride=2, 
+            norm_layer=norm_layer, norm_kwargs=norm_kwargs)]
         input_channel = stem_size
         # building inverted residual blocks
         for t, c, n, s in inverted_residual_setting:
-            output_channel = _make_divisible(c * width_mult, round_nearest)
+            output_channel = make_divisible(c * width_mult, round_nearest)
             for i in range(n):
                 stride = s if i == 0 else 1
-                features.append(
-                    block(input_channel, output_channel, stride, expand_ratio=t))
+                features.append(InvertedResidual(input_channel, output_channel, 
+                    stride, expand_ratio=t, norm_layer=norm_layer, norm_kwargs=norm_kwargs))
                 input_channel = output_channel
         # building last several layers
-        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1))
+        features.append(ConvBNReLU(input_channel, self.last_channel, kernel_size=1, 
+            norm_layer=norm_layer, norm_kwargs=norm_kwargs))
         # make it nn.Sequential
         self.features = nn.Sequential(*features)
 
         # building classifier
+        self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Sequential(
             nn.Dropout(0.2),
             nn.Linear(self.last_channel, num_classes),
@@ -152,9 +142,21 @@ class MobileNetV2(nn.Module):
     def forward(self, x):
         x = self.features(x)
         # Cannot use "squeeze" as batch-size can be 1 => must use reshape with x.shape[0]
-        x = nn.functional.adaptive_avg_pool2d(x, 1).reshape(x.shape[0], -1)
+        x = self.avgpool(x)
+        x = torch.flatten(x, start_dim=1)
         x = self.classifier(x)
         return x
+
+    def get_stages(self):
+        stages = nn.Sequential(
+            self.features[0],
+            self.features[1:3],
+            self.features[3:5],
+            self.features[5:12],
+            self.features[12:18]
+        )
+        channels = [16, 24, 32, 96, 320]
+        return stages, channels
 
     def get_classifier(self):
         return nn.Sequential(
@@ -195,18 +197,12 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
         raise RuntimeError("unsupported model: %s; supported in mobilenetv2: %s" %
                            (model_name, supported_models))
     model = mobilenet_v2(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)
-    channels = [16, 24, 32, 96, 320]
-    model_stages = nn.Sequential(
-        model.features[0],
-        model.features[1:3],
-        model.features[3:5],
-        model.features[5:12],
-        model.features[12:18]
-    )
+    stages, channels = model.get_stages()
+
     if feature_type == "tri_stage_fpn":
-        backbone = Backbone(model_stages, channels)
+        backbone = Backbone(stages, channels)
     elif feature_type == "classifier":
-        backbone = ClassifierFeature(model_stages, model.get_classifier(), n_classes)
+        backbone = ClassifierFeature(stages, model.get_classifier(), n_classes)
     else:
         raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
             "is not currently implemented, got %s" % (feature_type))

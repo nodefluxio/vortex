@@ -23,7 +23,7 @@ class DefaultTrainer(BaseTrainer):
         ## TODO : consider to move device deduction to BaseTrainer
         device = list(self.model.parameters())[0].device
         for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),
-                                         desc=" train", leave=False):
+                                         desc=" train", leave=False, dynamic_ncols=True):
             if self.scheduler is not None:
                 self.lr = self.scheduler.get_last_lr()[0]
             inputs = inputs.to(device)

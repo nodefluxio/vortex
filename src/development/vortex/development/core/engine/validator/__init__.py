@@ -101,7 +101,15 @@ def _(model_components, dataset, validation_args, predictor_args=None, device='c
     predictor = create_predictor(model_components, **predictor_args).to(device)
 
     task = model_components.network.task
-    return create_validator_instance(
-        task=task, predictor=predictor,
-        dataset=dataset, **validation_args
-    )
+    if 'loss' in model_components and 'collate_fn' in model_components:
+        return create_validator_instance(
+            task=task, predictor=predictor,
+            dataset=dataset,criterion = model_components.loss,
+            collate_fn = model_components.collate_fn,
+            **validation_args
+        )
+    else:
+        return create_validator_instance(
+            task=task, predictor=predictor,
+            dataset=dataset,**validation_args
+        )

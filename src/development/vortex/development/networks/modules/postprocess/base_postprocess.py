@@ -125,9 +125,9 @@ class BasicNMSPostProcess(nn.Module):
         return self._forward(input, score_threshold, iou_threshold)
 
 class BatchedNMSPostProcess(BasicNMSPostProcess) :
-    def __init__(self, *args, **kwargs) :
-        super(BatchedNMSPostProcess,self).__init__(*args,**kwargs)
-    
+    def __init__(self, decoder: Callable, nms: bool = True) :
+        super(BatchedNMSPostProcess,self).__init__(decoder, nms)
+
     def forward(self, input: torch.Tensor, score_threshold: torch.Tensor, iou_threshold: torch.Tensor) :
         n_batch = input.size(0)
         results = []

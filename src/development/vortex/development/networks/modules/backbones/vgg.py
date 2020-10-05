@@ -27,8 +27,13 @@ model_urls = {
 
 class VGG(nn.Module):
 
-    def __init__(self, features, num_classes=1000, init_weights=True):
+    def __init__(self, features, num_classes=1000, init_weights=True, norm_layer=None, norm_kwargs=None):
         super(VGG, self).__init__()
+        if norm_layer is None:
+            norm_layer = nn.BatchNorm2d
+        if norm_kwargs is None:
+            norm_kwargs = {}
+
         self.features = features
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.flatten = nn.Flatten(start_dim=1)
@@ -41,6 +46,7 @@ class VGG(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, num_classes),
         )
+        self.num_classes = num_classes
         if init_weights:
             self._initialize_weights()
 
@@ -50,15 +56,26 @@ class VGG(nn.Module):
         x = self.flatten(x)
         x = self.classifier(x)
         return x
-    
+
+    def get_stages(self):
+        channels = [64, 128, 256, 512, 512]
+        stages, tmp = [], []
+        for m in self.features:
+            tmp.append(m)
+            if isinstance(m, nn.MaxPool2d):
+                stages.append(nn.Sequential(*tmp))
+                tmp = []
+        return nn.Sequential(*stages), channels
+
     def get_classifier(self) :
         return nn.Sequential(
             self.avgpool,
             self.flatten,
             self.classifier
         )
-    
+
     def reset_classifier(self, num_classes):
+        self.num_classes = num_classes
         self.classifier[-1] = nn.Linear(4096, num_classes)
 
     def _initialize_weights(self):
@@ -75,7 +92,12 @@ class VGG(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
 
-def make_layers(cfg, batch_norm=False):
+def make_layers(cfg, batch_norm=False, norm_layer=None, norm_kwargs=None):
+    if norm_layer is None:
+        norm_layer = nn.BatchNorm2d
+    if norm_kwargs is None:
+        norm_kwargs = {}
+
     layers = []
     in_channels = 3
     for v in cfg:
@@ -84,7 +106,7 @@ def make_layers(cfg, batch_norm=False):
         else:
             conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU(inplace=True)]
+                layers += [conv2d, norm_layer(v, **norm_kwargs), nn.ReLU(inplace=True)]
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
@@ -108,7 +130,14 @@ def _vgg(arch, batch_norm, pretrained, progress, **kwargs):
             num_classes = kwargs.pop("num_classes")
 
     arch_stripped = arch.split('_')[0]
-    model = VGG(make_layers(default_cfgs[arch_stripped], batch_norm=batch_norm), **kwargs)
+    norm_layer, norm_kwargs = None, None
+    if 'norm_layer' in kwargs:
+        norm_layer = kwargs['norm_layer']
+    if 'norm_kwargs' in kwargs:
+        norm_kwargs = kwargs['norm_kwargs']
+    features = make_layers(default_cfgs[arch_stripped], batch_norm=batch_norm, 
+        norm_layer=norm_layer, norm_kwargs=norm_kwargs)
+    model = VGG(features, **kwargs)
     if pretrained:
         load_pretrained(model, model_urls[arch], num_classes=num_classes, 
             first_conv_name="features.0", progress=progress)
@@ -202,34 +231,17 @@ def vgg19_bn(pretrained=False, progress=True, **kwargs):
     """
     return _vgg('vgg19_bn', True, pretrained, progress, **kwargs)
 
-def get_backbone_for_fpn(features : nn.Sequential) :
-    stages = []
-    tmp = []
-    for feature in features :
-        tmp.append(feature)
-        if isinstance(feature, nn.MaxPool2d) :
-            stages.append(nn.Sequential(*tmp))
-            tmp.clear()
-    return nn.Sequential(*stages)
-
-def get_classifier(vgg : VGG) :
-    return nn.Sequential(
-        vgg.avgpool,
-        nn.Flatten(),
-        vgg.classifier
-    )
-
 def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
         raise RuntimeError("model %s is not supported yet, available model: %s" \
             % (model_name, supported_models))
-    
-    out_size = [64, 128, 256, 512, 512]
+
     model = eval(f'{model_name}(pretrained=pretrained, num_classes=n_classes, *args,**kwargs)')
+    stages, channels = model.get_stages()
 
     if feature_type == "tri_stage_fpn":
-        backbone = Backbone(get_backbone_for_fpn(model.features), out_size)
+        backbone = Backbone(stages, channels)
     elif feature_type == "classifier":
         backbone = ClassifierFeature(model.features, model.get_classifier(), n_classes)
     else:

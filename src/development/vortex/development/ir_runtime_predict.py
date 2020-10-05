@@ -8,7 +8,6 @@ description = 'Vortex IR model prediction pipeline; may receive multiple image(s
 
 
 def main(args):
-
     model_path=args.model
     test_images=args.image
     output_directory=args.output_dir
@@ -38,10 +37,10 @@ def main(args):
     visualization = results.visualization
 
     # Convert class index to class names,obtain results
-    try :
+    if 'class_label' in prediction[0]:
         class_names = [[vortex_ir_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
-    except :
-        class_names = None
+    else:
+        class_names = [["class_0" for _ in result['class_confidence']] for result in prediction]
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 

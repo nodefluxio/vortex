@@ -12,7 +12,7 @@ def main(args):
     test_images=args.image
     device=args.device
     output_dir=args.output_dir
-    
+
     kwargs = vars(args)
     for key in ['config','weights','image','device','output_dir']:
         kwargs.pop(key)
@@ -34,13 +34,12 @@ def main(args):
 
     prediction = results.prediction
     visualization = results.visualization
-    
-    # Convert class index to class names,obtain results
 
-    try :
+    # Convert class index to class names,obtain results
+    if 'class_label' in prediction[0] and vortex_predictor.model.class_names is not None:
         class_names = [[vortex_predictor.model.class_names[int(class_index)] for class_index in result['class_label']] for result in prediction]
-    except :
-        class_names = None
+    else:
+        class_names = [["class_0" for _ in result['class_confidence']] for result in prediction]
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 

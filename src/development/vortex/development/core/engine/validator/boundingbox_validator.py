@@ -86,7 +86,9 @@ class BoundingBoxValidator(BaseValidator):
     
     def update_results(self, index, results, targets, last_index):
         ## TODO : unify shape for single batch & multiple batch loader
-        if self.batch_size == 1 :
+        if isinstance(targets, torch.Tensor):
+            targets = targets.numpy()
+        if self.batch_size == 1:
             targets = [targets]
 
         ## Using the following assertion raise error on the end of the data loader when
@@ -104,31 +106,32 @@ class BoundingBoxValidator(BaseValidator):
     def _update_results(self, index, results, targets):
         results = results[0] # single batch
 
-        if results['class_label'] is not None and results['class_label'].max() >= len(self.class_names):
+        if 'class_label' in results and results['class_label'] is not None and \
+                results['class_label'].max() >= len(self.class_names):
             self.class_names.append('N/A') ## background
 
         self.logger('labels :')
         label_bboxes = []
         bboxes = np.take(targets, self.labels_fmt.bounding_box.indices,
-                            axis=self.labels_fmt.bounding_box.axis)
-        class_labels = np.array([[0]]*bboxes.shape[1], dtype=np.int32)
-        assert hasattr(self.labels_fmt, 'class_label')
-        if not self.labels_fmt.class_label is None :
+                         axis=self.labels_fmt.bounding_box.axis)
+
+        class_labels = np.zeros((bboxes.shape[0], 1))
+        if 'class_label' in self.labels_fmt and not self.labels_fmt.class_label is None:
             class_labels = np.take(targets, self.labels_fmt.class_label.indices, 
                 axis=self.labels_fmt.class_label.axis)
 
         class_labels_to_str = lambda class_label : self.class_names[class_label] \
             if self.class_names is not None else 'class_{}'.format(class_label)
 
-        create_bbox = lambda gt : dict(x=gt[0],y=gt[1],w=gt[2],h=gt[3])
-        to_xywh = lambda bbox : (bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1])
+        create_bbox = lambda gt: dict(x=gt[0], y=gt[1], w=gt[2], h=gt[3])
+        to_xywh = lambda bbox: (bbox[0], bbox[1], bbox[2]-bbox[0], bbox[3]-bbox[1])
 
         label_bboxes = list(map(lambda gt : BoundingBox(
             **create_bbox(gt[0]), img_name='{}'.format(index),
             class_label=class_labels_to_str(int(gt[1])), 
         ), zip(bboxes, class_labels)))
 
-        for bbox in label_bboxes :
+        for bbox in label_bboxes:
             self.logger(bbox)
 
         self.logger('detections :')
@@ -140,16 +143,19 @@ class BoundingBoxValidator(BaseValidator):
             img_name='{}'.format(index),
             confidence=float(class_confidence),
         )
-
         result_bboxes = []
-        ## onlty perform mapping if has detections
-        if results['bounding_box'] is not None :
-            result_bboxes = map(lambda result : to_bbox(*result, index), 
-                zip(results['bounding_box'], results['class_label'], results['class_confidence'])
+        if results['bounding_box'] is not None:
+            result_labels = None
+            if 'class_label' in results:
+                result_labels = results['class_label']
+            else:
+                result_labels = np.zeros((results['bounding_box'].shape[0], 1))
+            result_bboxes = map(lambda result: to_bbox(*result, index), 
+                zip(results['bounding_box'], result_labels, results['class_confidence'])
             )
             result_bboxes = list(result_bboxes)
 
-        for result in result_bboxes :
+        for result in result_bboxes:
             self.logger(result)
 
         self.evaluator.update(result_bboxes, label_bboxes)
