@@ -7,14 +7,16 @@ Edited by Vortex Team
 import types
 import functools
 import warnings
+from typing import List
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .conv2d import create_conv2d
-from .activations import sigmoid, get_act_layer
+from .conv2d import create_conv2d, tup_pair
+from .activations import sigmoid, get_act_layer, create_act_layer
 from .arch_utils import make_divisible
+from .padding import pad_same
 
 TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
@@ -306,6 +308,60 @@ class ConvBnAct(nn.Module):
         return x
 
 
+class SEModule(nn.Module):
+
+    def __init__(self, channels, reduction=16, act_layer=nn.ReLU, min_channels=8, reduction_channels=None,
+                 gate_layer='sigmoid'):
+        super(SEModule, self).__init__()
+        reduction_channels = reduction_channels or max(channels // reduction, min_channels)
+        self.fc1 = nn.Conv2d(channels, reduction_channels, kernel_size=1, bias=True)
+        self.act = act_layer(inplace=True)
+        self.fc2 = nn.Conv2d(reduction_channels, channels, kernel_size=1, bias=True)
+        self.gate = create_act_layer(gate_layer)
+
+    def forward(self, x):
+        x_se = x.mean((2, 3), keepdim=True)
+        x_se = self.fc1(x_se)
+        x_se = self.act(x_se)
+        x_se = self.fc2(x_se)
+        return x * self.gate(x_se)
+
+
+class EffectiveSEModule(nn.Module):
+    """ 'Effective Squeeze-Excitation
+    From `CenterMask : Real-Time Anchor-Free Instance Segmentation` - https://arxiv.org/abs/1911.06667
+    """
+    def __init__(self, channels, gate_layer='hard_sigmoid'):
+        super(EffectiveSEModule, self).__init__()
+        self.fc = nn.Conv2d(channels, channels, kernel_size=1, padding=0)
+        self.gate = create_act_layer(gate_layer, inplace=True)
+
+    def forward(self, x):
+        x_se = x.mean((2, 3), keepdim=True)
+        x_se = self.fc(x_se)
+        return x * self.gate(x_se)
+
+
+def avg_pool2d_same(x, kernel_size: List[int], stride: List[int], padding: List[int] = (0, 0),
+                    ceil_mode: bool = False, count_include_pad: bool = True):
+    # FIXME how to deal with count_include_pad vs not for external padding?
+    x = pad_same(x, kernel_size, stride)
+    return F.avg_pool2d(x, kernel_size, stride, (0, 0), ceil_mode, count_include_pad)
+
+
+class AvgPool2dSame(nn.AvgPool2d):
+    """ Tensorflow like 'SAME' wrapper for 2D average pooling
+    """
+    def __init__(self, kernel_size: int, stride=None, padding=0, ceil_mode=False, count_include_pad=True):
+        kernel_size = tup_pair(kernel_size)
+        stride = tup_pair(stride)
+        super(AvgPool2dSame, self).__init__(kernel_size, stride, (0, 0), ceil_mode, count_include_pad)
+
+    def forward(self, x):
+        return avg_pool2d_same(
+            x, self.kernel_size, self.stride, self.padding, self.ceil_mode, self.count_include_pad)
+
+
 class DepthwiseSeparableConv(nn.Module):
     """ DepthwiseSeparable block
     
@@ -504,13 +560,132 @@ def drop_connect(inputs, training : bool=False, drop_connect_rate : float=0.):
     return output
 
 
-def drop_path(x, drop_prob: float = 0., training: bool = False):
-    """function drop paths (Stochastic Depth) per sample.
+def drop_block_2d(x, drop_prob: float = 0.1, block_size: int = 7,  gamma_scale: float = 1.0,
+                  with_noise: bool = False, inplace: bool = False, batchwise: bool = False):
+    """ DropBlock. See https://arxiv.org/pdf/1810.12890.pdf
 
-    This is the same as the drop_connect implementation in original EfficientNet model.
-    The original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper.
+    DropBlock with an experimental gaussian noise option. This layer has been tested on a few training
+    runs with success, but needs further validation and possibly optimization for lower runtime impact.
     """
-    assert drop_prob >= 0
+    B, C, H, W = x.shape
+    total_size = W * H
+    clipped_block_size = min(block_size, min(W, H))
+    # seed_drop_rate, the gamma parameter
+    gamma = gamma_scale * drop_prob * total_size / clipped_block_size ** 2 / (
+        (W - block_size + 1) * (H - block_size + 1))
+
+    # Forces the block to be inside the feature map.
+    w_i, h_i = torch.meshgrid(torch.arange(W).to(x.device), torch.arange(H).to(x.device))
+    valid_block = ((w_i >= clipped_block_size // 2) & (w_i < W - (clipped_block_size - 1) // 2)) & \
+                  ((h_i >= clipped_block_size // 2) & (h_i < H - (clipped_block_size - 1) // 2))
+    valid_block = torch.reshape(valid_block, (1, 1, H, W)).to(dtype=x.dtype)
+
+    if batchwise:
+        # one mask for whole batch, quite a bit faster
+        uniform_noise = torch.rand((1, C, H, W), dtype=x.dtype, device=x.device)
+    else:
+        uniform_noise = torch.rand_like(x)
+    block_mask = ((2 - gamma - valid_block + uniform_noise) >= 1).to(dtype=x.dtype)
+    block_mask = -F.max_pool2d(
+        -block_mask,
+        kernel_size=clipped_block_size,  # block_size,
+        stride=1,
+        padding=clipped_block_size // 2)
+
+    if with_noise:
+        normal_noise = torch.randn((1, C, H, W), dtype=x.dtype, device=x.device) if batchwise else torch.randn_like(x)
+        if inplace:
+            x.mul_(block_mask).add_(normal_noise * (1 - block_mask))
+        else:
+            x = x * block_mask + normal_noise * (1 - block_mask)
+    else:
+        normalize_scale = (block_mask.numel() / block_mask.to(dtype=torch.float32).sum().add(1e-7)).to(x.dtype)
+        if inplace:
+            x.mul_(block_mask * normalize_scale)
+        else:
+            x = x * block_mask * normalize_scale
+    return x
+
+
+def drop_block_fast_2d(x: torch.Tensor, drop_prob: float = 0.1, block_size: int = 7,
+        gamma_scale: float = 1.0, with_noise: bool = False, inplace: bool = False, batchwise: bool = False):
+    """ DropBlock. See https://arxiv.org/pdf/1810.12890.pdf
+
+    DropBlock with an experimental gaussian noise option. Simplied from above without concern for valid
+    block mask at edges.
+    """
+    B, C, H, W = x.shape
+    total_size = W * H
+    clipped_block_size = min(block_size, min(W, H))
+    gamma = gamma_scale * drop_prob * total_size / clipped_block_size ** 2 / (
+            (W - block_size + 1) * (H - block_size + 1))
+
+    if batchwise:
+        # one mask for whole batch, quite a bit faster
+        block_mask = torch.rand((1, C, H, W), dtype=x.dtype, device=x.device) < gamma
+    else:
+        # mask per batch element
+        block_mask = torch.rand_like(x) < gamma
+    block_mask = F.max_pool2d(
+        block_mask.to(x.dtype), kernel_size=clipped_block_size, stride=1, padding=clipped_block_size // 2)
+
+    if with_noise:
+        normal_noise = torch.randn((1, C, H, W), dtype=x.dtype, device=x.device) if batchwise else torch.randn_like(x)
+        if inplace:
+            x.mul_(1. - block_mask).add_(normal_noise * block_mask)
+        else:
+            x = x * (1. - block_mask) + normal_noise * block_mask
+    else:
+        block_mask = 1 - block_mask
+        normalize_scale = (block_mask.numel() / block_mask.to(dtype=torch.float32).sum().add(1e-7)).to(dtype=x.dtype)
+        if inplace:
+            x.mul_(block_mask * normalize_scale)
+        else:
+            x = x * block_mask * normalize_scale
+    return x
+
+
+class DropBlock2d(nn.Module):
+    """ DropBlock. See https://arxiv.org/pdf/1810.12890.pdf
+    """
+    def __init__(self,
+                 drop_prob=0.1,
+                 block_size=7,
+                 gamma_scale=1.0,
+                 with_noise=False,
+                 inplace=False,
+                 batchwise=False,
+                 fast=True):
+        super(DropBlock2d, self).__init__()
+        self.drop_prob = drop_prob
+        self.gamma_scale = gamma_scale
+        self.block_size = block_size
+        self.with_noise = with_noise
+        self.inplace = inplace
+        self.batchwise = batchwise
+        self.fast = fast  # FIXME finish comparisons of fast vs not
+
+    def forward(self, x):
+        if not self.training or not self.drop_prob:
+            return x
+        if self.fast:
+            return drop_block_fast_2d(
+                x, self.drop_prob, self.block_size, self.gamma_scale, self.with_noise, self.inplace, self.batchwise)
+        else:
+            return drop_block_2d(
+                x, self.drop_prob, self.block_size, self.gamma_scale, self.with_noise, self.inplace, self.batchwise)
+
+
+def drop_path(x, drop_prob: float = 0., training: bool = False):
+    """Drop paths (Stochastic Depth) per sample (when applied in main path of residual blocks).
+
+    This is the same as the DropConnect impl I created for EfficientNet, etc networks, however,
+    the original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper...
+    See discussion: https://github.com/tensorflow/tpu/issues/494#issuecomment-532968956 ... I've opted for
+    changing the layer and argument names to 'drop path' rather than mix DropConnect as a layer name and use
+    'survival rate' as the argument.
+
+    """
     if drop_prob == 0. or not training:
         return x
     keep_prob = 1 - drop_prob
@@ -520,13 +695,10 @@ def drop_path(x, drop_prob: float = 0., training: bool = False):
     return output
 
 
-class DropPath(nn.ModuleDict):
+class DropPath(nn.Module):
     """Drop paths (Stochastic Depth) per sample  (when applied in main path of residual blocks).
-
-    This is the same as the DropConnect implementation in original EfficientNet model.
-    The original name is misleading as 'Drop Connect' is a different form of dropout in a separate paper.
     """
-    def __init__(self, drop_prob=0.):
+    def __init__(self, drop_prob=None):
         super(DropPath, self).__init__()
         self.drop_prob = drop_prob
 
