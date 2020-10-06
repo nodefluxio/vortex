@@ -21,8 +21,7 @@ import numpy as np
 import torch.nn as nn
 
 from .base_backbone import Backbone, ClassifierFeature
-from .rexnet import ClassifierHead
-from ..utils.layers import ConvBnAct, SEModule, AvgPool2dSame, DropPath
+from ..utils.layers import ConvBnAct, SEModule, AvgPool2dSame, DropPath, ClassifierHead
 from ..utils.arch_utils import load_pretrained
 
 

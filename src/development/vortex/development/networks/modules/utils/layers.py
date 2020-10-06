@@ -704,3 +704,49 @@ class DropPath(nn.Module):
 
     def forward(self, x):
         return drop_path(x, self.drop_prob, self.training)
+
+
+class FastAdaptiveAvgPool2d(nn.Module):
+    def __init__(self, flatten=False):
+        super(FastAdaptiveAvgPool2d, self).__init__()
+        self.flatten = flatten
+
+    def forward(self, x):
+        return x.mean((2, 3)) if self.flatten else x.mean((2, 3), keepdim=True)
+
+
+class ClassifierHead(nn.Module):
+    """Classifier head w/ configurable global pooling and dropout."""
+
+    def __init__(self, in_chs, num_classes, pool_type='avg', drop_rate=0.):
+        super(ClassifierHead, self).__init__()
+
+        self.flatten = True
+        if pool_type == '':
+            self.global_pool = nn.Identity()
+        elif pool_type == 'fast':
+            self.global_pool = FastAdaptiveAvgPool2d(flatten=True)
+            self.flatten = False
+        elif pool_type == 'avg':
+            self.global_pool = nn.AdaptiveAvgPool2d(1)
+        elif pool_type == 'max':
+            self.pool = nn.AdaptiveMaxPool2d(1)
+        else:
+            raise RuntimeError("Unknown 'pool_type' of {}".format(pool_type))
+
+        self.dropout = nn.Dropout(drop_rate) if drop_rate else None
+
+        ## classifier
+        if num_classes <= 0:
+            self.fc = nn.Identity()
+        else:
+            self.fc = nn.Linear(in_chs, num_classes)
+
+    def forward(self, x):
+        x = self.global_pool(x)
+        if self.flatten:
+            x = x.flatten(1)
+        if self.dropout:
+            x = self.dropout(x)
+        x = self.fc(x)
+        return x

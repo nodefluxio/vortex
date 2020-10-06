@@ -18,7 +18,7 @@ import math
 
 from ..utils.arch_utils import make_divisible, load_pretrained
 from ..utils.activations import get_act_layer
-from ..utils.layers import ConvBnAct
+from ..utils.layers import ConvBnAct, ClassifierHead
 from .base_backbone import Backbone, ClassifierFeature
 
 
@@ -30,27 +30,6 @@ model_urls = {
     'rexnet_200': _complete_url('rexnetv1_200-8c0b7f2d.pth'),
 }
 supported_models = list(model_urls.keys())
-
-
-class ClassifierHead(nn.Module):
-    """Classifier head w/ configurable global pooling and dropout."""
-
-    def __init__(self, in_chs, num_classes, drop_rate=0.):
-        super(ClassifierHead, self).__init__()
-        self.drop_rate = drop_rate
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-        self.dropout = None
-        if drop_rate:
-            self.dropout = nn.Dropout(self.drop_rate)
-        self.fc = nn.Linear(in_chs, num_classes)
-
-    def forward(self, x):
-        x = self.global_pool(x)
-        x = x.flatten(1)
-        if self.dropout:
-            x = self.dropout(x)
-        x = self.fc(x)
-        return x
 
 
 class SEWithNorm(nn.Module):
@@ -149,7 +128,7 @@ class ReXNetV1(nn.Module):
         self.num_features = self.out_channels[-1]
         self.features = nn.Sequential(*features)
 
-        self.head = ClassifierHead(self.num_features, num_classes, drop_rate)
+        self.head = ClassifierHead(self.num_features, num_classes, drop_rate=drop_rate)
         self.out_channels.append(num_classes)
 
         # FIXME weight init, the original appears to use PyTorch defaults
