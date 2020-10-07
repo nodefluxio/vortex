@@ -19,7 +19,7 @@ from torch._six import container_abcs
 
 from ..utils.layers import (
     DepthwiseSeparableConv, InvertedResidualBlock, 
-    EdgeResidual, ConvBnAct
+    EdgeResidual
 )
 from ..utils.activations import get_act_layer
 from ..utils.arch_utils import round_channels
@@ -64,6 +64,22 @@ supported_models = list(model_urls.keys())
 TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
 
+
+class ConvBnAct(nn.Module):
+    def __init__(self, in_channel, out_channel, kernel_size=3, stride=1, dilation=1, 
+                 pad_type='', act_layer=nn.ReLU, norm_layer=nn.BatchNorm2d, norm_kwargs=None, **_):
+        super(ConvBnAct, self).__init__()
+        norm_kwargs = norm_kwargs or {}
+        self.conv = create_conv2d(in_channel, out_channel, kernel_size, stride=stride, 
+            dilation=dilation, padding=pad_type)
+        self.bn1 = norm_layer(out_channel, **norm_kwargs)
+        self.act1 = act_layer(inplace=True)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.bn1(x)
+        x = self.act1(x)
+        return x
 
 class EfficientNetBuilder(nn.Module):
     def __init__(self, block_def, arch_params, global_params, stem_size=32,
