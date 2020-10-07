@@ -35,14 +35,21 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
                  n_classes=n_classes, **kwargs)
     raise RuntimeError("unexpected error! please report this as bug")
 
+
 ## for maintainer, register your module here :
 register_module('darknet53')
+register_module('cspnet')
 register_module('efficientnet')
 register_module('mobilenetv2')
 register_module('mobilenetv3')
+register_module('regnet')
 register_module('resnet')
+register_module('resnest')
+register_module('rexnet')
 register_module('shufflenetv2')
+register_module('tresnet')
 register_module('vgg')
+
 
 import inspect
 from functools import partial

@@ -1,17 +1,23 @@
 import sys
-sys.path.insert(0, 'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[1].joinpath('src', 'development')))
 
 from vortex.development.networks.modules import backbones
+from vortex.development.networks.modules.utils.layers import EvoNormBatch2d
+
 import torch
 import pytest
 
 no_pretrained = ['darknet53', 'shufflenetv2_x1.5', 'shufflenetv2_x2.0']
 all_backbone = [m.__name__.split('.')[-1] for m in list(backbones.supported_models.keys())]
 exclude_test = [ ## exclude bigger models
-    'efficientnet_b6', 'efficientnet_b7', 'efficientnet_b8', 
-    'efficientnet_l2', 'efficientnet_l2_475', 
+    'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7', 
+    'efficientnet_b8', 'efficientnet_l2', 'efficientnet_l2_475', 
     'vgg13', 'vgg16_bn', 'vgg19_bn', 'vgg19',
-    'resnet101', 'resnet152', 'resnext101_32x8d', 'wide_resnet101_2'
+    'resnet101', 'resnet152', 'resnext101_32x8d', 'wide_resnet101_2',
+    'rexnet_200', 'resnest200', 'resnest269', 'resnest50d_1s4x24d',
+    *backbones.regnet.supported_models[6:],
+    'tresnet_m_448', 'tresnet_l_448', 'tresnet_xl_448'
 ]
 
 
@@ -30,11 +36,11 @@ def test_backbone(module, feature):
             pretrained = True
         elif name != 'darknet53' and feature == 'tri_stage_fpn':
             network = backbones.get_backbone(name, pretrained=pretrained, feature_type=feature, 
-                n_classes=2, norm_layer=torch.nn.InstanceNorm2d, norm_kwargs={'eps': 1e-3})
+                n_classes=2, norm_layer=EvoNormBatch2d, norm_kwargs={'eps': 1e-3})
             assert all(not isinstance(m, torch.nn.BatchNorm2d) for m in network.modules())
         network = backbones.get_backbone(name, pretrained=pretrained, feature_type=feature, n_classes=2)
 
-        x = torch.rand(1, 3, 224, 224)
+        x = torch.rand(2, 3, 224, 224)
         x = network(x)
 
         if feature == "tri_stage_fpn":
