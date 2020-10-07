@@ -13,13 +13,23 @@ Backbones params and MAC/FLOPS comparison ( to compare which backbones is the li
 **NOTES** :
 
 - Params : total parameters in the model’s weight
-- MAC / FLOPS : Multiply-Accumulate Operation / Floating Point Operations per Second
+- MAC / FLOPS : Multiply-Accumulate Operation divided by Floating Point Operations per Second
+
+---
+
+## CSPNet
+
+Variants from reference [CSPNet: A New Backbone that can Enhance Learning Capability of CNN](https://arxiv.org/abs/1911.11929):
+
+- `cspresnet50`
+- `cspresnext50`
+- `cspdarknet53`
 
 ---
 
 ## Darknet
 
-Variants from reference [YOLOv3: An Incremental Improvement](https://arxiv.org/abs/1804.02767) :
+Variants from reference [YOLOv3: An Incremental Improvement](https://arxiv.org/abs/1804.02767):
 
 - `darknet53`
 
@@ -80,6 +90,52 @@ Variants from reference [Searching for MobileNetV3](https://arxiv.org/abs/1905.0
 
 ---
 
+## RegNet
+
+Variants from reference [Designing Network Design Spaces](https://arxiv.org/abs/2003.13678):
+
+- `regnetx_002`
+- `regnetx_004`
+- `regnetx_006`
+- `regnetx_008`
+- `regnetx_016`
+- `regnetx_032`
+- `regnetx_040`
+- `regnetx_064`
+- `regnetx_080`
+- `regnetx_120`
+- `regnetx_160`
+- `regnetx_320`
+- `regnety_002`
+- `regnety_004`
+- `regnety_006`
+- `regnety_008`
+- `regnety_016`
+- `regnety_032`
+- `regnety_040`
+- `regnety_064`
+- `regnety_080`
+- `regnety_120`
+- `regnety_160`
+- `regnety_320`
+
+---
+
+## ResNest
+
+Variants from reference [ResNeSt: Split-Attention Networks](https://arxiv.org/abs/2004.08955):
+
+- `resnest14`
+- `resnest26`
+- `resnest50`
+- `resnest101`
+- `resnest200`
+- `resnest269`
+- `resnest50d_4s2x40d`
+- `resnest50d_1s4x24d`
+
+---
+
 ## ResNet
 
 Variants from reference [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) :
@@ -102,6 +158,17 @@ Variants from reference [Wide Residual Networks](https://arxiv.org/abs/1605.0714
 
 ---
 
+## RexNet
+
+Variants from reference [ReXNet: Diminishing Representational Bottleneck on Convolutional Neural Network](https://arxiv.org/abs/2007.00992):
+
+- `rexnet_100`
+- `rexnet_130`
+- `rexnet_150`
+- `rexnet_200`
+
+---
+
 ## ShuffleNet
 
 Variants from reference [ShuffleNet V2: Practical Guidelines for Efficient CNN Architecture Design](https://arxiv.org/abs/1807.11164) :
@@ -110,6 +177,19 @@ Variants from reference [ShuffleNet V2: Practical Guidelines for Efficient CNN A
 - `shufflenetv2_x1.0` 
 - `shufflenetv2_x1.5` 
 - `shufflenetv2_x2.0` 
+
+---
+
+## TResNet
+
+Variants from reference [TResNet: High Performance GPU-Dedicated Architecture](https://arxiv.org/pdf/2003.13630.pdf):
+
+- `tresnet_m`
+- `tresnet_l`
+- `tresnet_xl`
+- `tresnet_m_448`
+- `tresnet_l_448`
+- `tresnet_xl_448`
 
 ---
 
