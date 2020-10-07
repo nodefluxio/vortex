@@ -21,6 +21,7 @@ using `'param_groups'` key in model components.
 - support for image size type of list (w,h), or non-square image, in predict and export.
 - validation loss calculation to experiment logger
 - support for changing batch norm layer in all backbone with `norm_layer` argument.
+- new backbone models: CSPNet, ResNest, RexNet, RegNet, TResNet. see more details in [spreadsheet](https://docs.google.com/spreadsheets/d/1M18Bm08P983_-5diHXAmlUmHusjpHdYMmcN0FmrNS74/edit?usp=sharing) or [csv summary](backbones_summary.txt)
 
 
 ### Changed
