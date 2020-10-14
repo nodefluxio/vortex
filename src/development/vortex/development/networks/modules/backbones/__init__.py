@@ -37,7 +37,7 @@ def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = 
 
 
 ## for maintainer, register your module here :
-register_module('darknet53')
+register_module('darknet')
 register_module('cspnet')
 register_module('efficientnet')
 register_module('mobilenetv2')

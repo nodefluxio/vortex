@@ -1,14 +1,9 @@
-import os
-import os.path
-import sys
-
-import cv2
+import torch
 import random
-import logging
 import numpy as np
-from pathlib import Path
+
 from easydict import EasyDict
-from typing import List, Union, Tuple, Callable
+from typing import List, Union
 
 
 class DarknetCollate:
@@ -21,10 +16,6 @@ class DarknetCollate:
         self.dataformat = EasyDict(dataformat)
 
     def __call__(self, batch):
-        try:
-            import torch
-        except:
-            raise RuntimeError("current implementation needs torch")
         images, targets = list(zip(*batch))
         images = torch.stack(images)
         collate_targets = []
@@ -57,6 +48,42 @@ class DarknetCollate:
             collate_targets.append(target)
 
         targets = torch.cat(collate_targets)
+        return (images, targets)
+
+
+class DarknetCollateNewDim:
+    def __init__(self, dataformat: dict, max_objects: int = 50):
+        self.dataformat = EasyDict(dataformat)
+        self.max_objects = max_objects
+
+    def __call__(self, batch):
+        images, targets = list(zip(*batch))
+        images = torch.stack(images)
+        collate_targets = []
+
+        df = self.dataformat
+        for batch_idx, target in enumerate(targets):
+            if not len(target.shape) == 2:
+                raise RuntimeError(
+                    "expects dimensionality of target is 2 got %s" % len(target.shape))
+            padded_target = torch.zeros(self.max_objects, 5)
+            num_target = len(target)
+            if self.dataformat.class_label is None:
+                class_label = torch.from_numpy(np.array([[0]]*target.shape[0])).float()
+            else:
+                class_label = torch.index_select(
+                    input=target, dim=df.class_label.axis,
+                    index=torch.tensor(df.class_label.indices)
+                )
+            bbox = torch.index_select(
+                input=target, dim=df.bounding_box.axis,
+                index=torch.tensor(df.bounding_box.indices)
+            ).float()
+            ## assume bbox to be x1,y1,w,h (corner), convert to xc,yc,w,h (center)
+            bbox[:, 0:2] += bbox[:, 2:4]/2 
+            padded_target[:num_target, :] = torch.cat((class_label, bbox), axis=1)
+            collate_targets.append(padded_target)
+        targets = torch.stack(collate_targets, dim=0)
         return (images, targets)
 
 
@@ -116,6 +143,7 @@ class MultiScaleDarknetCollate:
 
 supported_collater = [
     'DarknetCollate',
+    'DarknetCollateNewDim',
     'MultiScaleDarknetCollate',
 ]
 
