@@ -22,8 +22,11 @@ supported_models = list(model_urls.keys())
 
 
 class BasicBlock(nn.Module):
-    def __init__(self, inplanes, outplanes, norm_layer=nn.BatchNorm2d):
+    def __init__(self, inplanes, outplanes, norm_layer=None, norm_kwargs=None):
         super(BasicBlock, self).__init__()
+        norm_layer = norm_layer or nn.BatchNorm2d
+        norm_kwargs = norm_kwargs or {}
+
         kernel_size = 3
         if inplanes > outplanes:
             kernel_size = 1
@@ -43,8 +46,11 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     """ Building block for darknet21 and darknet53
     """
-    def __init__(self, planes, outplanes, norm_layer=nn.BatchNorm2d):
+    def __init__(self, planes, outplanes, norm_layer=None, norm_kwargs=None):
         super(Bottleneck, self).__init__()
+        norm_layer = norm_layer or nn.BatchNorm2d
+        norm_kwargs = norm_kwargs or {}
+
         self.conv1 = nn.Conv2d(outplanes, planes, kernel_size=1,
                                stride=1, padding=0, bias=False)
         self.bn1 = norm_layer(planes)
@@ -71,26 +77,27 @@ class Bottleneck(nn.Module):
 
 class DarkNet(nn.Module):
     def __init__(self, block, layers, num_classes=1000, in_channel=3, 
-                 norm_layer=nn.BatchNorm2d):
+                 norm_layer=nn.BatchNorm2d, norm_kwargs=None):
         super(DarkNet, self).__init__()
+        norm_kwargs = norm_kwargs or {}
         self.inplanes = 32
         self.num_classes = num_classes
 
         self.conv1 = nn.Conv2d(in_channel, self.inplanes, kernel_size=3, 
                                stride=1, padding=1, bias=False)
-        self.bn1 = norm_layer(self.inplanes)
+        self.bn1 = norm_layer(self.inplanes, **norm_kwargs)
         self.relu1 = nn.LeakyReLU(0.1)
 
-        self.layer1 = self._make_layer(block, 64, layers[0], norm_layer)
-        self.layer2 = self._make_layer(block, 128, layers[1], norm_layer)
-        self.layer3 = self._make_layer(block, 256, layers[2], norm_layer)
-        self.layer4 = self._make_layer(block, 512, layers[3], norm_layer)
-        self.layer5 = self._make_layer(block, 1024, layers[4], norm_layer)
+        self.layer1 = self._make_layer(block, 64, layers[0], norm_layer, norm_kwargs)
+        self.layer2 = self._make_layer(block, 128, layers[1], norm_layer, norm_kwargs)
+        self.layer3 = self._make_layer(block, 256, layers[2], norm_layer, norm_kwargs)
+        self.layer4 = self._make_layer(block, 512, layers[3], norm_layer, norm_kwargs)
+        self.layer5 = self._make_layer(block, 1024, layers[4], norm_layer, norm_kwargs)
 
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(1024, num_classes)
 
-        self.out_channels = [64, 128, 256, 512, 1024]
+        self.out_channels = [self.inplanes, 64, 128, 256, 512, 1024, num_classes]
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -98,11 +105,11 @@ class DarkNet(nn.Module):
                 m.weight.data.normal_(0, math.sqrt(2. / n))
                 if m.bias is not None:
                     m.bias.data.zero_()
-            elif isinstance(m, norm_layer):
+            elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, norm_layer):
+    def _make_layer(self, block, planes, blocks, norm_layer, norm_kwargs):
         layers = []
         if block == BasicBlock:
             assert blocks % 2 == 1
@@ -113,21 +120,44 @@ class DarkNet(nn.Module):
             inplanes = self.inplanes
             outplanes = planes
             for i in range(blocks):
-                layers.append((f"block_{i}", block(inplanes, outplanes)))
+                block_layer = BasicBlock(inplanes, outplanes, norm_layer, norm_kwargs)
+                layers.append((f"block_{i}", block_layer))
                 inplanes, outplanes = outplanes, inplanes
             assert inplanes == planes
         elif block == Bottleneck:
             #  downsample
             layers.append(("ds_conv", nn.Conv2d(self.inplanes, planes, kernel_size=3,
                                     stride=2, padding=1, bias=False)))
-            layers.append(("ds_bn", norm_layer(planes)))
+            layers.append(("ds_bn", norm_layer(planes, **norm_kwargs)))
             layers.append(("ds_relu", nn.LeakyReLU(0.1)))
 
             #  blocks
             for i in range(blocks):
-                layers.append(("residual_{}".format(i), Bottleneck(self.inplanes, planes)))
+                block_layer = Bottleneck(self.inplanes, planes, norm_layer, norm_kwargs)
+                layers.append(("residual_{}".format(i), block_layer))
         self.inplanes = planes
         return nn.Sequential(OrderedDict(layers))
+
+    def get_stages(self):
+        out_channels = self.out_channels[1:-1].copy()
+        stages = [
+            nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer1),
+            self.layer2,
+            self.layer3,
+            self.layer4,
+            self.layer5
+        ]
+        return nn.Sequential(*stages), out_channels
+
+    def get_classifier(self):
+        return nn.Sequential(
+            self.avgpool,
+            nn.Flatten(start_dim=1),
+            self.fc
+        )
+
+    def reset_classifier(self, num_classes):
+        self.fc = nn.Linear(1024, num_classes)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -144,52 +174,6 @@ class DarkNet(nn.Module):
         x = torch.flatten(x, start_dim=1)
         x = self.fc(x)
         return x
-    
-    def get_classifier(self):
-        return nn.Sequential(
-            self.avgpool,
-            nn.Flatten(start_dim=1),
-            self.fc
-        )
-
-
-class FrozenBatchNorm2d(nn.Module):
-    """
-    BatchNorm2d where the batch statistics and the affine parameters
-    are fixed
-    """
-
-    def __init__(self, num_features, eps=1e-5):
-        super(FrozenBatchNorm2d, self).__init__()
-        self.eps = eps
-        self.register_buffer("weight", torch.ones(num_features))
-        self.register_buffer("bias", torch.zeros(num_features))
-        self.register_buffer("running_mean", torch.zeros(num_features))
-        self.register_buffer("running_var", torch.ones(num_features))
-
-    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
-                              missing_keys, unexpected_keys, error_msgs):
-        num_batches_tracked_key = prefix + 'num_batches_tracked'
-        if num_batches_tracked_key in state_dict:
-            del state_dict[num_batches_tracked_key]
-
-        super(FrozenBatchNorm2d, self)._load_from_state_dict(
-            state_dict, prefix, local_metadata, strict,
-            missing_keys, unexpected_keys, error_msgs)
-
-    def forward(self, x):
-        # move reshapes to the beginning
-        # to make it fuser-friendly
-        w = self.weight.reshape(1, -1, 1, 1)
-        b = self.bias.reshape(1, -1, 1, 1)
-        rv = self.running_var.reshape(1, -1, 1, 1)
-        rm = self.running_mean.reshape(1, -1, 1, 1)
-        scale = w * (rv + self.eps).rsqrt()
-        bias = b - rm * scale
-        return x * scale + bias
-
-    def __repr__(self):
-        return f"{self.__class__.__name__}(num_features={self.weight.shape[0]}, eps={self.eps})"
 
 
 def _darknet(arch, block, layers, pretrained, progress, **kwargs):
@@ -242,37 +226,16 @@ def darknet53(pretrained=False, progress=True, **kwargs):
     return _darknet("darknet53", Bottleneck, [1, 2, 8, 8, 4], pretrained, progress, **kwargs)
 
 
-def _get_stages(model, pretrained=False):
-    if isinstance(model, str):
-        if model in supported_models:
-            model = eval("%s(pretrained=pretrained)" % model)
-        else:
-            raise RuntimeError("Unknown model name of '{}'".format(model))
-    assert isinstance(model, DarkNet)
-    return nn.Sequential(
-        nn.Sequential(model.conv1, model.bn1, model.relu1, model.layer1),
-        model.layer2,
-        model.layer3,
-        model.layer4,
-        model.layer5
-    )
-
-def bn2fixed(m):
-    if isinstance(m, nn.BatchNorm2d):
-        m = m.eval()
-
 def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
                  n_classes: int = 1000, *args, **kwargs):
     if not model_name in supported_models:
         raise RuntimeError("model %s is not supported, available: %s" %(model_name, supported_models))
-    # kwargs['norm_layer'] = FrozenBatchNorm2d
-    model = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    # model.apply(bn2fixed)
-    n_channels = [64, 128, 256, 512, 1024]
 
-    stages = _get_stages(model)
+    model = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
+    stages, channels = model.get_stages()
+
     if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, n_channels)
+        backbone = Backbone(stages, channels)
     elif feature_type == "classifier":
         backbone = ClassifierFeature(stages, model.get_classifier(), n_classes)
     else:
