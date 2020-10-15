@@ -22,6 +22,8 @@ using `'param_groups'` key in model components.
 - validation loss calculation to experiment logger
 - support for changing batch norm layer in all backbone with `norm_layer` argument.
 - new backbone models: CSPNet, ResNest, RexNet, RegNet, TResNet. see more details in [spreadsheet](https://docs.google.com/spreadsheets/d/1M18Bm08P983_-5diHXAmlUmHusjpHdYMmcN0FmrNS74/edit?usp=sharing) or [csv summary](backbones_summary.txt)
+- darknet weight converter in [scripts/convert_darknet_weight.py](scripts/convert_darknet_weight.py)
+- yolov3 [converted darknet weight](experiments/outputs/yolov3_darknet_608) and [config file](experiments/configs/yolov3_darknet_608.yml)
 
 
 ### Changed
@@ -43,6 +45,7 @@ using `'param_groups'` key in model components.
 - Fix error when `save_best_metrics` not present in experiment file
 - Fix ONNX graph ops to convert `iou_threshold` as input
 - lr scheduler bug when arguments changed and resumed
+- yolov3 model definition
 
 
 ## 0.2.0
