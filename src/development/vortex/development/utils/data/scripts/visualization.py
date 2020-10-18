@@ -157,6 +157,7 @@ def visualize(data_pair, data_format, figure: Figure=None, show_img_stats=True, 
             class_names=class_names
         )
     elif data_format_keys == detection_format:
+        # TODO: dont do this here, move to vortex_visual
         # TODO: use np.take to slice labels, add class_names if any
         bbox_fmt = data_format['bounding_box']
         clss_fmt = data_format['class_label']
@@ -301,9 +302,11 @@ if __name__=='__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', help="path to config file")
+    parser.add_argument('--stats', default=False, action='store_true', help="path to config file")
     args = parser.parse_args()
     with open(args.config) as f:
         config = EasyDict(yaml.load(f))
+    # TODO: use dataset wrapper / loader
     dataset = vortex_dataset.get_base_dataset(config.dataset.train.name, config.dataset.train.args)
-    ezviz = EazyViz(config.dataset.train.name, dataset)
+    ezviz = EazyViz(config.dataset.train.name, dataset, args.stats)
     ezviz.mainloop()
