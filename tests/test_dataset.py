@@ -69,6 +69,8 @@ def test_torchvision_dataset():
     assert isinstance(data.dataset[0][0], str), "ImageFolder expected to return input "\
         "of type 'str', got %s" % type(data.dataset[0][0])
 
+def test_darknet_dataset():
+    assert "DarknetDataset" in dataset.all_datasets['external']
 
 if __name__ == "__main__":
     test_dataset_register_dvc()
