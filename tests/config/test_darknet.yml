@@ -1,0 +1,93 @@
+experiment_name : resnet50_detr_voc
+logging : None
+checkpoint : None
+device : 'cuda:0'
+output_directory : experiments/outputs
+model : {
+  name : DETR,
+  preprocess_args : {
+    input_size : 800,
+    input_normalization : {
+      mean : [0.485, 0.456, 0.406],
+      std : [0.229, 0.224, 0.225],
+      scaler : 255
+    }
+  },
+  network_args : {
+    backbone : resnet50,
+    n_classes : 20,
+    pretrained_backbone: True,
+    num_decoder_layers: 6,
+    aux_loss: True,
+    lr_backbone: 0.00001,
+  },
+  loss_args : {},
+  postprocess_args : {}
+}
+trainer : {
+  optimizer : {
+    method : AdamW,
+    args : {
+      lr: 0.0001,
+      weight_decay : 0.0001,
+    }
+  },
+  lr_scheduler: {
+    method: StepLR,
+    args: {step_size: 200}
+  },
+  epoch : 300,
+  save_best_metrics: [loss, mean_ap],
+  driver : {
+    module : DefaultTrainer,
+    args : {
+      accumulation_step : 4,
+    },
+  }
+}
+validator: {
+  args : {
+    score_threshold : 0.45,
+    batch_size: 4,
+  },
+  val_epoch : 1,
+}
+dataset : {
+  train : {
+    name : DarknetDataset,
+    args : {
+      txt_path: ~/data/pkl-dataset/train/data/train.txt,
+      img_root: ~/data/pkl-dataset/train/data/images,
+      names: ~/data/pkl-dataset/train/data/names.txt,
+    },
+  },
+  eval : {
+    name : DarknetDataset,
+    args : {
+      txt_path: ~/data/pkl-dataset/validation/data/val.txt,
+      img_root: ~/data/pkl-dataset/train/data/images,
+      names: ~/data/pkl-dataset/train/data/names.txt,
+    }
+  },
+}
+dataloader: {
+  module: PytorchDataLoader,
+  args : {
+    num_workers : 4,
+    batch_size : 4,
+    shuffle : True,
+  },
+}
+seed : {
+  torch : 0,
+  cudnn : {
+    deterministic : True,
+    benchmark : False,
+  }
+}
+exporter : {
+  module : onnx,
+  args : {
+    opset_version : 11,
+  },
+}
