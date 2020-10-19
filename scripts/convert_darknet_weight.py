@@ -1,3 +1,27 @@
+"""Darknet Weight Converter to Vortex Model
+
+This is a utility script to convert darknet weight to vortex.
+For normal usage, you need to have darknet model cfg, model weight, 
+and (if you have one) the class names file.
+
+For example, if you want to convert YOLOv3, use the cfg file from
+https://github.com/AlexeyAB/darknet/blob/master/cfg/yolov3.cfg;
+then the model's weight corresponding to the cfg file, from
+https://pjreddie.com/media/files/yolov3.weights;
+also you need the class names for the model, which is coco in this case
+https://github.com/AlexeyAB/darknet/blob/master/data/coco.names;
+Run the script using:
+```
+$ python convert_darknet_weight.py --model yolov3 --cfg yolov3.cfg
+  --weight yolov3.weights --names coco.names
+```
+
+For more detailed arguments this script can accept, see with:
+```
+$ python convert_darknet_weight.py --help
+```
+"""
+
 import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parents[1].joinpath('src', 'development')))
@@ -28,7 +52,7 @@ Notes:
 if __name__ == "__main__":
     print(msg)
     available_model = darknet.supported_models + ['yolov3']
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("-w", "--weight", required=True, type=str, help="darknet weight path")
     parser.add_argument("-c", "--cfg", required=True, type=str, help="file path for darknet config")
     parser.add_argument("--model", choices=available_model, default='yolov3',

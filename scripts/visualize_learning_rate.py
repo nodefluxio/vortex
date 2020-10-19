@@ -1,3 +1,20 @@
+"""Utility to visualize learning rates from the vortex config
+
+This script is used to visualize the value of the resulting
+learning rates from learning rate scheduler in the configuration 
+files. It is required for the config file to have scheduler 
+configuration in `trainer.lr_scheduler`.
+
+To get started using this script, try:
+```
+$ python scripts/visualize_learning_rate.py --config 
+  experiments/configs/efficientnet_b0_classification_cifar10.yml
+  --epochs 100
+```
+
+For the more details argument you can use, see the `--help` argument.
+"""
+
 import sys
 from pathlib import Path
 from matplotlib.pyplot import plot
