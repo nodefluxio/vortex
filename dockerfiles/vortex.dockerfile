@@ -14,6 +14,6 @@ RUN apt update && xargs apt install -y < src/development/requirements.sys
 ## install python requirements
 RUN pip3 install -U pip setuptools
 
-RUN pip3 install 'src/runtime[all]' 'src/development[optuna_vis]'
+RUN pip3 install 'src/runtime[all]' 'src/development[optuna_vis]' --no-cache-dir
 
 WORKDIR /app
