@@ -159,20 +159,20 @@ class YoloHeadTest(unittest.TestCase) :
         )
 
     def test_yolo_conv_block(self) :
-        conv = YoloConvBlock(in_channels=1024)
+        conv = YoloConvBlock(in_channels=1024, out_channels=1024)
         x = conv(torch.rand(1,1024,13,13))
-        self.assertEqual(x.size(),torch.Size([1,512,13,13]))
+        self.assertEqual(x.size(), torch.Size([1,512,13,13]))
 
     def test_yolo_upsample_block_1(self) :
-        upsample = YoloUpsampleBlock(in_channels=1024)
+        upsample = YoloUpsampleBlock(in_channels=1024, out_channels=1024)
                      # | last stage (#5) |     | route 61 |
-        x = upsample(torch.rand(1,1024,13,13),torch.rand(1,512,26,26))
-        self.assertEqual(len(x),2)
-        self.assertEqual(x[0].size(),torch.Size([1,512,13,13]))
-        self.assertEqual(x[1].size(),torch.Size([1,768,26,26]))
+        x = upsample(torch.rand(1,1024,13,13), torch.rand(1,512,26,26))
+        self.assertEqual(len(x), 2)
+        self.assertEqual(x[0].size(), torch.Size([1,512,13,13]))
+        self.assertEqual(x[1].size(), torch.Size([1,768,26,26]))
 
-    def test_yolo_upsample_block_1(self) :
-        upsample = YoloUpsampleBlock(in_channels=768)
+    def test_yolo_upsample_block_2(self) :
+        upsample = YoloUpsampleBlock(in_channels=768, out_channels=768)
                      # | last stage (#5) |     | route 36 |
         x = upsample(torch.rand(1,768,26,26),torch.rand(1,256,52,52))
         self.assertEqual(len(x),2)
