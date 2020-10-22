@@ -59,6 +59,7 @@ if __name__ == "__main__":
         help="vortex model name to be converted (optional)")
     parser.add_argument("--names", type=str, help="file path for darknet class names (optional)")
     parser.add_argument("-n", "--num-classes", type=int, help="number of classes in model")
+    parser.add_argument("--input-size", type=int, help="number of classes in model")
     parser.add_argument("--output", type=str, help="output file path (.pth)")
     args = parser.parse_args()
 
@@ -70,13 +71,16 @@ if __name__ == "__main__":
             raise RuntimeError("Unable to infer model name from darknet weight filename, "\
                                "make sure to set the '--model' argument properly. \n"\
                                "available name: {}".format(' '.join(available_model)))
-    output_file = args.output
-    if output_file is None:
-        output_file = str(Path(__file__).parent.joinpath("{}.pth".format(model_name)))
-    if not output_file.endswith('.pth'):
-        output_file += '.pth'
-    file_dir = Path(output_file).parent
-    file_dir.mkdir(parents=True, exist_ok=True)
+
+    if args.output is None:
+        args.output = Path(__file__).parent.joinpath("{}.pth".format(model_name))
+    output_file = Path(args.output)
+    if output_file.exists() and output_file.is_dir():
+        fname = output_file.name
+        output_file = output_file.joinpath(fname).with_suffix(".pth")
+    if not output_file.name.endswith('.pth'):
+        output_file = output_file.with_suffix('.pth')
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     ## cfg
     input_size = 256
@@ -86,17 +90,25 @@ if __name__ == "__main__":
         cfg = f.read().splitlines()
 
     ## input size
-    for l in cfg:
-        if 'height' in l or 'width' in l:
-            splt = l.strip().split('=')
-            assert len(splt) == 2
-            input_size = int(splt[-1])
-            break
+    if not args.input_size:
+        wh_found = False
+        for l in cfg:
+            if ('height' in l or 'width' in l) and not l.startswith("#"):
+                splt = l.strip().split('=')
+                assert len(splt) == 2
+                input_size = int(splt[-1])
+                wh_found = True
+                break
+        if not wh_found:
+            warnings.warn("Input size ('height' or 'width') is not found in your "
+                "confif file, using default value of 256")
+    else:
+        input_size = args.input_size
 
     ## number of classes
     if not args.num_classes:
         cfg_flipped = cfg[::-1].copy()
-        is_yolo = False
+        is_yolo, ncls_found = False, False
         start, last_break = 0, 0
         for n,l in enumerate(cfg_flipped):
             if l.strip() == '':
@@ -108,6 +120,9 @@ if __name__ == "__main__":
             elif l.strip() == '[convolutional]':
                 start = n
                 break
+        if is_yolo and not 'yolo' in model_name:
+            raise RuntimeError("YOLO Layer is found in cfg file but your "
+                "model name is not yolo variant model, got '{}'".format(model_name))
 
         to_search = 'classes' if is_yolo else 'filters'
         block_cfg = cfg_flipped[start:last_break:-1].copy()
@@ -116,10 +131,11 @@ if __name__ == "__main__":
                 splt = c.strip().split('=')
                 assert len(splt) == 2
                 num_classes = int(splt[-1])
+                ncls_found = True
                 break
-        if is_yolo and not 'yolo' in model_name:
-            raise RuntimeError("YOLO Layer is found in cfg file but your "
-                "model name is not yolo variant model, got '{}'".format(model_name))
+        if not ncls_found:
+            raise RuntimeError("number of class is not found in your config file, "
+                "report this as a BUG!!")
     else:
         num_classes = args.num_classes
 
