@@ -104,6 +104,11 @@ class LinearBottleneck(nn.Module):
         return x
 
 class ReXNetV1(nn.Module):
+    """ReXNet model variant
+
+    NOTE: ReXNet variant can't be trained with single batch data using BatchNorm2d,
+        use different batch normalization layer if you need to, e.g. InstanceNorm2d.
+    """
     def __init__(self, in_channel=3, num_classes=1000, output_stride=32, norm_layer=None, norm_kwargs=None,
                  initial_chs=16, final_chs=180, width_mult=1.0, depth_mult=1.0, use_se=True,
                  se_rd=12, ch_div=1, drop_rate=0.2):
