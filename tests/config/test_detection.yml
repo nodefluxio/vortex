@@ -41,13 +41,9 @@ model: {
     }
   },
   loss_args: {
-    weight_fg: 0.9921441865230313,
-    weight_bg: 0.8505386347160281,
     weight_loc: 1.2754397219232854,
     weight_classes: 0.969884224593925,
-    weight_conf: 1.0,
-    ignore_thresh: 0.5,
-    reduction: mean
+    ignore_thresh: 0.5
   },
   postprocess_args: {
     nms: true,

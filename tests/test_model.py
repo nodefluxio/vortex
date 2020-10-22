@@ -10,11 +10,21 @@ import pytest
 from vortex.development.networks.models import create_model_components
 from vortex.development.networks.modules.backbones import supported_models as supported_backbone
 from vortex.development.utils.parser.parser import load_config, check_config
+from vortex.development.networks.modules.utils import inplace_abn
 
 backbones = [bb[0] for bb in supported_backbone.values()]
-backbones.remove('alexnet') if 'alexnet' in backbones else None
-backbones.remove('squeezenetv1.0') if 'squeezenetv1.0' in backbones else None
-backbones.remove('squeezenetv1.1') if 'squeezenetv1.1' in backbones else None
+skip_backbone = [
+    'alexnet', 'squeezenetv1.0', 'squeezenetv1.1', 
+    'rexnet_100',   ## rexnet can't be tested for 1 batch training 
+    'resnest14'     ## resnest can't be tested for 1 batch training
+]
+
+for b in skip_backbone:
+    if b in backbones:
+        backbones.remove(b)
+if not inplace_abn.has_iabn:    ## tresnet required additional module to be installed (inplace_abn)
+    backbones.remove('tresnet_m')
+
 tasks = ["detection", "classification"]
 
 
@@ -55,9 +65,9 @@ def test_model(task, backbone):
             "expected output size of %s for backbone '%s', got %s" % \
             (torch.Size([1, num_classes]), backbones[0], x.size())
     elif task == 'detection':
-        t = torch.tensor([[0.0000, 14.0000,  0.4604,  0.0915,  0.2292,  0.3620],
-                        [0.0000, 12.0000,  0.0896,  0.1165,  0.7583,  0.6617],
-                        [0.0000, 14.0000,  0.1958,  0.2705,  0.0729,  0.0978]])
+        t = torch.tensor([[[14.0000,  0.4604,  0.0915,  0.2292,  0.3620],
+                           [12.0000,  0.0896,  0.1165,  0.7583,  0.6617],
+                           [14.0000,  0.1958,  0.2705,  0.0729,  0.0978]]])
         assert len(x) == 3, "expected output to have 3 elements, got %s" % len(x)
         assert x[0].size(-1) == num_classes+5, "expected output model elements to have "\
             "torch.Size([*, %s]), got %s" % (num_classes+5, x[0].size())

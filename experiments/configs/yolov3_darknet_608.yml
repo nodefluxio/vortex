@@ -1,5 +1,8 @@
 experiment_name: yolov3_darknet_608
 logging: None
+checkpoint: None
+device: 'cuda:0'
+output_directory: experiments/outputs
 model: {
   name: YoloV3,
   preprocess_args: {
@@ -16,8 +19,6 @@ model: {
     pretrained_backbone: True
   },
   loss_args: {
-    weight_fg: 0.9921441865230313,
-    weight_bg: 0.8505386347160281,
     weight_loc: 1.2754397219232854,
     weight_classes: 0.969884224593925,
     ignore_thresh: 0.5
@@ -36,7 +37,7 @@ trainer: {
       weight_decay: 0.0005,
     }
   },
-  scheduler: {
+  lr_scheduler: {
     method: CosineLRScheduler,
     args: {
       t_initial: 200,
@@ -60,7 +61,6 @@ trainer: {
   },
   epoch: 200,
   save_epoch: 5,
-  device: 'cuda:0',
   driver: {
     module: DefaultTrainer,
     args: {
@@ -75,7 +75,6 @@ dataset: {
     dataset: VOC2007DetectionDataset,
     args: {
       image_set: train,
-      ## TODO : dont use list, support tuple
     },
     augmentations: [
       {
@@ -114,7 +113,6 @@ dataset: {
     },
   },
 }
-output_directory: experiments/outputs
 seed: {
   torch: 0,
   cudnn: {

@@ -1,10 +1,8 @@
-import os
 import sys
 from pathlib import Path
-proj_path = os.path.abspath(Path(__file__).parents[1])
-sys.path.append(proj_path)
-sys.path.insert(0,'src/runtime')
-sys.path.insert(0,'src/development')
+proj_path = Path(__file__).parents[1]
+sys.path.insert(0, str(proj_path.joinpath('src', 'runtime')))
+sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 
 import torch
 import torch.nn as nn
@@ -44,12 +42,12 @@ def test_base_predictor():
 
 @pytest.mark.parametrize("task", ["classification", "detection"])
 def test_predictor(task):
-    config_path = os.path.join(proj_path, "tests", "config", "test_" + task + ".yml")
+    config_path = str(proj_path.joinpath("tests", "config", "test_" + task + ".yml"))
     config = load_config(config_path)
     check_result = check_config(config, experiment_type='train')
-    assert check_result.valid, "config file %s for task %s is not valid, "\
-        "result:\n%s" % (config_path, task, str(check_result))
-    
+    assert check_result.valid, "config file {} for task {} is not valid, "\
+        "result:\n{}".format(config_path, task, str(check_result))
+
     args = {
         'model_name': config.model.name,
         'preprocess_args': config.model.preprocess_args,
@@ -70,10 +68,12 @@ def test_predictor(task):
     if task == 'detection':
         args["score_threshold"] = torch.tensor([config.validator.args["score_threshold"]], dtype=torch.float32)
         args["iou_threshold"] = torch.tensor([config.validator.args["iou_threshold"]], dtype=torch.float32)
-    
+
     with torch.no_grad():
         out = predictor(x, **args)
-    out_np = np.asarray(out)
+    if isinstance(out, (list, tuple, np.ndarray)):
+        out = out[0].unsqueeze(0)
+    out_np = out.cpu().numpy()
     if out_np.size != 0:
         result = get_prediction_results(out_np, predictor.output_format)[0]
         for name, val in result.items():
@@ -82,8 +82,8 @@ def test_predictor(task):
                 f"retrieved properly, size missmatch expect {len(indices)} got {val.shape[-1]}"
 
     num_elem = sum(len(f["indices"]) for f in predictor.output_format.values())
-    assert out[0].size(-1) == num_elem, "number of element in output of predictor is not "\
-        "the same as described in output_format; expect %s got %s" % (num_elem, out.size(1))
+    assert out[0].size(-1) == num_elem, "number of element in output of predictor is not the same "\
+        "as described in output_format; expect {} got {}".format(num_elem, out[0].size(-1))
 
 
 if __name__ == "__main__":

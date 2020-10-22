@@ -30,7 +30,7 @@ class YoloV3Loss(_DetectorWeightedLoss):
     __constants__ = ['weight_fg', 'weight_bg', 'reduction', 'ignore_thresh',
                      'weight_loc', 'weight_classes', 'weight_conf', 'anchors']
 
-    def __init__(self, img_size, weight_fg: float, weight_bg: float, ignore_thresh: float, weight_loc: float = 1.0, 
+    def __init__(self, weight_fg: float, weight_bg: float, ignore_thresh: float, weight_loc: float = 1.0, 
                  weight_classes: float = 1.0, weight_conf: float = 1.0, reduction='mean', check=True):
         super(YoloV3Loss, self).__init__(
             torch.Tensor([weight_fg]),
@@ -42,7 +42,6 @@ class YoloV3Loss(_DetectorWeightedLoss):
             reduction
         )
         self.check = check
-        self.img_size = img_size
 
     def assign_anchors(self, anchors: Tuple[torch.Tensor, torch.Tensor, torch.Tensor]):
         self.register_buffer('anchors', torch.stack(anchors))
@@ -69,7 +68,6 @@ class YoloV3Loss(_DetectorWeightedLoss):
             ignore_thresh=self.ignore_thresh,
             device=device
         )
-        targets[...,3:7] = targets[...,3:7] * self.img_size
         class_mask, fg_mask, bg_mask, tx, ty, tw, th, tc, tconf = targets
         return components_loss(
             x=x[fg_mask], tx=tx[fg_mask],
