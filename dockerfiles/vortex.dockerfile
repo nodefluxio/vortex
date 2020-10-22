@@ -4,16 +4,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt update && apt install -y git
 
-WORKDIR /app/vortex
-
-COPY ./src /app/vortex/src
+RUN git clone https://github.com/nodefluxio/vortex
 
 ## install system requirements
-RUN apt update && xargs apt install -y < src/development/requirements.sys
+RUN apt update && xargs apt install -y < vortex/src/development/requirements.sys
 
 ## install python requirements
 RUN pip3 install -U pip setuptools
 
-RUN pip3 install 'src/runtime[all]' 'src/development[optuna_vis]' --no-cache-dir
+RUN pip3 install 'vortex/src/development[optuna_vis]' 'vortex/src/runtime[all]'
+
+WORKDIR /app/src
+
+CMD cp vortex/src .
 
 WORKDIR /app
