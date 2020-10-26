@@ -77,6 +77,8 @@ using `'param_groups'` key in model components.
   - `nvidia_dali` augmentation module must be used with `DALIDataLoader`
   - `DALIDataLoader` can use other augmentation module, however if `nvidia_dali` augmentation module if specified in the experiment file, it must be in the first order
   - `DALIDataLoader` utilize `ray` library to paralelize external module augmentation for each batch sample
+- Added `DarknetDataset` to default dataset
+- Added `dataset_visualizer.py` script
 
 
 ### Changed
