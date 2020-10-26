@@ -107,7 +107,7 @@ class YoloV3UpsampleBlock(nn.Module):
         out2 : [N,C//4+Cr,H*2,W*2]
     """
     @staticmethod
-    def get_upsample_layer(in_channels: int):
+    def get_upsample_layer(in_channels: int, scale: int = 2):
         """
         [route]
         layers = -4
@@ -134,15 +134,15 @@ class YoloV3UpsampleBlock(nn.Module):
                 activation='leaky', bn=True
             ),
             nn.Upsample(
-                scale_factor=2,
+                scale_factor=scale,
                 mode='nearest'
             )
         )
 
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self, in_channels: int, out_channels: int, scale: int = 2):
         super(YoloV3UpsampleBlock, self).__init__()
         self.conv = YoloV3ConvBlock(in_channels=in_channels, out_channels=out_channels)
-        self.upsample = YoloV3UpsampleBlock.get_upsample_layer(out_channels//2)
+        self.upsample = YoloV3UpsampleBlock.get_upsample_layer(out_channels//2, scale)
 
     def forward(self, x: torch.Tensor, route: torch.Tensor):
         out1 = self.conv(x)
@@ -306,17 +306,16 @@ class YoloV3Layer(nn.Module):
 
 class YoloV3Head(nn.Module):
     def __init__(self, img_size: int, backbone_channels: Tuple[int, int, int, int, int], 
-                 grids: List[Tuple[int, int]], anchors: List[Tuple[int, int]], n_classes: int):
+                 grids: List[Tuple[int, int]], anchors: List[Tuple[int, int]], 
+                 n_classes: int, backbone_stages: Tuple[int, int, int] = (3, 4, 5)):
         super(YoloV3Head, self).__init__()
-        c1, c2, c3, c4, c5 = backbone_channels
-        u1 = c5
-        u2 = c4 + c5 // 4
-        u3 = c3 + c4 // 4
+        # c1, c2, c3, c4, c5 = backbone_channels
+        assert len(backbone_channels) == 5 and len(backbone_stages) == 3
+        c3, c4, c5 = (backbone_channels[x-1] for x in backbone_stages)
 
-        in_channels = u1
-        out_channels = c5
-        self.u1 = YoloV3UpsampleBlock(in_channels=in_channels, out_channels=out_channels)
-        self.c1 = YoloV3LayerConv(in_channels=c5//2, n_classes=n_classes)
+        scale = (5 - backbone_stages[1]) * 2
+        self.u1 = YoloV3UpsampleBlock(in_channels=c5, out_channels=1024, scale=scale)
+        self.c1 = YoloV3LayerConv(in_channels=512, n_classes=n_classes)
         self.h1 = YoloV3Layer(
             img_size=img_size,
             grids=grids[2], mask=(6, 7, 8),
@@ -324,10 +323,9 @@ class YoloV3Head(nn.Module):
             anchors=anchors
         )
 
-        in_channels = u2
-        out_channels = c4
-        self.u2 = YoloV3UpsampleBlock(in_channels=in_channels, out_channels=out_channels)
-        self.c2 = YoloV3LayerConv(in_channels=c4//2, n_classes=n_classes)
+        scale = (4 - backbone_stages[0]) * 2
+        self.u2 = YoloV3UpsampleBlock(in_channels=(c4 + c5 // 4), out_channels=512, scale=scale)
+        self.c2 = YoloV3LayerConv(in_channels=256, n_classes=n_classes)
         self.h2 = YoloV3Layer(
             img_size=img_size,
             grids=grids[1], mask=(3, 4, 5),
@@ -335,10 +333,8 @@ class YoloV3Head(nn.Module):
             anchors=anchors
         )
 
-        in_channels = u3
-        out_channels = c3
-        self.u3 = YoloV3ConvBlock(in_channels=in_channels, out_channels=out_channels)
-        self.c3 = YoloV3LayerConv(in_channels=c3//2, n_classes=n_classes)
+        self.u3 = YoloV3ConvBlock(in_channels=(c3 + c4 // 4), out_channels=256)
+        self.c3 = YoloV3LayerConv(in_channels=128, n_classes=n_classes)
         self.h3 = YoloV3Layer(
             img_size=img_size,
             grids=grids[0], mask=(0, 1, 2),

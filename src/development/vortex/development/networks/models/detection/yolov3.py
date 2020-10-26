@@ -29,19 +29,28 @@ class YoloV3(BackbonePoolConnector):
     ]
 
     def __init__(self, backbone: Union[str, Type[Backbone]], img_size: int, n_classes: int, 
-                 anchors: Union[List[Tuple[int, int]]] = None, *args, **kwargs):
-        super(YoloV3, self).__init__(backbone, feature_type="tri_stage_fpn", *args, **kwargs)
+                 anchors: Union[List[Tuple[int, int]]] = None, backbone_stages: list = [3, 4, 5], **kwargs):
+        super(YoloV3, self).__init__(backbone, feature_type="tri_stage_fpn", **kwargs)
         downsampling = [2**n for n in range(5)]
         grids = yolo_feature_maps(img_size)
+
+        assert len(backbone_stages) == 3, "Only support 3 backbone stage outputs, got {}".format(backbone_stages)
+        assert all(1 <= x <= 5 for x in backbone_stages), "Backbone stage outputs must be between 1 to 5, " \
+            "got {}".format(backbone_stages)
+        self.backbone_stages_out = backbone_stages
         backbone_channels = [int(x) for x in self.backbone.out_channels]
+        self.backbone = torch.nn.ModuleList([
+            self.backbone.stage1, self.backbone.stage2, self.backbone.stage3,
+            self.backbone.stage4, self.backbone.stage5
+        ])
+
         if not anchors:
             anchors = self.coco_anchors
         self.head = YoloV3Head(
-            img_size=img_size,
+            img_size=img_size, n_classes=n_classes,
             backbone_channels=backbone_channels,
-            grids=grids,
-            anchors=anchors,
-            n_classes=n_classes
+            grids=grids, anchors=anchors,
+            backbone_stages=backbone_stages
         )
         self.grids = grids
         self.task = "detection"
@@ -55,8 +64,12 @@ class YoloV3(BackbonePoolConnector):
         return self.head.get_anchors()
 
     def forward(self, x: torch.Tensor) -> Union[Tuple[torch.Tensor, torch.Tensor, torch.Tensor], torch.Tensor]:
-        s3, s4, s5 = self.backbone(x)
-        h1, h2, h3 = self.head(s3, s4, s5)
+        stage_out = []
+        for i, module in enumerate(self.backbone):
+            x = module(x)
+            if i+1 in self.backbone_stages_out:
+                stage_out.append(x)
+        h1, h2, h3 = self.head(stage_out[0], stage_out[1], stage_out[2])
         if self.training:
             output = h1, h2, h3
         else:
