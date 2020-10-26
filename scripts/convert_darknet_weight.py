@@ -57,8 +57,12 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--cfg", required=True, type=str, help="file path for darknet config")
     parser.add_argument("--model", choices=available_model, default='yolov3',
         help="vortex model name to be converted (optional)")
-    parser.add_argument("--names", type=str, help="file path for darknet class names (optional)")
-    parser.add_argument("-n", "--num-classes", type=int, help="number of classes in model")
+    parser.add_argument("--names", type=str, 
+        help="file path for darknet class names (optional)")
+    parser.add_argument("-n", "--num-classes", type=int, 
+        help="number of classes in model (optional)")
+    parser.add_argument("--backbone-stages", nargs='+',
+        help="list of backbone stages to output to head (optional)")
     parser.add_argument("--input-size", type=int, help="number of classes in model")
     parser.add_argument("--output", type=str, help="output file path (.pth)")
     args = parser.parse_args()
@@ -68,8 +72,8 @@ if __name__ == "__main__":
     if model_name is None:      ## automatically infer model name
         model_name = weight_file.name.split('.', 1)[0]
         if not model_name.lower().replace('-', '_') in available_model:
-            raise RuntimeError("Unable to infer model name from darknet weight filename, "\
-                               "make sure to set the '--model' argument properly. \n"\
+            raise RuntimeError("Unable to infer model name from darknet weight filename, "
+                               "make sure to set the '--model' argument properly. \n"
                                "available name: {}".format(' '.join(available_model)))
 
     if args.output is None:
@@ -85,6 +89,7 @@ if __name__ == "__main__":
     ## cfg
     input_size = 256
     num_classes = 1000
+    anchors = None
     cfg = None
     with open(args.cfg) as f:
         cfg = f.read().splitlines()
@@ -106,32 +111,44 @@ if __name__ == "__main__":
         input_size = args.input_size
 
     ## number of classes
+    is_yolo = False
     if not args.num_classes:
         cfg_flipped = cfg[::-1].copy()
-        is_yolo, ncls_found = False, False
+        ncls_found = False
         start, last_break = 0, 0
         for n,l in enumerate(cfg_flipped):
-            if l.strip() == '':
-                last_break = n
-            elif l.strip() == '[yolo]':
+            if l.strip() == '[yolo]':
                 start = n
                 is_yolo = True
                 break
             elif l.strip() == '[convolutional]':
                 start = n
                 break
-        if is_yolo and not 'yolo' in model_name:
-            raise RuntimeError("YOLO Layer is found in cfg file but your "
-                "model name is not yolo variant model, got '{}'".format(model_name))
+            elif l.strip() == '' or l.strip().startswith('['):
+                last_break = n
+        if is_yolo and model_name != 'yolov3':
+            model_name = 'yolov3'
+        elif not is_yolo and model_name == 'yolov3':
+            raise RuntimeError("Model name specified is 'yolov3', but YOLO Layer is not "
+                "found in cfg file, make sure to properly specify '--model' argument")
 
         to_search = 'classes' if is_yolo else 'filters'
         block_cfg = cfg_flipped[start:last_break:-1].copy()
+        anc_found = False
         for c in block_cfg:
             if to_search in c:
                 splt = c.strip().split('=')
                 assert len(splt) == 2
                 num_classes = int(splt[-1])
                 ncls_found = True
+            if 'anchors' in c:
+                splt = c.strip().split('=')
+                assert len(splt) == 2
+                anc_found = True
+                anchors_tmp = [int(x) for x in splt[1].strip().split(',') if x.strip().isdigit()]
+                assert len(anchors_tmp) == 18
+                anchors = [(anchors_tmp[2*n], anchors_tmp[2*n+1]) for n in range(9)]
+            if anc_found and ncls_found:
                 break
         if not ncls_found:
             raise RuntimeError("number of class is not found in your config file, "
@@ -139,10 +156,40 @@ if __name__ == "__main__":
     else:
         num_classes = args.num_classes
 
+    ## backbone stages
+    if is_yolo and not args.backbone_stages:
+        cfg_flipped = cfg[::-1].copy()
+        numlayer_to_stages = {4: 1, 11: 2, 36: 3, 61: 4, 74: 5}
+        n_yolo_found, yolo_before = 0, True
+        route_two_found = []
+        for i,l in enumerate(cfg_flipped):
+            if l.strip() == '[yolo]':
+                yolo_before = True
+                n_yolo_found += 1
+                if n_yolo_found == 3:
+                    break
+            elif l.strip() == '[route]' and yolo_before:
+                splt = cfg_flipped[i-1].strip().split('=')
+                assert len(splt) == 2
+                num_layers = splt[1].split(',')
+                if len(num_layers) == 2:
+                    route_two_found.append(int(num_layers[1].strip()))
+                    yolo_before = False
+        backbone_stages = [numlayer_to_stages[x] for x in route_two_found]
+        if n_yolo_found == 3 and len(backbone_stages) == 2:
+            backbone_stages.append(5)
+        if len(backbone_stages) != 3:
+            raise RuntimeError("Cannot found 3 route layers to determine backbone stages, "
+                "report this as a bug!!")
+    else:
+        if len(args.backbone_stages) == 1 and isinstance(args.backbone_stages[0], str):
+            args.backbone_stages = args.backbone_stages[0]
+        backbone_stages = [int(x) for x in args.backbone_stages if x.isdigit()]
+
     print("Converting '{}' model with input size {} and number of classes {}"
         .format(model_name, input_size, num_classes))
     if model_name == "yolov3":
-        model = YoloV3('darknet53', input_size, num_classes)
+        model = YoloV3('darknet53', input_size, num_classes, anchors, backbone_stages=backbone_stages)
     elif model_name in darknet.supported_models:
         model = getattr(darknet, model_name)(pretrained=False, num_classes=num_classes)
     else:

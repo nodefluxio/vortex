@@ -1,3 +1,3 @@
 outs:
-- md5: c9b38e69ef22cac7b240822daf7ef5a2
+- md5: 2b2ac7df346887b8a78ac9fafef239fc
   path: yolov3_darknet_608.pth
