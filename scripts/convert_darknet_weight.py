@@ -220,7 +220,7 @@ if __name__ == "__main__":
             args.backbone_stages = args.backbone_stages[0]
         backbone_stages = [int(x) for x in args.backbone_stages if x.isdigit()]
 
-    print("Converting '{}' model with input size {} and number of classes {}"
+    print(">> Converting '{}' model with input size {} and number of classes {}"
         .format(model_name, input_size, num_classes))
     if model_name == "yolov3":
         model = YoloV3('darknet53', input_size, num_classes, anchors, backbone_stages=backbone_stages)
@@ -252,4 +252,4 @@ if __name__ == "__main__":
 
     torch.save(checkpoint, output_file)
     print("DONE!!")
-    print("model saved to: ", output_file)
+    print(">> model saved to: {}; with config in {}".format(output_file, output_file.with_suffix('.yml')))
