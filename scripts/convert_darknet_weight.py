@@ -37,6 +37,41 @@ from vortex.development.networks.modules.utils.darknet import load_darknet_weigh
 warnings.resetwarnings()
 
 
+cfg_template = \
+"""experiment_name: {exp_name}
+device: 'cuda:0'
+checkpoint: {weight_file}
+output_directory: experiments/outputs
+model: {{
+  name: YoloV3,
+  preprocess_args: {{
+    input_size: {input_size},
+    input_normalization: {{
+      mean: [0.0, 0.0, 0.0],
+      std: [1.0, 1.0, 1.0]
+    }}
+  }},
+  network_args: {{
+    backbone: darknet53,
+    n_classes: {num_classes},
+    anchors: {anchors},
+    pretrained_backbone: True
+  }},
+  loss_args: {{}},
+  postprocess_args: {{
+    nms: True,
+    threshold: True,
+  }}
+}}
+exporter: {{
+  module: onnx,
+  args: {{
+    opset_version: 11,
+  }}
+}}
+"""
+
+
 msg = """Convert darknet weight to Vortex model definition
 Notes:
 - Implemented darknet models: yolov3, darknet7 (tiny-yolov3 backbone), darknet19 (yolov2 backbone), 
@@ -44,7 +79,6 @@ Notes:
 - If you want to test the classification models, e.g. darknet53, use imagenet
   class names (for '--names' argument) defined in darknet:
   https://github.com/pjreddie/darknet/blob/master/data/imagenet.shortnames.list 
-- Darknet models expect image input with of float with range [0,1] with RGB channels 
 - If you want to get more accurate result, resize input image to rectangle (width == height) 
   and keep the original image aspect ratio by padding
 """
@@ -204,6 +238,17 @@ if __name__ == "__main__":
         assert len(class_names) >= num_classes, "Number of class names defined in {} " \
             "is less than number of class ({})".format(args.names, num_classes)
         checkpoint["class_names"] = class_names[:num_classes]
+
+    ## generate vortex config
+    cfg_vortex = cfg_template.format(
+        exp_name=output_file.name.replace('.pth', ''),
+        weight_file=str(output_file),
+        input_size=input_size,
+        num_classes=num_classes,
+        anchors=[list(x) for x in anchors]
+    )
+    with open(output_file.with_suffix('.yml'), 'w+') as f:
+        f.write(cfg_vortex)
 
     torch.save(checkpoint, output_file)
     print("DONE!!")
