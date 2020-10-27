@@ -55,6 +55,7 @@ model: {{
     backbone: darknet53,
     n_classes: {num_classes},
     anchors: {anchors},
+    backbone_stages: {backbone_stages},
     pretrained_backbone: True
   }},
   loss_args: {{}},
@@ -245,7 +246,8 @@ if __name__ == "__main__":
         weight_file=str(output_file),
         input_size=input_size,
         num_classes=num_classes,
-        anchors=[list(x) for x in anchors]
+        anchors=[list(x) for x in anchors],
+        backbone_stages=backbone_stages
     )
     with open(output_file.with_suffix('.yml'), 'w+') as f:
         f.write(cfg_vortex)
