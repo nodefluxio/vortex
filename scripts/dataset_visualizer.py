@@ -13,6 +13,7 @@ import numpy as np
 
 from typing import List, Union
 
+import PIL
 import cv2
 import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
@@ -120,6 +121,10 @@ def visualize(data_pair, data_format, figure: Figure=None, show_img_stats=True, 
         img_fig, img_ax = figure, figure.add_subplot(gs[0:,0:2])
 
     image, labels = data_pair
+    # since this visualization script read the dataset (instead of wrapper/dataloader)
+    # there is a chance that PIL image is given
+    if isinstance(image, PIL.Image.Image):
+        image = np.array(image)
     h, w, c = image.shape
 
     # tensor across observation for histogram and boxplot
