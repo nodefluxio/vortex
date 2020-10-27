@@ -43,7 +43,7 @@ class DarknetDataset :
         names = Path(names).expanduser()
         img_paths = pd.read_fwf(txt_path, header=None)[0]
         for img_path in img_paths:
-            img_filename = str(Path(txt_path).parent / img_root / img_path)
+            img_filename = str(img_root / img_path)
             self.image_filenames.append(img_filename)
             if not Path(img_filename).exists() :
                 missing_images.append(img_filename)
