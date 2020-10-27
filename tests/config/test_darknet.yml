@@ -56,17 +56,17 @@ dataset : {
   train : {
     name : DarknetDataset,
     args : {
-      txt_path: ~/data/pkl-dataset/train/data/train.txt,
-      img_root: ~/data/pkl-dataset/train/data/images,
-      names: ~/data/pkl-dataset/train/data/names.txt,
+      txt_path: tests/test_dataset/obj_det/train.txt,
+      img_root: tests/test_dataset/obj_det/images,
+      names: tests/test_dataset/obj_det/names.txt,
     },
   },
   eval : {
     name : DarknetDataset,
     args : {
-      txt_path: ~/data/pkl-dataset/validation/data/val.txt,
-      img_root: ~/data/pkl-dataset/train/data/images,
-      names: ~/data/pkl-dataset/train/data/names.txt,
+      txt_path: tests/test_dataset/obj_det/train.txt,
+      img_root: tests/test_dataset/obj_det/images,
+      names: tests/test_dataset/obj_det/names.txt,
     }
   },
 }
