@@ -71,6 +71,35 @@ def test_torchvision_dataset():
 
 def test_darknet_dataset():
     assert "DarknetDataset" in dataset.all_datasets['external']
+    ## make sure that "base" dataset can be instantiated
+    ## note that this test is dependent on external files
+    args = dict(
+        txt_path=str(Path(proj_path)/'tests/test_dataset/obj_det/train.txt'),
+        img_root=str(Path(proj_path)/'tests/test_dataset/obj_det/images'),
+        names=str(Path(proj_path)/'tests/test_dataset/obj_det/names.txt'),
+    )
+    base_dataset = dataset.get_base_dataset("DarknetDataset", args)
+    assert len(base_dataset) == 5
+    ## make sure that dataset can be wrapped
+    preprocess_args = dict(
+        input_size=640,
+        input_normalization=dict(
+            mean=[0.5,0.5,0.5],
+            std=[0.5,0.5,0.5],
+        )
+    )
+    dataset_conf = dict(
+        train=dict(
+            dataset="DarknetDataset",
+            args=args,
+        )
+    )
+    dataset_ = create_dataset(EasyDict(dataset_conf), stage="train", preprocess_config=EasyDict(preprocess_args))
+    assert len(dataset_) == 5
+    assert len(dataset_.class_names) == 20 ## VOC dataet
+    img, label = dataset_[0]
+    ## should return image with desired size
+    assert all(lhs==rhs for lhs, rhs in zip(img.shape,[3,640,640]))
 
 if __name__ == "__main__":
     test_dataset_register_dvc()
