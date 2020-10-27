@@ -24,7 +24,8 @@ using `'param_groups'` key in model components.
 - new backbone models: CSPNet, ResNest, RexNet, RegNet, TResNet. see more details in [spreadsheet](https://docs.google.com/spreadsheets/d/1M18Bm08P983_-5diHXAmlUmHusjpHdYMmcN0FmrNS74/edit?usp=sharing) or [csv summary](backbones_summary.txt)
 - darknet weight converter in [scripts/convert_darknet_weight.py](scripts/convert_darknet_weight.py)
 - yolov3 [converted darknet weight](experiments/outputs/yolov3_darknet_608) and [config file](experiments/configs/yolov3_darknet_608.yml)
-
+- get model path from `config.checkpoint` if found and valid for `predict` and `export`
+- yolov3 support for changing backbone stage to output with `backbone_stages` argument.
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
