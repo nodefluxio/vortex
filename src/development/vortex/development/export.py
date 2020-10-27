@@ -11,9 +11,11 @@ def main(args):
 
     # Parse config
     config = load_config(args.config)
+    if args.weights is None and hasattr(config, 'checkpoint') and config.checkpoint is not None:
+        args.weights = config.checkpoint
 
     # Initialize graph exporter
-    graph_exporter=GraphExportPipeline(config=config,weights=args.weights)
+    graph_exporter = GraphExportPipeline(config=config, weights=args.weights)
     result = graph_exporter.run(example_input=args.example_input)
     if not result.export_status:
         raise RuntimeError("One or more IR export failed")
