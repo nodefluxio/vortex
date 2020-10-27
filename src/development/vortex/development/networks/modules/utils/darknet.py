@@ -138,8 +138,9 @@ def darknet_conv(in_channels: int, filters: int, bn: bool, kernel_size: int, pad
 
 
 @enforce.runtime_validation
-def yolo_feature_maps(input_size: int) -> List[Tuple[int, int]]:
-    s3, s4, s5 = 2**3, 2**4, 2**5
+def yolo_feature_maps(input_size: int, backbone_stages: Tuple[int, int, int] = (3,4,5)) -> List[Tuple[int, int]]:
+    assert len(backbone_stages) == 3, "'backbone_stages' should have length of 3, got".format(backbone_stages)
+    s3, s4, s5 = (2**x for x in backbone_stages)
     return [
         (input_size//s3, input_size//s3),
         (input_size//s4, input_size//s4),

@@ -31,8 +31,6 @@ class YoloV3(BackbonePoolConnector):
     def __init__(self, backbone: Union[str, Type[Backbone]], img_size: int, n_classes: int, 
                  anchors: Union[List[Tuple[int, int]]] = None, backbone_stages: list = [3, 4, 5], **kwargs):
         super(YoloV3, self).__init__(backbone, feature_type="tri_stage_fpn", **kwargs)
-        downsampling = [2**n for n in range(5)]
-        grids = yolo_feature_maps(img_size)
 
         assert len(backbone_stages) == 3, "Only support 3 backbone stage outputs, got {}".format(backbone_stages)
         assert all(1 <= x <= 5 for x in backbone_stages), "Backbone stage outputs must be between 1 to 5, " \
@@ -44,6 +42,7 @@ class YoloV3(BackbonePoolConnector):
             self.backbone.stage4, self.backbone.stage5
         ])
 
+        grids = yolo_feature_maps(img_size, tuple(backbone_stages))
         if not anchors:
             anchors = self.coco_anchors
         self.head = YoloV3Head(
