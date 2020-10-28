@@ -12,10 +12,10 @@ _dropbox_url = lambda sh, fname: "https://www.dropbox.com/s/{}/{}?dl=1".format(s
 
 model_urls = {
     ## note that darknet7 model only has backbone weight (without classifier)
-    'darknet7': _dropbox_url("dhu17cc41fi4kyz", "darknet7_bb-8ef63008.pth"), 
-    'darknet19': _dropbox_url("0dr0fk2dmjmm0ld", "darknet19-814e7f8a.pth"),
-    'darknet21': None,
-    'darknet53': _dropbox_url("1k7oa4edm1jyd9t", "darknet53-81b1ed5f.pth")
+    'darknet7': _dropbox_url("7xhyjjm53trg6wv", "darknet7-11acc66c.pth"),       # pytorch trained
+    'darknet19': _dropbox_url("7kmapol5nferyka", "darknet19-ad075691.pth"),     # from darknet
+    'darknet21': _dropbox_url("3cajnh7txm1drkl", "darknet21-1b30244d.pth"),     # pytorch trained
+    'darknet53': _dropbox_url("2hqdzzur00p3uhr", "darknet53-6229eb9e.pth"),     # from darknet
 }
 
 supported_models = list(model_urls.keys())
@@ -76,11 +76,13 @@ class Bottleneck(nn.Module):
 
 
 class DarkNet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000, in_channel=3, 
-                 norm_layer=nn.BatchNorm2d, norm_kwargs=None):
+    def __init__(self, block, layers, num_classes=1000, in_channel=3,
+                 norm_layer=nn.BatchNorm2d, norm_kwargs=None, 
+                 inplane_extra_conv=False):
         super(DarkNet, self).__init__()
         norm_kwargs = norm_kwargs or {}
-        self.inplanes = 32
+        self._extra_conv = inplane_extra_conv
+        self.inplanes = 32 if not self._extra_conv else 16
         self.num_classes = num_classes
 
         self.conv1 = nn.Conv2d(in_channel, self.inplanes, kernel_size=3, 
@@ -88,6 +90,8 @@ class DarkNet(nn.Module):
         self.bn1 = norm_layer(self.inplanes, **norm_kwargs)
         self.relu1 = nn.LeakyReLU(0.1)
 
+        if self._extra_conv:
+            self.layer0 = self._make_layer(block, 32, 1, norm_layer, norm_kwargs)
         self.layer1 = self._make_layer(block, 64, layers[0], norm_layer, norm_kwargs)
         self.layer2 = self._make_layer(block, 128, layers[1], norm_layer, norm_kwargs)
         self.layer3 = self._make_layer(block, 256, layers[2], norm_layer, norm_kwargs)
@@ -98,6 +102,8 @@ class DarkNet(nn.Module):
         self.fc = nn.Linear(1024, num_classes)
 
         self.out_channels = [self.inplanes, 64, 128, 256, 512, 1024, num_classes]
+        if self._extra_conv:
+            self.out_channels.insert(1, 32)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -109,17 +115,21 @@ class DarkNet(nn.Module):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
 
-    def _make_layer(self, block, planes, blocks, norm_layer, norm_kwargs):
+    def _make_layer(self, block, planes, num_blocks, norm_layer, norm_kwargs):
         layers = []
+        stride = 2
+        if planes == 1024 and self._extra_conv:
+            layers.append(("ds_pad", nn.ZeroPad2d(padding=(0, 1, 0, 1))))
+            stride = 1
         if block == BasicBlock:
-            assert blocks % 2 == 1
+            assert num_blocks % 2 == 1
             #  downsample
-            layers.append(("ds_pool", nn.MaxPool2d(kernel_size=2, stride=2)))
+            layers.append(("ds_pool", nn.MaxPool2d(kernel_size=2, stride=stride)))
 
             #  blocks
             inplanes = self.inplanes
             outplanes = planes
-            for i in range(blocks):
+            for i in range(num_blocks):
                 block_layer = BasicBlock(inplanes, outplanes, norm_layer, norm_kwargs)
                 layers.append((f"block_{i}", block_layer))
                 inplanes, outplanes = outplanes, inplanes
@@ -127,21 +137,28 @@ class DarkNet(nn.Module):
         elif block == Bottleneck:
             #  downsample
             layers.append(("ds_conv", nn.Conv2d(self.inplanes, planes, kernel_size=3,
-                                    stride=2, padding=1, bias=False)))
-            layers.append(("ds_bn", norm_layer(planes, **norm_kwargs)))
+                                    stride=stride, padding=1, bias=False)))
+            layers.append(("ds_bn", norm_layer(planes)))
             layers.append(("ds_relu", nn.LeakyReLU(0.1)))
 
             #  blocks
-            for i in range(blocks):
+            for i in range(num_blocks):
                 block_layer = Bottleneck(self.inplanes, planes, norm_layer, norm_kwargs)
                 layers.append(("residual_{}".format(i), block_layer))
+        else:
+            raise RuntimeError("Unknown block class of {}".format(block))
         self.inplanes = planes
         return nn.Sequential(OrderedDict(layers))
 
     def get_stages(self):
         out_channels = self.out_channels[1:-1].copy()
+        if self._extra_conv:
+            out_channels.pop(0)
+            first_stage = nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer0, self.layer1)
+        else:
+            first_stage = nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer1)
         stages = [
-            nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer1),
+            first_stage,
             self.layer2,
             self.layer3,
             self.layer4,
@@ -164,6 +181,8 @@ class DarkNet(nn.Module):
         x = self.bn1(x)
         x = self.relu1(x)
 
+        if self._extra_conv:
+            x = self.layer0(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -204,7 +223,8 @@ def darknet7(pretrained=False, progress=True, **kwargs):
     `"Tiny-YOLOv3" <https://github.com/pjreddie/darknet/blob/master/cfg/yolov3-tiny.cfg>`_ and 
     `"Tiny-YOLOv2" <https://github.com/pjreddie/darknet/blob/master/cfg/yolov2-tiny.cfg>`_
     """
-    return _darknet("darknet7", BasicBlock, [1, 1, 1, 1, 1], pretrained, progress, **kwargs)
+    return _darknet("darknet7", BasicBlock, [1, 1, 1, 1, 1], pretrained, progress, 
+                    inplane_extra_conv=True, **kwargs)
 
 def darknet19(pretrained=False, progress=True, **kwargs):
     r"""Constructs a darknet-19 model from 
