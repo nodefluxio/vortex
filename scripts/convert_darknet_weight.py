@@ -37,7 +37,7 @@ from vortex.development.networks.modules.utils.darknet import load_darknet_weigh
 warnings.resetwarnings()
 
 
-cfg_template = \
+cfg_template_yolo = \
 """experiment_name: {exp_name}
 device: 'cuda:0'
 checkpoint: {weight_file}
@@ -55,14 +55,42 @@ model: {{
     backbone: darknet53,
     n_classes: {num_classes},
     anchors: {anchors},
-    backbone_stages: {backbone_stages},
-    pretrained_backbone: True
+    backbone_stages: {backbone_stages}
   }},
   loss_args: {{}},
   postprocess_args: {{
     nms: True,
     threshold: True,
   }}
+}}
+exporter: {{
+  module: onnx,
+  args: {{
+    opset_version: 11,
+  }}
+}}
+"""
+
+cfg_template_darknet = \
+"""experiment_name: {exp_name}
+device: 'cuda:0'
+checkpoint: {weight_file}
+output_directory: experiments/outputs
+model: {{
+  name: softmax,
+  preprocess_args: {{
+    input_size: {input_size},
+    input_normalization: {{
+      mean: [0.0, 0.0, 0.0],
+      std: [1.0, 1.0, 1.0]
+    }}
+  }},
+  network_args: {{
+    backbone: {model_name},
+    n_classes: {num_classes}
+  }},
+  loss_args: {{}},
+  postprocess_args: {{}}
 }}
 exporter: {{
   module: onnx,
@@ -192,6 +220,7 @@ if __name__ == "__main__":
         num_classes = args.num_classes
 
     ## backbone stages
+    backbone_stages = None
     if is_yolo and not args.backbone_stages:
         cfg_flipped = cfg[::-1].copy()
         numlayer_to_stages = {4: 1, 11: 2, 36: 3, 61: 4, 74: 5}
@@ -216,7 +245,7 @@ if __name__ == "__main__":
         if len(backbone_stages) != 3:
             raise RuntimeError("Cannot found 3 route layers to determine backbone stages, "
                 "report this as a bug!!")
-    else:
+    elif is_yolo:
         if len(args.backbone_stages) == 1 and isinstance(args.backbone_stages[0], str):
             args.backbone_stages = args.backbone_stages[0]
         backbone_stages = [int(x) for x in args.backbone_stages if x.isdigit()]
@@ -241,14 +270,24 @@ if __name__ == "__main__":
         checkpoint["class_names"] = class_names[:num_classes]
 
     ## generate vortex config
-    cfg_vortex = cfg_template.format(
-        exp_name=output_file.name.replace('.pth', ''),
-        weight_file=str(output_file),
-        input_size=input_size,
-        num_classes=num_classes,
-        anchors=[list(x) for x in anchors],
-        backbone_stages=backbone_stages
-    )
+    if is_yolo:
+        cfg_vortex = cfg_template_yolo.format(
+            exp_name=output_file.name.replace('.pth', ''),
+            weight_file=str(output_file),
+            input_size=input_size,
+            num_classes=num_classes,
+            anchors=[list(x) for x in anchors],
+            backbone_stages=backbone_stages
+        )
+    else:
+        cfg_vortex = cfg_template_darknet.format(
+            exp_name=output_file.name.replace('.pth', ''),
+            weight_file=str(output_file),
+            input_size=input_size,
+            num_classes=num_classes,
+            model_name=model_name
+        )
+    print(model_name)
     with open(output_file.with_suffix('.yml'), 'w+') as f:
         f.write(cfg_vortex)
 
