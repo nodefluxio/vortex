@@ -9,6 +9,7 @@ from pprint import PrettyPrinter
 from .torchvision import create_torchvision_dataset,SUPPORTED_TORCHVISION_DATASETS
 
 _file_path = Path(__file__)
+_file_dir  = _file_path.parent
 _default_dataset_path = os.path.join(
     os.getcwd(), "external", "datasets")
 _exclude_dirs = [
@@ -33,7 +34,9 @@ supported_dataset = {
 }
 
 
-def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_path):
+# TODO: rename function name, support passing module directly as python module
+# NOTE: temporarily allow to skip submodule `utils`, TODO: cleanup by supporting python module directly
+def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_path, submodule: Union[str,None]='utils'):
     """
     Register DVC type dataset to be recognized by Vortex.
 
@@ -56,7 +59,13 @@ def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_
             shutil.move(PurePath(_default_dataset_path, module),
                         PurePath(_default_dataset_path, transformed_name))
             module = transformed_name
-        exec('from %s.utils import dataset as %s' % (module, module))
+        # TODO: find out exec alternative
+        if submodule is None:
+            # actual dataset doesn't put at submodule, import as it is
+            exec('import %s as %s' % (module, module))
+        else:
+            # NOTE: assuming actual dataset is named after `dataset`
+            exec('from %s.%s import dataset as %s' % (module, submodule, module))
     except Exception as e:
         warnings.warn(
             'failed to import dataset %s, original error message is "%s"' % (module, str(e)))
@@ -72,6 +81,7 @@ def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_
     supported_dataset[py_module] = py_module.supported_dataset
 
 
+# TODO: rename function name,
 def _scan_dvc_dataset(path: Path, dataset_env: str = 'VORTEX_DATASET_ROOT'):
     """
     given path, find all standardized dvc dataset
@@ -122,3 +132,5 @@ def get_base_dataset(dataset: str, dataset_args: dict = {}):
 
 # automatically scans for available datasets in default dataset
 _scan_dvc_dataset(_default_dataset_path)
+# TODO: support passing module directly as python module
+register_dvc_dataset('darknet', _file_dir,submodule=None)
