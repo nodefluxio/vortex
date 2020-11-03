@@ -287,7 +287,6 @@ if __name__ == "__main__":
             num_classes=num_classes,
             model_name=model_name
         )
-    print(model_name)
     with open(output_file.with_suffix('.yml'), 'w+') as f:
         f.write(cfg_vortex)
 
