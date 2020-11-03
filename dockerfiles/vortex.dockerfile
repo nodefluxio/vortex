@@ -2,14 +2,14 @@ FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt update && apt install -y git
+RUN apt-get update && apt-get install -y git
 
 WORKDIR /app/vortex
 
 COPY ./src /app/vortex/src
 
 ## install system requirements
-RUN apt update && xargs apt install -y < src/development/requirements.sys
+RUN apt-get update && xargs apt-get install -y < src/development/requirements.sys
 
 ## install python requirements
 RUN pip3 install -U pip setuptools
