@@ -267,7 +267,10 @@ if __name__ == "__main__":
             class_names = f.read().splitlines()
         assert len(class_names) >= num_classes, "Number of class names defined in {} " \
             "is less than number of class ({})".format(args.names, num_classes)
-        checkpoint["class_names"] = class_names[:num_classes]
+        class_names = class_names[:num_classes]
+    else:
+        class_names = [f"class_{x}" for x in range(num_classes)]
+    checkpoint["class_names"] = class_names
 
     ## generate vortex config
     if is_yolo:
