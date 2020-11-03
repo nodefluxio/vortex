@@ -42,7 +42,7 @@ class YoloV3Decoder(nn.Module):
         if self.threshold:
             indices = (predictions[..., 4] > score_threshold)
             indices = indices.squeeze(0)
-            indices = torch.nonzero(indices)
+            indices = torch.nonzero(indices, as_tuple=False)
             predictions = predictions.index_select(1, indices.squeeze(1))
             class_conf = class_conf.index_select(1, indices.squeeze(1))
             class_pred = class_pred.index_select(1, indices.squeeze(1))
