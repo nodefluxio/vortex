@@ -186,6 +186,9 @@ class ResNestBottleneck(nn.Module):
 
 class ResNest(nn.Module):
     """ResNest Variants
+
+    NOTE: ResNest variant can't be trained with single batch data using BatchNorm2d,
+        use different batch normalization layer if you need to, e.g. InstanceNorm2d.
     Parameters
     ----------
     block : Block

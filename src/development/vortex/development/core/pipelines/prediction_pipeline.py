@@ -293,10 +293,13 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         # Initialize model
         if weights is None:
-            weights = Path(experiment_directory) / ('{}.pth'.format(config.experiment_name))
-            if not os.path.isfile(weights):
-                raise RuntimeError("Default weight in {} is not exist, please provide weight "
-                    "path using '--weights' argument.".format(str(weights)))
+            if hasattr(config, 'checkpoint') and config.checkpoint is not None:
+                weights = config.checkpoint
+            else:
+                weights = Path(experiment_directory) / ('{}.pth'.format(config.experiment_name))
+                if not os.path.isfile(weights):
+                    raise RuntimeError("Default weight in {} is not exist, please provide weight "
+                        "path using '--weights' argument.".format(str(weights)))
         ckpt = torch.load(weights)
         state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 

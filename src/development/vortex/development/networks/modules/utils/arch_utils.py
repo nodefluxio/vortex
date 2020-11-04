@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 from torch.hub import load_state_dict_from_url
 
@@ -27,7 +28,11 @@ def load_pretrained(model, url, in_channel=3, num_classes=1000, first_conv_name=
                     classifier_name=None, progress=True):
     assert in_channel in (1, 3)
 
-    state_dict = load_state_dict_from_url(url, progress=progress)
+    if len(url.split(':')) < 2: ## assume local path
+        state_dict = torch.load(url)
+    else:
+        state_dict = load_state_dict_from_url(url, progress=progress)
+
     if in_channel != 3:
         if first_conv_name is None:
             raise RuntimeError("could not change the default number of input channel "\

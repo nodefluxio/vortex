@@ -1,11 +1,9 @@
 import torch
 import torch.nn as nn
-import numpy as np
-import enforce
 
 from typing import Union, Tuple, List
 
-from ...utils.darknet import yolo_feature_maps, darknet_conv
+from ...utils.darknet import darknet_conv
 
 __all__ = [
     'YoloV3Head',
@@ -23,7 +21,7 @@ supported_models = [
 
 class YoloV3ConvBlock(nn.Module):
     @staticmethod
-    def get_yolo_conv_layers(in_channels: int):
+    def get_yolo_conv_layers(in_channels: int, out_channels: int):
         """
         ######################
 
@@ -54,29 +52,41 @@ class YoloV3ConvBlock(nn.Module):
         activation=leaky
         """
         return nn.Sequential(
-            *[darknet_conv(
+            darknet_conv(
                 in_channels=in_channels,
-                filters=in_channels//2, kernel_size=1,
+                filters=out_channels//2, kernel_size=1,
+                stride=1, pad=True,
+                activation='leaky', bn=True
+            ),
+            darknet_conv(
+                in_channels=out_channels//2,
+                filters=out_channels, kernel_size=3,
+                stride=1, pad=True,
+                activation='leaky', bn=True
+            ),
+            darknet_conv(
+                in_channels=out_channels,
+                filters=out_channels//2, kernel_size=1,
                 stride=1, pad=True,
                 activation='leaky', bn=True
             ),
                 darknet_conv(
-                in_channels=in_channels//2,
-                filters=in_channels, kernel_size=3,
+                in_channels=out_channels//2,
+                filters=out_channels, kernel_size=3,
                 stride=1, pad=True,
                 activation='leaky', bn=True
-            )]*2,
+            ),
             darknet_conv(
-                in_channels=in_channels,
-                filters=in_channels//2, kernel_size=1,
+                in_channels=out_channels,
+                filters=out_channels//2, kernel_size=1,
                 stride=1, pad=True,
                 activation='leaky', bn=True
             )
         )
 
-    def __init__(self, in_channels: int):
+    def __init__(self, in_channels: int, out_channels: int):
         super(YoloV3ConvBlock, self).__init__()
-        self.conv = YoloV3ConvBlock.get_yolo_conv_layers(in_channels)
+        self.conv = YoloV3ConvBlock.get_yolo_conv_layers(in_channels, out_channels)
 
     def forward(self, x: torch.Tensor):
         return self.conv(x)
@@ -97,7 +107,7 @@ class YoloV3UpsampleBlock(nn.Module):
         out2 : [N,C//4+Cr,H*2,W*2]
     """
     @staticmethod
-    def get_upsample_layer(in_channels: int):
+    def get_upsample_layer(in_channels: int, scale: int = 2):
         """
         [route]
         layers = -4
@@ -124,15 +134,15 @@ class YoloV3UpsampleBlock(nn.Module):
                 activation='leaky', bn=True
             ),
             nn.Upsample(
-                scale_factor=2,
+                scale_factor=scale,
                 mode='nearest'
             )
         )
 
-    def __init__(self, in_channels: int):
+    def __init__(self, in_channels: int, out_channels: int, scale: int = 2):
         super(YoloV3UpsampleBlock, self).__init__()
-        self.conv = YoloV3ConvBlock(in_channels=in_channels)
-        self.upsample = YoloV3UpsampleBlock.get_upsample_layer(in_channels//2)
+        self.conv = YoloV3ConvBlock(in_channels=in_channels, out_channels=out_channels)
+        self.upsample = YoloV3UpsampleBlock.get_upsample_layer(out_channels//2, scale)
 
     def forward(self, x: torch.Tensor, route: torch.Tensor):
         out1 = self.conv(x)
@@ -162,16 +172,13 @@ class YoloV3LayerConv(nn.Module):
         return nn.Sequential(
             darknet_conv(
                 in_channels=in_channels,
-                filters=in_channels//2,
+                filters=in_channels*2,
                 kernel_size=3, stride=1,
                 pad=True, activation='leaky', bn=True
             ),
-            darknet_conv(
-                in_channels=in_channels//2,
-                filters=int(5+n_classes)*3,
-                kernel_size=1, stride=1,
-                pad=True, activation='linear', bn=False
-            )
+            nn.Conv2d(in_channels=in_channels*2,
+                              out_channels=3*(n_classes + 5),
+                              kernel_size=1, stride=1, padding=0)
         )
 
     def __init__(self, in_channels: int, n_classes: int):
@@ -223,8 +230,7 @@ class YoloV3Layer(nn.Module):
         self.n_predict = self.n_classes + 5
 
     @staticmethod
-    # @enforce.runtime_validation
-    def create_grids(anchors: Union[np.ndarray, torch.Tensor], img_size: int, n_grids: Tuple[int, int], n_anchors: int, dtype: torch.dtype = torch.float32):
+    def create_grids(anchors, img_size, n_grids, n_anchors, dtype: torch.dtype = torch.float32):
         nx, ny = n_grids  # x and y grid size
         img_size = img_size
         stride = torch.tensor([img_size / max(n_grids)])
@@ -235,21 +241,23 @@ class YoloV3Layer(nn.Module):
         grid_xy = torch.stack((xv, yv), 2).type(dtype).view((1, 1, ny, nx, 2))
 
         # build wh gains
-
         anchor_vec = anchors / stride
         anchor_wh = anchor_vec.view(1, n_anchors, 1, 1, 2).type(dtype)
 
         return nx, ny, grid_xy, stride, anchor_wh
 
     @staticmethod
+    @torch.jit.script
     def recompute_grids(n_grids: torch.Tensor):
         assert(len(n_grids) == 2)
         # build xy offsets
         nx, ny = n_grids[0], n_grids[1]
-        yv, xv = torch.meshgrid([torch.arange(ny).type(
-            torch.float), torch.arange(nx).type(torch.float)])
-        grid_xy = torch.stack((xv, yv), 2).type(torch.float).view(
-            (1, 1, ny, nx, 2)).to(n_grids.device)
+        yv, xv = torch.meshgrid([
+            torch.arange(ny, dtype=torch.float), 
+            torch.arange(nx, dtype=torch.float)
+        ])
+        grid_xy = torch.stack((xv, yv), 2).view(
+            (1, 1, int(ny), int(nx), 2)).to(n_grids.device)
         return grid_xy
 
     def forward(self, prediction: torch.Tensor):
@@ -258,7 +266,7 @@ class YoloV3Layer(nn.Module):
 
         if self.training and nx != self.nx:
             grid_xy = self.recompute_grids(
-                torch.tensor([nx, ny]).to(prediction.device)
+                torch.tensor([nx, ny], device=prediction.device)
             )
             self.nx, self.ny = nx, ny
             self.grid_xy = grid_xy
@@ -297,34 +305,36 @@ class YoloV3Layer(nn.Module):
 
 
 class YoloV3Head(nn.Module):
-    def __init__(self, img_size: int, backbone_channels: Tuple[int, int, int, int, int], grids: List[Tuple[int, int]], anchors: List[Tuple[int, int]], n_classes: int):
+    def __init__(self, img_size: int, backbone_channels: Tuple[int, int, int, int, int], 
+                 grids: List[Tuple[int, int]], anchors: List[Tuple[int, int]], 
+                 n_classes: int, backbone_stages: Tuple[int, int, int] = (3, 4, 5)):
         super(YoloV3Head, self).__init__()
-        c1, c2, c3, c4, c5 = backbone_channels
-        u1 = c5
-        u2 = c4 + u1 // 4
-        u3 = c3 + u2 // 4
-        self.u1 = YoloV3UpsampleBlock(
-            in_channels=u1)  # Yolov3-Darknet53 : 1024
-        # Yolov3-Darknet53 : 512
-        self.c1 = YoloV3LayerConv(in_channels=u1//2, n_classes=n_classes)
+        # c1, c2, c3, c4, c5 = backbone_channels
+        assert len(backbone_channels) == 5 and len(backbone_stages) == 3
+        c3, c4, c5 = (backbone_channels[x-1] for x in backbone_stages)
+
+        scale = (5 - backbone_stages[1]) * 2
+        self.u1 = YoloV3UpsampleBlock(in_channels=c5, out_channels=1024, scale=scale)
+        self.c1 = YoloV3LayerConv(in_channels=512, n_classes=n_classes)
         self.h1 = YoloV3Layer(
             img_size=img_size,
             grids=grids[2], mask=(6, 7, 8),
             n_classes=n_classes,
             anchors=anchors
         )
-        self.u2 = YoloV3UpsampleBlock(in_channels=u2)  # Yolov3-Darknet53 : 768
-        # Yolov3-Darknet53 : 384
-        self.c2 = YoloV3LayerConv(in_channels=u2//2, n_classes=n_classes)
+
+        scale = (4 - backbone_stages[0]) * 2
+        self.u2 = YoloV3UpsampleBlock(in_channels=(c4 + c5 // 4), out_channels=512, scale=scale)
+        self.c2 = YoloV3LayerConv(in_channels=256, n_classes=n_classes)
         self.h2 = YoloV3Layer(
             img_size=img_size,
             grids=grids[1], mask=(3, 4, 5),
             n_classes=n_classes,
             anchors=anchors
         )
-        self.u3 = YoloV3ConvBlock(in_channels=u3)  # Yolov3-Darknet53 : 448
-        # Yolov3-Darknet53 : 224
-        self.c3 = YoloV3LayerConv(in_channels=u3//2, n_classes=n_classes)
+
+        self.u3 = YoloV3ConvBlock(in_channels=(c3 + c4 // 4), out_channels=256)
+        self.c3 = YoloV3LayerConv(in_channels=128, n_classes=n_classes)
         self.h3 = YoloV3Layer(
             img_size=img_size,
             grids=grids[0], mask=(0, 1, 2),

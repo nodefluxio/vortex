@@ -1,0 +1,128 @@
+experiment_name: yolov3_darknet_608
+logging: None
+checkpoint: None
+device: 'cuda:0'
+output_directory: experiments/outputs
+model: {
+  name: YoloV3,
+  preprocess_args: {
+    input_size: 608,
+    input_normalization: {
+      mean: [0.0, 0.0, 0.0],
+      std: [1.0, 1.0, 1.0]
+    }
+  },
+  network_args: {
+    backbone: darknet53,
+    n_classes: 80,
+    anchors: [[10, 13], [16, 30], [33, 23], [30, 61], [62, 45], [59, 119], [116, 90], [156, 198], [373, 326]],
+    pretrained_backbone: True
+  },
+  loss_args: {
+    weight_loc: 1.2754397219232854,
+    weight_classes: 0.969884224593925,
+    ignore_thresh: 0.5
+  },
+  postprocess_args: {
+    nms: True,
+    threshold: True,
+  }
+}
+trainer: {
+  optimizer: {
+    method: SGD,
+    args: {
+      lr: 0.0048358967189158575,
+      momentum: 0.9,
+      weight_decay: 0.0005,
+    }
+  },
+  lr_scheduler: {
+    method: CosineLRScheduler,
+    args: {
+      t_initial: 200,
+      t_mul: 1.0,
+      lr_min: 0.00001,
+      warmup_lr_init: 0.0002815717238539049,
+      warmup_t: 4,
+      cycle_limit: 1,
+      t_in_epochs: True,
+      decay_rate: 0.1,
+    }
+  },
+  ## optional field for validation step
+  validation: {
+    ## passed to validator class
+    args: {
+      score_threshold: 0.9,
+      iou_threshold: 0.2,
+    },
+    val_epoch: 5,
+  },
+  epoch: 200,
+  save_epoch: 5,
+  driver: {
+    module: DefaultTrainer,
+    args: {
+      accumulation_step: 4,
+    },
+  }
+}
+dataset: { 
+  ## darknet uses COCO dataset, but since we don't yet have support for it, use VOC
+  ## TODO: change to COCO dataset
+  train: {
+    dataset: VOC2007DetectionDataset,
+    args: {
+      image_set: train,
+    },
+    augmentations: [
+      {
+        module: albumentations,
+        args: {
+          transforms: [
+            {compose: OneOf, args: {
+              transforms: [{transform: RandomBrightnessContrast, args : {p : 0.5}},
+                           {transform: RandomSnow, args : {p : 0.5}}
+              ],
+              p: 0.5}},
+            {transform: HorizontalFlip, args: {p: 0.5}},
+            {transform: RandomScale, args: {scale_limit: 0.3, p: 0.5,}}
+          ],
+          bbox_params: {
+            min_visibility: 0.0,
+            min_area: 0.0
+          },
+          visual_debug: False
+        }
+      }
+    ]
+  },
+  eval: {
+    dataset: VOC2007DetectionDataset,
+    args: {
+      image_set: val
+    }
+  },
+  dataloader: {
+    dataloader: DataLoader,
+    args: {
+      num_workers: 0,
+      batch_size: 4,
+      shuffle: True,
+    },
+  },
+}
+seed: {
+  torch: 0,
+  cudnn: {
+    deterministic: True,
+    benchmark: False,
+  }
+}
+exporter: {
+  module: onnx,
+  args: {
+    opset_version: 11,
+  },
+}

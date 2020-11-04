@@ -1,7 +1,7 @@
 numpy==1.17.0
 opencv-python==4.2.0.34
-torch==1.6.0
-torchvision==0.7.0
+torch<=1.6.0
+torchvision<=0.7.0
 matplotlib
 tqdm
 tb-nightly

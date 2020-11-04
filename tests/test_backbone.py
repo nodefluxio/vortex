@@ -8,7 +8,7 @@ from vortex.development.networks.modules.utils.layers import EvoNormBatch2d
 import torch
 import pytest
 
-no_pretrained = ['darknet53', 'shufflenetv2_x1.5', 'shufflenetv2_x2.0']
+no_pretrained = ['darknet21', 'shufflenetv2_x1.5', 'shufflenetv2_x2.0']
 all_backbone = [m.__name__.split('.')[-1] for m in list(backbones.supported_models.keys())]
 exclude_test = [ ## exclude bigger models
     'efficientnet_b5', 'efficientnet_b6', 'efficientnet_b7', 
