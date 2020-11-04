@@ -2,8 +2,6 @@ FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN apt-get update && apt-get install -y git
-
 WORKDIR /app/vortex
 
 COPY ./src /app/vortex/src
