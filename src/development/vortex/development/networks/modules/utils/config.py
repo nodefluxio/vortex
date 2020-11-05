@@ -49,7 +49,7 @@ def is_exportable():
 
 
 class set_exportable:
-    def __init__(self, mode: bool) -> None:
+    def __init__(self, mode: bool=True) -> None:
         global _EXPORTABLE
         self.prev = _EXPORTABLE
         _EXPORTABLE = mode
@@ -68,7 +68,7 @@ def is_scriptable():
 
 
 class set_scriptable:
-    def __init__(self, mode: bool) -> None:
+    def __init__(self, mode: bool=True) -> None:
         global _SCRIPTABLE
         self.prev = _SCRIPTABLE
         _SCRIPTABLE = mode

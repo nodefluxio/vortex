@@ -459,37 +459,45 @@ _ACT_LAYER_ME = dict(
 )
 
 
+## scrap dynamically returning activation funtion for now.
+## causing to much trouble in export, interfering with other `nn` module.
+# def get_act_fn(name='relu'):
+#     """ Activation Function Factory
+#     Fetching activation fns by name with this function allows export or torch script friendly
+#     functions to be returned dynamically based on current config.
+#     """
+#     if not name:
+#         return None
+#     if not (is_no_jit() or is_exportable() or is_scriptable()):
+#         # If not exporting or scripting the model, first look for a memory-efficient version with
+#         # custom autograd, then fallback
+#         if name in _ACT_FN_ME:
+#             return _ACT_FN_ME[name]
+#     if not is_no_jit():
+#         if name in _ACT_FN_JIT:
+#             return _ACT_FN_JIT[name]
+#     return _ACT_FN_DEFAULT[name]
+
+
+# def get_act_layer(name='relu'):
+#     """ Activation Layer Factory
+#     Fetching activation layers by name with this function allows export or torch script friendly
+#     functions to be returned dynamically based on current config.
+#     """
+#     if not name:
+#         return None
+#     if not (is_no_jit() or is_exportable() or is_scriptable()):
+#         if name in _ACT_LAYER_ME:
+#             return _ACT_LAYER_ME[name]
+#     if not is_no_jit():
+#         if name in _ACT_LAYER_JIT:
+#             return _ACT_LAYER_JIT[name]
+#     return _ACT_LAYER_DEFAULT[name]
+
 def get_act_fn(name='relu'):
-    """ Activation Function Factory
-    Fetching activation fns by name with this function allows export or torch script friendly
-    functions to be returned dynamically based on current config.
-    """
-    if not name:
-        return None
-    if not (is_no_jit() or is_exportable() or is_scriptable()):
-        # If not exporting or scripting the model, first look for a memory-efficient version with
-        # custom autograd, then fallback
-        if name in _ACT_FN_ME:
-            return _ACT_FN_ME[name]
-    if not is_no_jit():
-        if name in _ACT_FN_JIT:
-            return _ACT_FN_JIT[name]
     return _ACT_FN_DEFAULT[name]
 
-
 def get_act_layer(name='relu'):
-    """ Activation Layer Factory
-    Fetching activation layers by name with this function allows export or torch script friendly
-    functions to be returned dynamically based on current config.
-    """
-    if not name:
-        return None
-    if not (is_no_jit() or is_exportable() or is_scriptable()):
-        if name in _ACT_LAYER_ME:
-            return _ACT_LAYER_ME[name]
-    if not is_no_jit():
-        if name in _ACT_LAYER_JIT:
-            return _ACT_LAYER_JIT[name]
     return _ACT_LAYER_DEFAULT[name]
 
 
