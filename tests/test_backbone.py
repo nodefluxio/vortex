@@ -23,7 +23,6 @@ if not inplace_abn.has_iabn:
     exclude_test.extend(backbones.tresnet.supported_models)
 else:
     exclude_test.extend(backbones.tresnet.supported_models[3:])
-print(exclude_test)
 
 @pytest.mark.parametrize(
     "module, feature",
