@@ -1,18 +1,14 @@
-import cv2
 import onnx
 import torch
 import enforce
-import numpy as np
-import torch.nn as nn
 
-from copy import copy
-from vortex.development.networks.modules.postprocess.utils.nms import NoNMS
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
 from .utils.onnx.graph_ops.embed_output_format import embed_output_format
 from .utils.onnx.graph_ops.embed_class_names import embed_class_names
 from .utils.onnx.graph_ops.nms_iou_threshold_as_input import nms_iou_threshold_as_input
 from .utils.onnx.graph_ops.create_batch_output_sequence import create_batch_output_sequence
-from typing import Union, List, Tuple, Dict, Type, Any
+
+from typing import Union, List, Tuple, Any
 from pathlib import Path
 
 __all__ = [

@@ -4,6 +4,7 @@ sys.path.insert(0, str(Path(__file__).parents[1].joinpath('src', 'development'))
 
 from vortex.development.networks.modules import backbones
 from vortex.development.networks.modules.utils.layers import EvoNormBatch2d
+from vortex.development.networks.modules.utils import inplace_abn
 
 import torch
 import pytest
@@ -17,9 +18,11 @@ exclude_test = [ ## exclude bigger models
     'resnet101', 'resnet152', 'resnext101_32x8d', 'wide_resnet101_2',
     'rexnet_200', 'resnest200', 'resnest269', 'resnest50d_1s4x24d',
     *backbones.regnet.supported_models[6:],
-    'tresnet_m_448', 'tresnet_l_448', 'tresnet_xl_448'
 ]
-
+if not inplace_abn.has_iabn:
+    exclude_test.extend(backbones.tresnet.supported_models)
+else:
+    exclude_test.extend(backbones.tresnet.supported_models[3:])
 
 @pytest.mark.parametrize(
     "module, feature",

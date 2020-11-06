@@ -1,7 +1,6 @@
 import cv2
 import torch
 import logging
-import numpy as np
 
 from pathlib import Path
 from copy import deepcopy
