@@ -30,15 +30,14 @@ jobs:
       - name: Build and Publish Docker Image
         uses: docker/build-push-action@v1.1.0
         with:
-          # repository: nodefluxio/vortex
-          # username: ${{ secrets.DOCKER_USERNAME }}
-          # password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: nodefluxio/vortex
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
           build_args: RUNTIME_TYPE=${{ matrix.runtime_type }}
           tags: "runtime-${{ matrix.runtime_type }}-${{ env.RELEASE_VERSION }}"
           target: runtime
           dockerfile: Dockerfile
-          # push: ${{ github.event_name == 'release' }}
-          push: false
+          push: ${{ github.event_name == 'release' }}
         timeout-minutes: 55
 
   build-full:
@@ -57,13 +56,12 @@ jobs:
       - name: Build and Publish Docker Image
         uses: docker/build-push-action@v1.1.0
         with:
-          # repository: nodefluxio/vortex
-          # username: ${{ secrets.DOCKER_USERNAME }}
-          # password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: nodefluxio/vortex
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
           build_args: RUNTIME_TYPE=all
           tags: "${{ env.RELEASE_VERSION }},latest"
           target: development
           dockerfile: Dockerfile
-          # push: ${{ github.event_name == 'release' }}
-          push: false
+          push: ${{ github.event_name == 'release' }}
         timeout-minutes: 55
