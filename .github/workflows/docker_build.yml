@@ -36,7 +36,7 @@ jobs:
           build_args: RUNTIME_TYPE=${{ matrix.runtime_type }}
           tags: "runtime-${{ matrix.runtime_type }}-${{ env.RELEASE_VERSION }}"
           target: runtime
-          dockerfile: dockerfiles/Dockerfile
+          dockerfile: Dockerfile
           # push: ${{ github.event_name == 'release' }}
           push: false
         timeout-minutes: 55
@@ -63,7 +63,7 @@ jobs:
           build_args: RUNTIME_TYPE=all
           tags: "${{ env.RELEASE_VERSION }},latest"
           target: development
-          dockerfile: dockerfiles/Dockerfile
+          dockerfile: Dockerfile
           # push: ${{ github.event_name == 'release' }}
           push: false
         timeout-minutes: 55
