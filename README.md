@@ -17,9 +17,13 @@ Key Features :
 - Graph export to [Torchscript](https://pytorch.org/docs/stable/jit.html) and [ONNX](https://onnx.ai/)
 - Visual report of model's performance and resource usage, see [this example](experiments/outputs/resnet18_softmax_cifar10/reports/resnet18_softmax_cifar10_validation_cuda:0.md)
 
+## Installation
+
+see detailed guide: https://nodefluxio.github.io/vortex/#installation
+
 ## User Guides & Documentations
 
-- see [Vortex Documentation](https://nodefluxio.github.io/vortex/)
+see [Vortex Documentation](https://nodefluxio.github.io/vortex/)
 
 ## Development Pipelines
 
