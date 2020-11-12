@@ -13,10 +13,12 @@ from vortex.development.utils.parser.parser import load_config, check_config
 from vortex.development.networks.modules.utils import inplace_abn
 
 backbones = [bb[0] for bb in supported_backbone.values()]
+backbones.insert(0, 'darknet53')
 skip_backbone = [
     'alexnet', 'squeezenetv1.0', 'squeezenetv1.1', 
     'rexnet_100',   ## rexnet can't be tested for 1 batch training 
-    'resnest14'     ## resnest can't be tested for 1 batch training
+    'resnest14',    ## resnest can't be tested for 1 batch training
+    'darknet7'      ## unusual spatial size for stage 4
 ]
 
 for b in skip_backbone:
