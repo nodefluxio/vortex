@@ -45,6 +45,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /root/.cache && \
     rm -rf /var/lib/apt/lists/*
-RUN pip3 install ./src/development[optuna_vis]
+RUN pip install ./src/development[optuna_vis] --ignore-installed
 RUN python -c "import vortex.development"
 WORKDIR /app
