@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 
 # get inference helper from runtime eample
-root = Path(__file__).parent.parent
+root = Path(__file__).parents[1]
 sys.path.insert(0, str(root / 'examples'))
 from runtime import InferenceHelper, vrt
 
