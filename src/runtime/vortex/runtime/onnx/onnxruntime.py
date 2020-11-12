@@ -1,11 +1,9 @@
 import numpy as np
 
 from vortex.runtime.basic_runtime import BaseRuntime
-from vortex.runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
 
 from pathlib import Path
-from collections import OrderedDict
-from typing import Union, List, Dict, Tuple, Any
+from typing import Union, List, Tuple, Any
 
 class OnnxRuntime(BaseRuntime) :
     """
@@ -26,6 +24,8 @@ class OnnxRuntime(BaseRuntime) :
     def __init__(self, model : Union[str,Path], providers : Any, fallback : bool, input_name : str = 'input', output_name : Union[str,List[str]] = 'output', execution_mode : Union[str,int] = 'sequential', graph_optimization_level : Union[str,int] = 'basic') :
         import onnxruntime
         import onnx
+        from vortex.runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
+
         sess_options = onnxruntime.SessionOptions()
         if graph_optimization_level in OnnxRuntime.graph_optimization_level.keys() :
             graph_optimization_level = OnnxRuntime.graph_optimization_level[graph_optimization_level]
@@ -39,6 +39,7 @@ class OnnxRuntime(BaseRuntime) :
             pass
         else :
             raise ValueError("unsupported execution mode, supported : %s" %OnnxRuntime.execution_mode)
+
         graph_optimization_level = onnxruntime.capi.onnxruntime_pybind11_state.GraphOptimizationLevel(graph_optimization_level)
         execution_mode = onnxruntime.capi.onnxruntime_pybind11_state.ExecutionMode(execution_mode)
         sess_options.graph_optimization_level = graph_optimization_level
@@ -48,6 +49,7 @@ class OnnxRuntime(BaseRuntime) :
             import warnings
             warnings.warn("disabling onnx runtime fallback")
             self.session.disable_fallback()
+
         onnx_protobuf = onnx.load(model)
         output_format = get_output_format(onnx_protobuf)
         input_specs = get_input_specs(onnx_protobuf)
@@ -64,7 +66,7 @@ class OnnxRuntime(BaseRuntime) :
             class_names=class_names,
         )
         assert len(self.output_name) == 1
-    
+
     @staticmethod
     def is_available() :
         try :
@@ -73,7 +75,7 @@ class OnnxRuntime(BaseRuntime) :
             return True
         except ImportError :
             return False
-        
+    
     def predict(self, *args, **kwargs) -> np.ndarray :
         run_args = {name : value for name, value in zip(self.input_specs, args)}
         run_args = {**run_args, **kwargs}
@@ -108,7 +110,7 @@ class OnnxRuntimeCpu(OnnxRuntime) :
             if not fallback :
                 raise ImportError("CPUExecutionProvider not available")
         super(OnnxRuntimeCpu,self).__init__(model,providers=['CPUExecutionProvider'],fallback=fallback,*args,**kwargs)
-    
+
     @staticmethod
     def is_available() :
         try :

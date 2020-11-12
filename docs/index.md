@@ -8,7 +8,7 @@ A Deep Learning Model Development Framework for Computer Vision
 
 ---
 
-## Overview
+# Overview
 
 Vortex (a.k.a Visual Cortex) is a computer deep learning framework based on Pytorch that provides end-to-end model development. It utilizes **a single experiment file** in YAML format (and an optional YAML file for hyperparameter optimization) to navigate all of the pipelines and provides complete development environment which consists of the following pipelines :
 
@@ -34,7 +34,7 @@ Currently we support deep learning model development on computer vision of the f
 
 ---
 
-## Highlights
+# Highlights
 
 - Easy CLI usage
 - Modular design, reusable components
@@ -48,199 +48,237 @@ Currently we support deep learning model development on computer vision of the f
 - Visual report of model's performance and resource usage, see [this example](https://github.com/nodefluxio/vortex/blob/master/experiments/outputs/resnet18_softmax_cifar10/reports/resnet18_softmax_cifar10_validation_cuda:0.md)
 ---
 
-## Installation
+# Installation
 
 ---
 
-This installation guide cover the installation of Vortex components, which consists of 2 packages:
+Vortex consists of 2 packages:
 
 - Vortex development package (`vortex.development`)
 
     This package contain full vortex pipelines and main development features with all of it's dependencies
 
-- Vortex runtime package (`vortex.runtime`):
+- Vortex runtime package (`vortex.runtime`)
 
-    This package only contain minimal dependencies to run vortex graph IR file for prediction pipeline (minimal interface).
-    Currently this guide will cover for the following backends:
+    This package only contain minimal dependencies to run the exported vortex model (IR graph).
+    There are two IR graph format supported by vortex, torchscript or onnx.
 
-    - torchscript (backends : cpu,cuda )
-    - onnxruntime (backends : cpu )
+    You could choose to install only minimal dependencies packages if you want to support only one of them, or you could also install all of them with extra dependency option:
+    - all
+    - torchscript  
+    - onnxruntime  
+
+Vortex is tested and developed using Python3.6
 
 ---
 
-### Vortex Development Package Installation
+## Vortex Development
 
 ---
 
-#### On Host
+### With Docker
 
-Install package dependencies :
+Make sure you have installed `nvidia-docker2` if you want to use your nvidia gpus, if you haven't follow [this guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker).
 
-```console
+You pull the official image from our docker hub:
+```bash
+docker pull nodefluxio/vortex:latest
+```
+
+Or if you want to build your self:
+```bash
+docker build --target=development -t vortex:dev -f dockerfiles/vortex.dockerfile .
+```
+
+---
+
+### From Source
+
+Install package dependencies:
+
+```bash
 apt update
 apt install -y libsm6 libxext6 libxrender-dev ffmpeg \
                x264 libx264-dev libsm6 git sqlite3 \
                libsqlite3-dev graphviz pciutils
 ```
 
-Vortex run and tested on Python 3.6, so if you use Ubuntu 18.04 just run :
+Make sure you have Python3.6 installed, or if you use Ubuntu 18.04 you can install them by:
 
-```console
-apt install -y python3 python3-pip
+```bash
+apt install -y python3.6
 ```
 
-or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/)
-
-And don't forget to update the pip and setuptools package to avoid several installation issues
-
-```console
-pip3 install -U pip setuptools
-```
-
-Then, clone the repo and install the vortex packages. It's important to be noted that `vortex.development` package also depends on `vortex.runtime` package, so we need to install both packages :
-
-```console
+or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/).  
+Then clone vortex repo to your local directory:
+```bash
 git clone https://github.com/nodefluxio/vortex.git
 cd vortex
 git checkout v0.2.0
-pip3 install 'src/runtime[all]'
-pip3 install 'src/development'
 ```
 
-Additionally if you want to install vortex with optuna visualization support :
+You could choose either one of the following environment to install vortex:
 
-```console
-pip3 install 'src/development[optuna_vis]'
+#### Using `pip`  
+Make sure you have pip installed for your python executable, if not follow [this guide](https://pip.pypa.io/en/stable/installing/).  
+It's important to be noted that `vortex.development` package also depends on `vortex.runtime` package, so you need to install both packages:
+
+```bash
+pip install ./src/runtime[all] 
+pip install ./src/development
 ```
 
-This command will register a python package named as `visual-cortex` and `visual-cortex-runtime` when you check it using `pip3 list`.
+Or if you want to install vortex with additional optuna visualization support:
 
-```console
-pip3 list | grep visual-cortex
-
-/*
-visual-cortex            {installed-version}
-visual-cortex-runtime    {installed-version}
-*/
+```bash
+pip install 'src/development[optuna_vis]'
 ```
 
-To check whether the installation is succesful, you can run :
+To check whether the installation is succesful, you can run:
 
-```console
+```bash
 python3.6 -c 'import vortex.development'
 python3.6 -c 'import vortex.runtime'
 ```
 
-Which will print output like this
+#### Using `conda`  
+Make sure you have `conda` installed, if not follow [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html).  
+Create new environment and activate it:
+```
+conda create --name vortex python=3.6
+conda activate vortex
+```
 
-```console
-UserWarning: finished scanning dataset, available dataset(s) : 
-{   'external': [],
-    'torchvision.datasets': [   'MNIST',
-                                'FashionMNIST',
-                                'KMNIST',
-                                'EMNIST',
-                                'QMNIST',
-                                'ImageFolder',
-                                'CIFAR10',
-                                'CIFAR100',
-                                'SVHN',
-                                'STL10']}
-  (pp.pformat(all_datasets)))
+Install pytorch and the supporting package:
+```bash
+conda install -c pytorch -y pytorch=1.6 torchvision=0.7 cudatoolkit=10.2
+```
+Then you could install vortex with:
+```bash
+pip install ./src/runtime[all] ./src/development
+```
+
+Check the installation with:
+```bash
+python -c 'import vortex.development'
+python -c 'import vortex.runtime'
 ```
 
 ---
 
-#### Using Docker
+## Vortex Runtime 
 
-You can build the dockerfile,
+There three option for the runtime package installation to support either one of the IR graph runtime or to support both of them. The options are:
+- `onnxruntime`
+- `torchscript`
+- `all`
 
-```console
-docker build -t vortex:dev -f dockerfiles/vortex.dockerfile .
+---
+
+### With Docker
+
+Make sure you have installed `nvidia-docker2` if you want to use your nvidia gpus, if you haven't follow [this guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker).
+
+
+You pull the official image from our docker hub for runtime:
+```bash
+docker pull nodefluxio/vortex:runtime-all-0.2.1
+```
+There are runtime image tags you can choose from the repository, all the tags that starts with `runtime-` is the image for vortex runtime. For example if you choose to get the image with `onnxruntime` support:
+```bash
+docker pull nodefluxio/vortex:runtime-onnxruntime-0.2.1
+```
+
+Or if you want to build your self:
+```bash
+docker build --target=runtime -t vortex:runtime -f dockerfiles/vortex.dockerfile .
+```
+You could also specify the extra dependency to support specific IR graph using the build argument `RUNTIME_TYPE`, for example with `onnxruntime`:
+```bash
+docker build --target=runtime --build-arg RUNTIME_TYPE=onnxruntime -t vortex:runtime-onnx -f dockerfiles/vortex.dockerfile .
 ```
 
 ---
 
-### Vortex Runtime Package Installation
+### From Source
 
----
+Install package dependencies:
 
-#### On Host
-
-Install package dependencies :
-
-```console
+```bash
 apt update
 apt install -y libsm6 libxext6 libxrender-dev ffmpeg \
                x264 libx264-dev libsm6 git sqlite3 \
-               libsqlite3-dev
+               libsqlite3-dev graphviz pciutils
 ```
 
-Vortex run and tested on Python 3.6, so if you use Ubuntu 18.04 just run :
+Make sure you have Python3.6 installed, or if you use Ubuntu 18.04 you can install them by:
 
-```console
-apt install -y python3 python3-pip
+```bash
+apt install -y python3.6
 ```
 
-or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/)
-
-And don't forget to update the pip and setuptools package to avoid several installation issues
-
-```console
-pip3 install -U pip setuptools
-```
-
-Then, clone the repo and install the vortex runtime package which suit your targeted IR runtime. Currently Vortex support the following runtime :
-
-- `onnxruntime`
-- `torchscript`
-
-For example, if you want to install specific dependencies for `onnxruntime`, execute the following command :
-
-```console
-git clone https://github.com/nodefluxio/vortex.git
-cd vortex
+or, you can download the Python 3.6 release [here](https://www.python.org/downloads/release/python-369/).  
+Then clone vortex repo to your local directory:
+```bash
+git clone https://github.com/nodefluxio/vortex.git && cd vortex
 git checkout v0.2.0
-pip3 install 'src/runtime[onnxruntime]'
 ```
 
-However, if you want to test all available runtime, you can install it using the following command :
+You could choose either one of the following environment to install vortex:
 
+#### Using `pip`
+
+Choose one dependency options that suits your need, for example if you want to install specific dependencies for `onnxruntime`:
 ```console
-pip3 install 'src/runtime[all]'
+pip install ./src/runtime[onnxruntime]
 ```
 
-This command will register a python package named as `visual-cortex-runtime` when you check it using `pip3 list`.
-
+Or, if you want have support for all available runtime:
 ```console
-pip3 list | grep visual-cortex
-
-/*
-visual-cortex-runtime    {installed-version}
-*/
+pip install ./src/runtime[all]
 ```
 
-To check whether the installation is succesful, you can run :
-
+To check the installation, you can run:
 ```console
 python3.6 -c 'import vortex.runtime'
 ```
 
+#### Using `conda`  
+Make sure you have `conda` installed, if not follow [this guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html).  
+Create new environment and activate it:
+```
+conda create --name vortex-rt python=3.6
+conda activate vortex-rt
+```
+
+Install cudatoolkit package:
+```bash
+conda install -c pytorch -y cudatoolkit=10.2
+```
+
+Choose one of the dependency that suits your need, for example if you only want to support `onnxruntime`:
+```bash
+pip install ./src/runtime[onnxruntime]
+```
+Or, if you want to support all available runtime:
+```bash
+pip install ./src/runtime[all]
+```
+
+Check the installation with:
+```bash
+python -c 'import vortex.runtime'
+```
+
 ---
 
-#### Using Docker
-
-TODO
-
----
-
-## Getting Started
+# Getting Started
 
 Vortex utilizes a certain standard to allow seamless integration between pipelines. In this guide, we will show you how to **integrate your dataset/use the built-in ones**, how to build the **experiment file**, and how to utilize and propagate both items to all of Vortex pipelines.
 
 ---
 
-### Developing Vortex Model
+## Developing Vortex Model
 
 1. The first step is dataset integration, it is recommended for you to check the [built-in datasets section](modules/builtin_dataset.md) in order to find suitable setting for your dataset. For example, you can use [torchvision's ImageFolder](modules/builtin_dataset.md#torchvision-dataset) to integrate a classification dataset. However, if you didn't find any suitable internal integration, you can follow [dataset integration section](user-guides/dataset_integration.md) to make your own integration point
 
@@ -262,7 +300,7 @@ Vortex utilizes a certain standard to allow seamless integration between pipelin
 
 ---
 
-### Hyperparameter Optimization
+## Hyperparameter Optimization
 
 Now, once you've accustomed with Vortex pipelines, you can explore the use of hypopt pipeline to find the best hyperparameter setting for your model. Basically To do that, you can follow the guide below :
 
