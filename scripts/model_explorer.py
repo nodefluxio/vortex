@@ -164,7 +164,7 @@ class ModelExplorer:
             title = f"{self.title}: {self.model_path}"
             self.root.title(title)
         else:
-            print(f'{filename} doesnt exists')
+            print(f'{self.model_path} doesnt exists')
 
     def open_directory(self):
         """prompt directory dialog and then update existing filenames
