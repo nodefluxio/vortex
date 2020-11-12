@@ -413,8 +413,13 @@ def main(args):
     print("prediction results\n", results['prediction'])
 
     if args.show:
-        print(type(results['visualization']))
-        vis = np.vstack(results['visualization'])
+        vis = results['visualization']
+        if len(vis) > 1:
+            # image must be on the same shape before stacking
+            shape = vis[0].shape[-2::-1]
+            vis = list(map(lambda x: cv2.resize(x, shape), vis))
+        # simply stack visualization accross batch
+        vis = np.vstack(vis)
         cv2.imshow("prediction results", vis)
         cv2.waitKey()
 
@@ -423,7 +428,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', type=str, help='path to model')
     parser.add_argument('--runtime', type=str, help='runtime engine')
-    parser.add_argument('--input', type=str, help='input image')
+    parser.add_argument('--input', type=str, nargs='+', help='input image')
     parser.add_argument('--show', action='store_true', help='show prediction results')
     parser.add_argument("--score_threshold", default=0.9, type=float,
                         help='score threshold for detection, only used if model is detection, ignored otherwise')

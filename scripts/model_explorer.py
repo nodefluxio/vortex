@@ -188,7 +188,13 @@ class ModelExplorer:
             print(kwargs)
             results = self.model(**kwargs)
             self.runtime.append(results['runtime'])
-            image = np.vstack(results['visualization'])
+            vis = results['visualization']
+            if len(vis) > 1:
+                # image must be on the same shape before stacking
+                shape = vis[0].shape[-2::-1]
+                vis = list(map(lambda x: cv2.resize(x, shape), vis))
+            # simply stack visualization accross batch
+            image = np.vstack(vis)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             gs = self.figure.add_gridspec(1,1)
             img_ax = self.figure.add_subplot(gs[0:,0:2])
