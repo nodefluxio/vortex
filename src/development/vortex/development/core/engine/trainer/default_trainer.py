@@ -1,8 +1,6 @@
-
 import torch
 from tqdm import tqdm
 from easydict import EasyDict
-from typing import Tuple, List, Union, Type, Any, Dict
 
 from vortex.development.core.engine.trainer.base_trainer import BaseTrainer
 
@@ -24,8 +22,6 @@ class DefaultTrainer(BaseTrainer):
         device = list(self.model.parameters())[0].device
         for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),
                                          desc=" train", leave=False, dynamic_ncols=True):
-            if self.scheduler is not None:
-                self.lr = self.scheduler.get_last_lr()[0]
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
@@ -63,4 +59,6 @@ class DefaultTrainer(BaseTrainer):
 
                 self.global_step+=1
                 step_loss = 0
+            if self.scheduler is not None:
+                self.lr = self.scheduler.get_last_lr()[0]
         return (epoch_loss / len(dataloader)), self.lr
