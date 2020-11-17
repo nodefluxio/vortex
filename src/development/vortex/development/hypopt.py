@@ -14,7 +14,6 @@ def main(args):
     optconfig_path=args.optconfig
     weights=args.weights
 
-    from pathlib import Path
     from vortex.development.utils.parser.loader import Loader
     with open(config_path) as f:
         config_data = yaml.load(f, Loader=Loader)
@@ -39,18 +38,32 @@ def main(args):
 ## npm install -g electron@1.8.4 orca
 ## pip install plotly psutil requests cma
 
-def add_parser(parent_parser,subparsers = None):
-    if subparsers is None:
-        parser = parent_parser
-    else:
-        parser = subparsers.add_parser('hypopt',description=description)
-    parser.add_argument('-c','--config', required=True, type=str, help='path to experiment config file')
-    parser.add_argument('-o','--optconfig', required=True, type=str, help='path to hypopt config file')
-    parser.add_argument("-w","--weights", help='path to selected weights (optional, will be inferred from `output_directory` and `experiment_name` field from config) if not specified, valid only for ValidationObjective, ignored otherwise')
+def add_parser(subparsers, parent_parser):
+    HYPOPT_HELP = "Run hyperparameter optimization"
+    usage = "\n  vortex hypopt [options] <config> <optconfig>"
+    parser = subparsers.add_parser(
+        "hypopt",
+        parents=[parent_parser],
+        description=HYPOPT_HELP,
+        help=HYPOPT_HELP,
+        formatter_class=argparse.RawTextHelpFormatter,
+        usage=usage
+    )
 
-if __name__=='__main__' :
-    logging.basicConfig(level=logging.INFO)
-    parser = argparse.ArgumentParser(description=description)
-    add_parser(parser)
-    args = parser.parse_args()
-    main(args)
+    parser.add_argument(
+        'config', type=str, 
+        help='path to experiment config file'
+    )
+    parser.add_argument(
+        'optconfig', type=str, 
+        help='path to hypopt config file'
+    )
+
+    cmd_args_group = parser.add_argument_group(title="command arguments")
+    cmd_args_group.add_argument(
+        "-w", "--weights", 
+        help="path to model's weights (optional, inferred from config if not specified)"
+             "valid only for ValidationObjective, ignored otherwise"
+    )
+
+    parser.set_defaults(func=main)

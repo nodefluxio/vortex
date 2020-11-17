@@ -36,21 +36,33 @@ def main(args):
     print("\nloss: {}\nmetrics: {}\nlearning rates: {}".format(epoch_losses, 
         val_metrics, learning_rates))
 
-def add_parser(parent_parser, subparsers = None):
-    if subparsers is None:
-        parser = parent_parser
-    else:
-        parser = subparsers.add_parser('train', description=description)
-    parser.add_argument('-c', '--config', required=True, type=str,
-                        help='path to experiment config file')
-    parser.add_argument('--resume', action='store_true', 
-                        help='vortex-saved model path for resume training')
-    parser.add_argument("--no-log", action='store_true', 
-                        help='disable logging, ignore experiment file config')
+def add_parser(subparsers, parent_parser):
+    TRAIN_HELP = "Train model from configuration file"
+    usage = "\n  vortex train [options] <config>"
+    parser = subparsers.add_parser(
+        "train",
+        parents=[parent_parser],
+        description=TRAIN_HELP,
+        help=TRAIN_HELP,
+        formatter_class=argparse.RawTextHelpFormatter,
+        usage=usage
+    )
 
+    parser.add_argument(
+        "config", 
+        help="path to experiment config file"
+    )
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=description)
-    add_parser(parser)
-    args = parser.parse_args()
-    main(args)
+    cmd_args_group = parser.add_argument_group(title="command arguments")
+    cmd_args_group.add_argument(
+        '--resume', 
+        action='store_true', 
+        help='resume training, getting the weight from `config.checkpoint`'
+    )
+    cmd_args_group.add_argument(
+        "--no-log", 
+        action='store_true', 
+        help='disable experiment logging'
+    )
+
+    parser.set_defaults(func=main)

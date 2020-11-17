@@ -21,20 +21,33 @@ def main(args):
         raise RuntimeError("One or more IR export failed")
     print("DONE!")
 
-def add_parser(parent_parser,subparsers = None):
-    if subparsers is None:
-        parser = parent_parser
-    else:
-        parser = subparsers.add_parser('export',description=description)
-    parser.add_argument('-c','--config', required=True, help='export experiment config file')
-    parser.add_argument("-w","--weights", help="path to selected weights (optional, will be inferred from "\
-        "`output_directory` and `experiment_name` field from config) if not specified")
-    parser.add_argument('-i',"--example-input", help="path to example input for tracing (optional, may be necessary "\
-        "for correct tracing, especially for detection model)")
+def add_parser(subparsers, parent_parser):
+    EXPORT_HELP = "Export trained vortex model to IR model specified in configuration file"
+    usage = "\n  vortex export [options] <config>"
+    parser = subparsers.add_parser(
+        "export",
+        parents=[parent_parser],
+        description=EXPORT_HELP,
+        help=EXPORT_HELP,
+        formatter_class=argparse.RawTextHelpFormatter,
+        usage=usage
+    )
 
-if __name__ == '__main__':
+    parser.add_argument(
+        "config", 
+        help="path to experiment config file"
+    )
 
-    parser = argparse.ArgumentParser(description=description)
-    add_parser(parser)
-    args = parser.parse_args()
-    main(args)
+    cmd_args_group = parser.add_argument_group(title="command arguments")
+    cmd_args_group.add_argument(
+        "-w", "--weights", 
+        help="path to model's weights (optional, inferred from config if not specified)"
+    )
+    cmd_args_group.add_argument(
+        "-i", "--example-input",
+        metavar="IMAGE",
+        help="path to example input for exporter tracing (optional, may be necessary "
+             "to correctly trace the entire model especially for detection task)"
+    )
+
+    parser.set_defaults(func=main)

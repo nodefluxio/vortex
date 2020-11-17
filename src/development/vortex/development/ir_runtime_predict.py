@@ -1,8 +1,7 @@
-from typing import Union, Type, List
-from vortex.development.core.pipelines import IRPredictionPipeline
-
-from vortex.runtime import model_runtime_map
 import argparse
+
+from vortex.development.core.pipelines import IRPredictionPipeline
+from vortex.runtime import model_runtime_map
 
 description = 'Vortex IR model prediction pipeline; may receive multiple image(s) for batched prediction'
 
@@ -44,25 +43,49 @@ def main(args):
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 
-def add_parser(parent_parser,subparsers = None):
-    if subparsers is None:
-        parser = parent_parser
-    else:
-        parser = subparsers.add_parser('ir_runtime_predict',description=description)
-    parser.add_argument('-m','--model', type=str, required=True, help='path to IR model')
-    parser.add_argument('-i', '--image', type=str, nargs='+', required=True, \
-        help='path to test image(s); at least 1 path should be provided, supports up to model batch_size')
-    parser.add_argument("-o","--output-dir",default='.',help='directory to dump prediction visualization')
-    parser.add_argument("--score_threshold", default=0.9, type=float,
-                        help='score threshold for detection, only used if model is detection, ignored otherwise')
-    parser.add_argument("--iou_threshold", default=0.2, type=float,
-                        help='iou threshold for nms, only used if model is detection, ignored otherwise')
-    parser.add_argument('-r','--runtime', type=str, default='cpu', help='runtime device')
+def add_parser(subparsers, parent_parser):
+    IR_PREDICT_HELP = "Run prediction on IR model"
+    usage = "\n  vortex predict [options] <model> <image ...>"
+    parser = subparsers.add_parser(
+        "ir_runtime_predict",
+        parents=[parent_parser],
+        description=IR_PREDICT_HELP,
+        help=IR_PREDICT_HELP,
+        formatter_class=argparse.RawTextHelpFormatter,
+        usage=usage
+    )
 
-if __name__ == '__main__':
-    import argparse
+    parser.add_argument('model', type=str, help='path to IR model')
+    parser.add_argument(
+        "image", 
+        nargs='+', type=str, 
+        help="image(s) path to be predicted, supports up to model's batch size"
+    )
 
-    parser = argparse.ArgumentParser(description=description)
-    add_parser(parser)
-    args = parser.parse_args()
-    main(args)
+    cmd_args_group = parser.add_argument_group(title="command arguments")
+    cmd_args_group.add_argument(
+        "-o", "--output-dir",
+        metavar="DIR",
+        default='.',
+        help="directory to dump prediction result"
+    )
+    cmd_args_group.add_argument(
+        "-r", "--runtime", 
+        type=str, default='cpu', 
+        help='runtime device/backend to use for prediction'
+    )
+
+    # Additional arguments for detection model
+    det_args_group = parser.add_argument_group(title="detection task arguments")
+    det_args_group.add_argument(
+        "--score_threshold", 
+        default=0.9, type=float, 
+        help="score threshold for detection nms"
+    )
+    det_args_group.add_argument(
+        "--iou_threshold", 
+        default=0.2, type=float, 
+        help="iou threshold for detection nms"
+    )
+
+    parser.set_defaults(func=main)

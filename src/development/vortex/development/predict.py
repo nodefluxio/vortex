@@ -1,5 +1,5 @@
 import argparse
-from typing import Union, List
+import torch
 
 from vortex.development.utils.parser import load_config
 from vortex.development.core.pipelines import PytorchPredictionPipeline
@@ -21,9 +21,7 @@ def main(args):
     config = load_config(config_path)
     
     # Initialize Vortex Vanila Predictor
-    vortex_predictor=PytorchPredictionPipeline(config = config,
-                                     weights = weights_file,
-                                     device = device)
+    vortex_predictor = PytorchPredictionPipeline(config, weights=weights_file, device=device)
     
     # Make prediction
     results = vortex_predictor.run(images = test_images,
@@ -43,29 +41,65 @@ def main(args):
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 
-def add_parser(parent_parser,subparsers = None):
-    if subparsers is None:
-        parser = parent_parser
-    else:
-        parser = subparsers.add_parser('predict',description=description)
-    parser.add_argument("-c","--config", required=True, help='path to experiment config')
-    parser.add_argument("-w","--weights", help='path to selected weights(optional, will be inferred from `output_directory` and `experiment_name` field from config) if not specified')
-    parser.add_argument("-o","--output-dir",default='.',help='directory to dump prediction visualization')
-    parser.add_argument("-i","--image", required=True, nargs='+', type=str, help='path to test image(s)')
-    parser.add_argument('-d',"--device", help="the device in which the inference will be performed")
+def add_parser(subparsers, parent_parser):
+    PREDICT_HELP = "Run prediction on model from configuration file"
+    usage = "\n  vortex predict [options] <config> <image ...>"
+    parser = subparsers.add_parser(
+        "predict",
+        parents=[parent_parser],
+        description=PREDICT_HELP,
+        help=PREDICT_HELP,
+        formatter_class=argparse.RawTextHelpFormatter,
+        usage=usage
+    )
+
+    parser.add_argument(
+        "config", 
+        help="path to experiment config file"
+    )
+    parser.add_argument(
+        "image", 
+        nargs='+', type=str, 
+        help="image(s) path to be predicted"
+    )
+
+    avail_devices = ["cpu"]
+    if torch.cuda.is_available():
+        num_device = torch.cuda.device_count()
+        cuda_devices = ["cuda"] if num_device == 1 \
+            else [f"cuda:{n}" for n in range(num_device)]
+        avail_devices.extend(cuda_devices)
+
+    cmd_args_group = parser.add_argument_group(title="command arguments")
+    cmd_args_group.add_argument(
+        "-w", "--weights", 
+        help="path to model's weights (optional, inferred from config if not specified)"
+    )
+    cmd_args_group.add_argument(
+        "-o", "--output-dir",
+        metavar="DIR",
+        default='.',
+        help="directory to dump prediction result"
+    )
+    cmd_args_group.add_argument(
+        "-d", "--device",
+        metavar="DEVICE",
+        choices=avail_devices,
+        help="the device in which the prediction is performed, "
+             "available: {}".format(avail_devices)
+    )
 
     # Additional arguments for detection model
-    parser.add_argument("--score_threshold", default=0.9, type=float,
-                        help='score threshold for detection, only used if model is detection, ignored otherwise')
-    parser.add_argument("--iou_threshold", default=0.2, type=float,
-                        help='iou threshold for nms, only used if model is detection, ignored otherwise')
-    
+    det_args_group = parser.add_argument_group(title="detection task arguments")
+    det_args_group.add_argument(
+        "--score_threshold", 
+        default=0.9, type=float, 
+        help="score threshold for detection nms"
+    )
+    det_args_group.add_argument(
+        "--iou_threshold", 
+        default=0.2, type=float, 
+        help="iou threshold for detection nms"
+    )
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=description)
-    add_parser(parser)
-    args = parser.parse_args()
-
-    main(args)
-
-
+    parser.set_defaults(func=main)
