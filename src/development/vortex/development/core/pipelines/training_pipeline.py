@@ -13,7 +13,8 @@ import torch
 import numpy as np
 
 from vortex.development.core.factory import (
-    create_model,create_dataset,
+    create_model,
+    create_dataset,
     create_dataloader,
     create_experiment_logger
 )
