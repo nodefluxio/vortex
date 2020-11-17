@@ -20,11 +20,11 @@ with open('optuna.vis.requirements.txt') as f:
 # Python scripts console entrypoints
 entry_points = {
     'console_scripts': [
-        'vortex=vortex.development.vortex_cli:main',
+        'vortex=vortex.development.cli:main',
     ]
 }
 
-tests_require = ['pytest','pytest-cov']
+tests_require = ['pytest', 'pytest-cov']
 
 # Setup
 setup(name=package_name,
