@@ -10,10 +10,7 @@ from typing import Union, Callable, Type, Iterable
 from collections import OrderedDict
 
 from vortex.development.networks.models import create_model_components
-from vortex.development.utils.data.loader import create_loader,wrapper_format
-from vortex.development.utils.data.dataset.wrapper import BasicDatasetWrapper,DefaultDatasetWrapper
 from vortex.development.utils.data.collater import create_collater
-from vortex.development.utils.logger.base_logger import ExperimentLogger
 from vortex.development.utils.logger import create_logger
 from vortex.runtime.factory import create_runtime_model
 from vortex.development.exporter.base_exporter import BaseExporter
@@ -142,6 +139,8 @@ def create_dataset(dataset_config : EasyDict,
                    stage : str,
                    wrapper_format : str = 'default'
                    ):
+    from vortex.development.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
+
     dataset_config = deepcopy(dataset_config)
     augmentations = []
 
@@ -256,6 +255,7 @@ def create_dataloader(dataloader_config : EasyDict,
             images,labels = data
         ```
     """
+    from vortex.development.utils.data.loader import create_loader, wrapper_format
 
     dataloader_config = deepcopy(dataloader_config)
     dataset_config = deepcopy(dataset_config)
