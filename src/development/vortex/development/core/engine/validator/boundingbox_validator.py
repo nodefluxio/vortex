@@ -1,31 +1,12 @@
 import torch
-import logging
-import warnings
-import matplotlib
 import numpy as np
-import pandas as pd
-import seaborn as sn
 import matplotlib.pyplot as plt
 
-from copy import copy
-from tqdm import tqdm
-from pathlib import Path
-from itertools import cycle
-from easydict import EasyDict
-from collections import OrderedDict
-from collections.abc import Sequence
-from functools import singledispatch
-from typing import Union, List, Dict, Type, Any
+from typing import Union, Dict, Any
 
-from vortex.development.predictor.base_module import BasePredictor, create_predictor
+from vortex.development.predictor.base_module import BasePredictor
 from vortex.development.utils.metrics.evaluator import DetectionEvaluator as Evaluator
 from vortex.development.utils.prediction import BoundingBox
-
-from vortex.development.utils.profiler.speed import TimeData
-from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
-from vortex.development.core.factory import create_runtime_model
-from vortex.development.predictor.base_module import BasePredictor, create_predictor
-from vortex.development.predictor.utils import get_prediction_results
 
 from .base_validator import BaseValidator
 from vortex.runtime.basic_runtime import BaseRuntime

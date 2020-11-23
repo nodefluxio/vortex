@@ -1,20 +1,17 @@
 import torch
-import matplotlib
 import numpy as np
 import pandas as pd
 import seaborn as sn
 import matplotlib.pyplot as plt
 
 from itertools import cycle
-from typing import Union, List, Dict, Type, Any
+from typing import Union, List, Dict
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import average_precision_score, precision_recall_curve
 from sklearn.metrics import roc_curve, roc_auc_score
 from sklearn.metrics import precision_recall_fscore_support
 
-from vortex.development.predictor.base_module import BasePredictor
-
-from .base_validator import BaseValidator
+from vortex.development.core.engine.validator import BaseValidator
 
 class ClassificationValidator(BaseValidator):
     ## TODO : read from core task definition
