@@ -1,4 +1,5 @@
 import argparse
+import warnings
 import torch
 
 from vortex.development.utils.parser import load_config
@@ -6,12 +7,43 @@ from vortex.development.core.pipelines import PytorchPredictionPipeline
 
 description = 'Vortex Pytorch model prediction pipeline; may receive multiple image(s) for batched prediction'
 
+
+def check_deprecated_args(args):
+    ## check config
+    if args.config is None and args.config_dep is not None:
+        warnings.warn("Argument `--config` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex predict config.yml image.jpg`.")
+        args.config = args.config_dep
+    elif args.config is not None and args.config_dep is not None:
+        warnings.warn("Both positional and optional argument for config file "
+            "is given, will use the positional argument instead.")
+    elif args.config is None and args.config_dep is None:
+        raise RuntimeError("config argument is not given, make sure to "
+            "specify it, e.g. `$ vortex predict config.yml image.jpg`")
+
+    ## check image
+    if args.image == [] and args.image_dep != []:
+        warnings.warn("Argument `--image` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex predict config.yml image.jpg`.")
+        args.image = args.image_dep
+    elif args.image != [] and args.image_dep != []:
+        warnings.warn("Both positional and optional argument for image file(s) "
+            "is given, will use the positional argument instead.")
+    elif args.image == [] and args.image_dep == []:
+        raise RuntimeError("image argument is not given, make sure to "
+            "specify it, e.g. `$ vortex predict config.yml image.jpg`")
+
+
 def main(args):
-    config_path=args.config
-    weights_file=args.weights
-    test_images=args.image
-    device=args.device
-    output_dir=args.output_dir
+    check_deprecated_args(args)
+
+    config_path = args.config
+    weights_file = args.weights
+    test_images = args.image
+    device = args.device
+    output_dir = args.output_dir
 
     kwargs = vars(args)
     for key in ['config','weights','image','device','output_dir']:
@@ -41,6 +73,7 @@ def main(args):
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 
+
 def add_parser(subparsers, parent_parser):
     PREDICT_HELP = "Run prediction on model from configuration file"
     usage = "\n  vortex predict [options] <config> <image ...>"
@@ -54,12 +87,12 @@ def add_parser(subparsers, parent_parser):
     )
 
     parser.add_argument(
-        "config", 
+        "config", nargs="?",    ## TODO: remove `nargs` when deprecation is removed
         help="path to experiment config file"
     )
     parser.add_argument(
         "image", 
-        nargs='+', type=str, 
+        nargs='*', type=str,    ## TODO: change `nargs` to '+' when deprecation is removed
         help="image(s) path to be predicted"
     )
 
@@ -100,6 +133,22 @@ def add_parser(subparsers, parent_parser):
         "--iou_threshold", 
         default=0.2, type=float, 
         help="iou threshold for detection nms"
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-c", "--config",
+        dest="config_dep", metavar="CONFIG",
+        help="path to experiment config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
+    )
+    deprecated_group.add_argument(
+        "-i", "--image",
+        dest="image_dep", metavar="IMAGES",
+        default=[],
+        nargs='*', type=str, 
+        help="image(s) path to be predicted. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)

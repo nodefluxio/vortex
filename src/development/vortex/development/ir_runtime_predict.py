@@ -1,4 +1,5 @@
 import argparse
+import warnings
 
 from vortex.development.core.pipelines import IRPredictionPipeline
 from vortex.runtime import model_runtime_map
@@ -6,11 +7,41 @@ from vortex.runtime import model_runtime_map
 description = 'Vortex IR model prediction pipeline; may receive multiple image(s) for batched prediction'
 
 
+def check_deprecated_args(args):
+    ## check model
+    if args.model is None and args.model_dep is not None:
+        warnings.warn("Argument `--model` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex ir_runtime_predict model.onnx image.jpg`.")
+        args.model = args.model_dep
+    elif args.model is not None and args.model_dep is not None:
+        warnings.warn("Both positional and optional argument for IR model "
+            "file is given, will use the positional argument instead.")
+    elif args.model is None and args.model_dep is None:
+        raise RuntimeError("model path argument is not given, make sure to "
+            "specify it, e.g. `$ vortex ir_runtime_predict model.onnx image.jpg`")
+
+    ## check image
+    if args.image == [] and args.image_dep != []:
+        warnings.warn("Argument `--image` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex ir_runtime_predict model.onnx image.jpg`.")
+        args.image = args.image_dep
+    elif args.image != [] and args.image_dep != []:
+        warnings.warn("Both positional and optional argument for image file(s) "
+            "is given, will use the positional argument instead.")
+    elif args.image == [] and args.image_dep == []:
+        raise RuntimeError("image(s) path argument is not given, make sure to "
+            "specify it, e.g. `$ vortex ir_runtime_predict model.onnx image.jpg`")
+
+
 def main(args):
-    model_path=args.model
-    test_images=args.image
-    output_directory=args.output_dir
-    runtime=args.runtime
+    check_deprecated_args(args)
+
+    model_path = args.model
+    test_images = args.image
+    output_directory = args.output_dir
+    runtime = args.runtime
 
     kwargs = vars(args)
     for key in ['model','image','runtime','output_dir']:
@@ -43,6 +74,7 @@ def main(args):
     print('Prediction : {}'.format(prediction))
     print('Class Names : {}'.format(class_names))
 
+
 def add_parser(subparsers, parent_parser):
     IR_PREDICT_HELP = "Run prediction on IR model"
     usage = "\n  vortex predict [options] <model> <image ...>"
@@ -55,10 +87,14 @@ def add_parser(subparsers, parent_parser):
         usage=usage
     )
 
-    parser.add_argument('model', type=str, help='path to IR model')
+    parser.add_argument(
+        "model",
+        type=str, nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to IR model"
+    )
     parser.add_argument(
         "image", 
-        nargs='+', type=str, 
+        nargs='*', type=str,    ## TODO: change `nargs` to '+' when deprecation is removed
         help="image(s) path to be predicted, supports up to model's batch size"
     )
 
@@ -86,6 +122,22 @@ def add_parser(subparsers, parent_parser):
         "--iou_threshold", 
         default=0.2, type=float, 
         help="iou threshold for detection nms"
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-m", "--model",
+        dest="model_dep", metavar="MODEL",
+        help="path to IR model. This argument is DEPRECATED and will be "
+             "removed. Use the positional argument instead."
+    )
+    deprecated_group.add_argument(
+        "-i", "--image",
+        dest="image_dep", metavar="IMAGES",
+        default=[],
+        nargs='*', type=str, 
+        help="image(s) path to be predicted. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)

@@ -1,5 +1,6 @@
 import argparse
 import logging
+import warnings
 
 from vortex.development.utils.parser import load_config, check_config
 from vortex.runtime import model_runtime_map
@@ -10,7 +11,35 @@ description = "Vortex exported IR graph validation pipeline; successful runs wil
 logger = logging.getLogger(__name__)
 
 
+def check_deprecated_args(args):
+    if args.config is None and args.config_dep is not None:
+        warnings.warn("Argument `--config` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex ir_runtime_validate config.yml model.onnx`.")
+        args.config = args.config_dep
+    elif args.config is not None and args.config_dep is not None:
+        warnings.warn("Both positional and optional argument for config file "
+            "is given, will use the positional argument instead.")
+    elif args.config is None and args.config_dep is None:
+        raise RuntimeError("config argument is not given, make sure to specify "
+            "it, e.g. `$ vortex ir_runtime_validate config.yml model.onnx`")
+
+    if args.model is None and args.model_dep is not None:
+        warnings.warn("Argument `--model` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex ir_runtime_validate config.yml model.onnx`.")
+        args.model = args.model_dep
+    elif args.model is not None and args.model_dep is not None:
+        warnings.warn("Both positional and optional argument for IR model "
+            "file is given, will use the positional argument instead.")
+    elif args.model is None and args.model_dep is None:
+        raise RuntimeError("model path argument is not given, make sure to specify "
+            "it, e.g. `$ vortex ir_runtime_validate config.yml model.onnx`")
+
+
 def main(args):
+    check_deprecated_args(args)
+
     available_runtime = []
     for runtime_map in model_runtime_map.values():
         available_runtime.extend(list(runtime_map.keys()))
@@ -40,6 +69,7 @@ def main(args):
         ', '.join(['{}: {}'.format(key, value) for key, value in eval_results.items()])
     ))
 
+
 def add_parser(subparsers, parent_parser):
     IR_VALIDATE_HELP = "run validation on IR model from configuration file"
     usage = "\n  vortex validate [options] <config> <model>"
@@ -52,8 +82,15 @@ def add_parser(subparsers, parent_parser):
         usage=usage
     )
 
-    parser.add_argument("config", help='path to experiment config')
-    parser.add_argument("model", help='path to IR model')
+    parser.add_argument(
+        "config", nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to experiment config file."
+    )
+    parser.add_argument(
+        "model",
+        type=str, nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to IR model"
+    )
 
     cmd_args_group = parser.add_argument_group(title="command arguments")
     cmd_args_group.add_argument(
@@ -66,6 +103,20 @@ def add_parser(subparsers, parent_parser):
         "-b", "--batch-size", 
         type=int, 
         help="batch size for validation, this value must match with exported model batch size"
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-c", "--config",
+        dest="config_dep", metavar="CONFIG",
+        help="path to experiment config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
+    )
+    deprecated_group.add_argument(
+        "-m", "--model",
+        dest="model_dep", metavar="MODEL",
+        help="path to IR model. This argument is DEPRECATED and will be "
+             "removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)

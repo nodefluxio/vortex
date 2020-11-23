@@ -1,11 +1,28 @@
 import argparse
+import warnings
 
 from vortex.development.core.pipelines import TrainingPipeline
 from vortex.development.utils.parser import load_config
 
 description='Vortex training pipeline; will generate a Pytorch model file'
 
+
+def check_deprecated_args(args):
+    if args.config is None and args.config_dep is not None:
+        warnings.warn("Argument `--config` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex train config.yml`.")
+        args.config = args.config_dep
+    elif args.config is not None and args.config_dep is not None:
+        warnings.warn("Both positional and optional argument for config file "
+            "is given, will use the positional argument instead.")
+    elif args.config is None and args.config_dep is None:
+        raise RuntimeError("config argument is not given, make sure to "
+            "specify it, e.g. `$ vortex train config.yml`")
+
+
 def main(args):
+    check_deprecated_args(args)
     log_metric = not args.no_log
 
     # Load configuration from experiment file
@@ -36,6 +53,7 @@ def main(args):
     print("\nloss: {}\nmetrics: {}\nlearning rates: {}".format(epoch_losses, 
         val_metrics, learning_rates))
 
+
 def add_parser(subparsers, parent_parser):
     TRAIN_HELP = "Train model from configuration file"
     usage = "\n  vortex train [options] <config>"
@@ -49,8 +67,8 @@ def add_parser(subparsers, parent_parser):
     )
 
     parser.add_argument(
-        "config", 
-        help="path to experiment config file"
+        "config", nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to experiment config file."
     )
 
     cmd_args_group = parser.add_argument_group(title="command arguments")
@@ -63,6 +81,14 @@ def add_parser(subparsers, parent_parser):
         "--no-log", 
         action='store_true', 
         help='disable experiment logging'
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-c", "--config",
+        dest="config_dep", metavar="CONFIG",
+        help="path to experiment config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)

@@ -1,5 +1,6 @@
 import argparse
 import logging
+import warnings
 import torch
 
 from vortex.development.utils.parser import load_config, check_config
@@ -10,7 +11,23 @@ description='Vortex Pytorch model validation pipeline; successful runs will prod
 logger = logging.getLogger(__name__)
 
 
+def check_deprecated_args(args):
+    if args.config is None and args.config_dep is not None:
+        warnings.warn("Argument `--config` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex validate config.yml`.")
+        args.config = args.config_dep
+    elif args.config is not None and args.config_dep is not None:
+        warnings.warn("Both positional and optional argument for config file "
+            "is given, will use the positional argument instead.")
+    elif args.config is None and args.config_dep is None:
+        raise RuntimeError("config argument is not given, make sure to "
+            "specify it, e.g. `$ vortex validate config.yml`")
+
+
 def main(args):
+    check_deprecated_args(args)
+
     config = load_config(args.config)
     check_result = check_config(config, 'validate')
     logger.debug(check_result)
@@ -29,6 +46,7 @@ def main(args):
         ', '.join(['{}: {}'.format(key, value) for key, value in eval_results.items()])
     ))
 
+
 def add_parser(subparsers, parent_parser):
     VAL_HELP = "Validate model from configuration file and generate reports"
     usage = "\n  vortex validate [options] <config>"
@@ -41,7 +59,10 @@ def add_parser(subparsers, parent_parser):
         usage=usage
     )
 
-    parser.add_argument("config", help='path to experiment config')
+    parser.add_argument(
+        "config", nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to experiment config file."
+    )
 
     avail_devices = ["cpu"]
     if torch.cuda.is_available():
@@ -68,6 +89,14 @@ def add_parser(subparsers, parent_parser):
         "-b", "--batch-size", 
         default=1, type=int, 
         help="batch size for validation"
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-c", "--config",
+        dest="config_dep", metavar="CONFIG",
+        help="path to experiment config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)

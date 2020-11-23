@@ -1,18 +1,45 @@
 import yaml
-import logging
+import warnings
 import argparse
 from easydict import EasyDict
 
 from vortex.development.core.pipelines import HypOptPipeline
 
-logger = logging.getLogger(__name__)
 description = "Vortex hyperparameter optimization experiment"
 
 
+def check_deprecated_args(args):
+    if args.config is None and args.config_dep is not None:
+        warnings.warn("Argument `--config` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex hypopt config.yml optconfig.yml`.")
+        args.config = args.config_dep
+    elif args.config is not None and args.config_dep is not None:
+        warnings.warn("Both positional and optional argument for config file "
+            "is given, will use the positional argument instead.")
+    elif args.config is None and args.config_dep is None:
+        raise RuntimeError("config argument is not given, make sure to "
+            "specify it, e.g. `$ vortex hypopt config.yml optconfig.yml`")
+
+    if args.optconfig is None and args.optconfig_dep is not None:
+        warnings.warn("Argument `--optconfig` is DEPRECATED and will be removed "
+            "in the future. Use positional argument instead, e.g. "
+            "`$ vortex hypopt config.yml optconfig.yml`.")
+        args.optconfig = args.optconfig_dep
+    elif args.optconfig is not None and args.optconfig_dep is not None:
+        warnings.warn("Both positional and optional argument for hypopt config "
+            "file is given, will use the positional argument instead.")
+    elif args.optconfig is None and args.optconfig_dep is None:
+        raise RuntimeError("optconfig argument is not given, make sure to "
+            "specify it, e.g. `$ vortex hypopt config.yml optconfig.yml`")
+
+
 def main(args):
-    config_path=args.config
-    optconfig_path=args.optconfig
-    weights=args.weights
+    check_deprecated_args(args)
+
+    config_path = args.config
+    optconfig_path = args.optconfig
+    weights = args.weights
 
     from vortex.development.utils.parser.loader import Loader
     with open(config_path) as f:
@@ -51,12 +78,14 @@ def add_parser(subparsers, parent_parser):
     )
 
     parser.add_argument(
-        'config', type=str, 
-        help='path to experiment config file'
+        'config',
+        type=str, nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to experiment config file"
     )
     parser.add_argument(
-        'optconfig', type=str, 
-        help='path to hypopt config file'
+        'optconfig',
+        type=str, nargs="?",    ## TODO: remove `nargs` when deprecation is removed
+        help="path to hypopt config file"
     )
 
     cmd_args_group = parser.add_argument_group(title="command arguments")
@@ -64,6 +93,20 @@ def add_parser(subparsers, parent_parser):
         "-w", "--weights", 
         help="path to model's weights (optional, inferred from config if not specified)"
              "valid only for ValidationObjective, ignored otherwise"
+    )
+
+    deprecated_group = parser.add_argument_group(title="deprecated arguments")
+    deprecated_group.add_argument(
+        "-c", "--config",
+        dest="config_dep", metavar="CONFIG",
+        help="path to experiment config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
+    )
+    deprecated_group.add_argument(
+        "-o", "--optconfig",
+        dest="optconfig_dep", metavar="OPTCONFIG",
+        help="path to hypopt config file. This argument is DEPRECATED "
+             "and will be removed. Use the positional argument instead."
     )
 
     parser.set_defaults(func=main)
