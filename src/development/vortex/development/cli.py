@@ -101,7 +101,7 @@ def main(argv=None):
         level = logging.DEBUG
     elif args.verbose >= 3:
         level = logging.TRACE
-    logger.setLevel(level)
+    logging.basicConfig(level=level)
 
     ## run command function from `parser.set_defaults`
     args.func(args)
