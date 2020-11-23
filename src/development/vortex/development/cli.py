@@ -2,7 +2,7 @@ import sys
 import argparse
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("vortex")
 
 from vortex.development import (
     train,
@@ -38,10 +38,12 @@ def get_main_parser():
 
     log_level_group = parent_parser.add_mutually_exclusive_group()
     log_level_group.add_argument(
-        "-v", "--verbose", action="count", default=0, help="Increase verbosity"
+        "-v", "--verbose", action="count", default=0, 
+        help="Increase verbosity. Option is additive up to 3 times, e.g. `-vv`"
     )
     log_level_group.add_argument(
-        "-q", "--quiet", action="count", default=0, help="Be more quiet."
+        "-q", "--quiet", action="count", default=0, 
+        help="Be more quiet. Option is additive up to 2 times."
     )
 
     usage = "\n  vortex <COMMAND> [options]"
@@ -87,6 +89,19 @@ def get_main_parser():
 def main(argv=None):
     parser = get_main_parser()
     args = parser.parse_args(argv)
+
+    level = logging.WARNING
+    if args.quiet == 1:
+        level = logging.ERROR
+    elif args.quiet >= 2:
+        level = logging.CRITICAL
+    elif args.verbose == 1:
+        level = logging.INFO
+    elif args.verbose == 2:
+        level = logging.DEBUG
+    elif args.verbose >= 3:
+        level = logging.TRACE
+    logger.setLevel(level)
 
     ## run command function from `parser.set_defaults`
     args.func(args)
