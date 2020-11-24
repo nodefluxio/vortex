@@ -77,7 +77,7 @@ def add_parser(subparsers, parent_parser):
         help="path to model's weights (optional, inferred from config if not specified)"
     )
     cmd_args_group.add_argument(
-        "-d", "--device",
+        "-d", "--devices",
         metavar="DEVICE",
         default=[],
         choices=avail_devices,
