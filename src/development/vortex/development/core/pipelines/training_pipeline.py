@@ -6,11 +6,11 @@ import warnings
 from typing import Union
 from pathlib import Path
 from datetime import datetime
-from tqdm import tqdm
 from easydict import EasyDict
 
 import torch
 import numpy as np
+import enlighten
 
 from vortex.development.core.factory import (
     create_model,
@@ -279,7 +279,7 @@ class TrainingPipeline(BasePipeline):
             _set_seed(config.seed)
 
         if not self.hypopt:
-            print("\nexperiment directory:", self.run_directory)
+            print("\nExperiment directory:", self.run_directory)
         self._has_cls_names = hasattr(self.dataloader.dataset, "class_names")
 
     def run(self, save_model: bool = True) -> EasyDict:
@@ -299,19 +299,59 @@ class TrainingPipeline(BasePipeline):
             outputs = train_executor.run()
             ```
         """
-        # Do training process
+        ## terminal output related manager
+        manager = enlighten.get_manager()
+
+        ## title bar
+        title_fmt = "Vortex{fill}TRAIN: {exp_name}{fill}{elapsed}"
+        manager.status_bar(
+            status_format=title_fmt, 
+            color="bold_underline_white",
+            justify=enlighten.Justify.CENTER, 
+            autorefresh=True, min_delay=0.5,
+            exp_name=self.config.experiment_name
+        )
+
+        ## metric bar
+        metric_format = "metrics    lr: {lr:.4g}  loss: {loss:.4g}  {metrics}{fill}"
+        metric_stats = manager.status_bar(
+            status_format=metric_format,
+            justify=enlighten.Justify.LEFT, color="white_on_gray20",
+            position=1,
+            loss=0.0, lr=0.0, metrics=""
+        )
+        manager.status_bar(status_format="{fill}", position=2)
+
+        epoch_bar_fmt = u'{desc}{desc_pad}{percentage:3.0f}%|{bar}| ' + \
+                        u'{count:{len_total}d}/{total:d} ' + \
+                        u'[{elapsed}<{eta}, {secs_per_iter:.2f}s/{unit}]'
+        total_epoch = self.config.trainer.epoch
+        epoch_pbar = manager.counter(
+            count=self.start_epoch, total=total_epoch,
+            desc="Epoch:", unit="epoch",
+            bar_format=epoch_bar_fmt,
+            secs_per_iter=0.0
+        )
+
+        default_bar_fmt = '{desc}{desc_pad}{percentage:3.0f}%|{bar}| ' + \
+                          '{count:{len_total}d}/{total:d} ' + \
+                          '[{elapsed}<{eta}, {rate:.2f}{unit}/s]'
+
+        ## Do training process
         val_metrics, val_results = [], None
         epoch_losses = []
         learning_rates = []
-        last_epoch = 0
-        for epoch in tqdm(range(self.start_epoch, self.config.trainer.epoch), desc="EPOCH",
-                          total=self.config.trainer.epoch, initial=self.start_epoch, 
-                          dynamic_ncols=True):
-            loss, lr = self.trainer(self.dataloader, epoch)
+        for epoch in range(self.start_epoch, self.config.trainer.epoch):
+            train_pbar = manager.counter(
+                total=len(self.dataloader), desc="  Training:", 
+                unit='it', leave=False,
+                bar_format=default_bar_fmt,
+            )
+
+            loss, lr = self.trainer(self.dataloader, epoch, train_pbar)
             epoch_losses.append(loss.item())
             learning_rates.append(lr)
-            print('epoch %s loss : %s with lr : %s' % (epoch, loss.item(), lr))
-            last_epoch = epoch
+            metric_stats.update(loss=loss.item(), lr=lr)
 
             # Experiment Logging, disable on hyperparameter optimization
             if not self.hypopt:
@@ -321,14 +361,25 @@ class TrainingPipeline(BasePipeline):
                     'epoch_lr' : lr
                 })
                 self.experiment_logger.log_on_epoch_update(metrics_log)
-            
+
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.validator.predictor.model is self.model_components.network)
-                val_results = self.validator()
-                if 'pr_curves' in val_results :
+                val_pbar = manager.counter(
+                    total=len(self.validator.dataset), desc='  Validating:', 
+                    unit='it', leave=False,
+                    bar_format=default_bar_fmt
+                )
+
+                val_results = self.validator(val_pbar)
+                if 'pr_curves' in val_results:
                     val_results.pop('pr_curves')
                 val_metrics.append(val_results)
+
+                disp_metrics = {"val_loss": val_results["val_loss"]} if "val_loss" in val_results else {}
+                disp_metrics.update({k: val_results[k] for k in list(val_results.keys())[:2]})
+                disp_metrics = '  '.join("{}: {:.4g}".format(n, v) for n,v in disp_metrics.items())
+                metric_stats.update(metrics=disp_metrics)
 
                 # Experiment Logging, disable on hyperparameter optimization
                 if not self.hypopt:
@@ -348,8 +399,6 @@ class TrainingPipeline(BasePipeline):
                             self.best_metrics[metric_name] = val_results[metric_name]
                             model_fname = "{}-best-{}.pth".format(self.config.experiment_name, metric_name)
                             self._save_checkpoint(epoch, metrics=val_results, filename=model_fname)
-
-                print('epoch %s validation : %s' % (epoch, ', '.join(['{}:{:.4f}'.format(key, value) for key, value in val_results.items()])))
 
             ## save on best loss
             if self.save_best_type and 'loss' in self.save_best_type and \
@@ -372,6 +421,11 @@ class TrainingPipeline(BasePipeline):
                     shutil.copy(model_path, final_path)
                     ## rename last epoch weight
                     shutil.move(model_path, model_path.replace('-last', ''))
+            epoch_elapsed = epoch_pbar.elapsed / (epoch_pbar.count+1)
+            epoch_pbar.update(secs_per_iter=epoch_elapsed)
+        epoch_pbar.close()
+        metric_stats.close()
+        manager.stop()
 
         return EasyDict({
             'epoch_losses' : epoch_losses, 

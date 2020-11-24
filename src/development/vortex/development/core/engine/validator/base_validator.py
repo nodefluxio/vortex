@@ -4,7 +4,6 @@ import warnings
 import matplotlib
 import numpy as np
 
-from tqdm import tqdm
 from pathlib import Path
 from easydict import EasyDict
 from collections import OrderedDict
@@ -38,7 +37,7 @@ class Logger:
         self.logger = logger
         import types
         self.log = types.MethodType(getattr(self.logger, default_log_level), self)
-    
+
     def __call__(self, *args, **kwargs):
         self.log(*args, **kwargs)
 
@@ -356,13 +355,14 @@ class BaseValidator:
         assert isinstance(results[0], (dict, OrderedDict)), "result type {} not understood".format(type(results))
         return results
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, pbar, *args, **kwargs):
         """
         default validation pipeline
         """
         is_training = True
         validation_handler, val_loss_err_msg = None, None
         val_loss = 0.
+        val_loss_stats = False
         if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
@@ -373,8 +373,7 @@ class BaseValidator:
 
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
-            for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" VAL", leave=True, dynamic_ncols=True):
+            for index, (image, targets) in enumerate(self.dataset):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
@@ -399,9 +398,11 @@ class BaseValidator:
                     except Exception as e:
                         val_loss_err_msg = e
                         val_loss_stats = False
+                pbar.update()
+            pbar.close()
 
         self.metrics = self.compute_metrics()
-        if isinstance(self.predictor, BasePredictor) :
+        if isinstance(self.predictor, BasePredictor):
             self.predictor.train(is_training)
             if self.criterion:
                 validation_handler.remove()
@@ -409,5 +410,5 @@ class BaseValidator:
                     print(val_loss_err_msg)
                 else:
                     val_loss /= len(self.dataset)
-                    self.metrics.update(EasyDict({'val_loss' : val_loss}))
+                    self.metrics.update({'val_loss': val_loss.cpu().item()})
         return self.metrics
