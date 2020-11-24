@@ -14,13 +14,13 @@ class ClassificationLoss(nn.Module):
         else:
             raise RuntimeError("Unknown classifcation loss, should be either 'ce_loss' or 'focal_loss', got {}".format(loss))
 
-    def forward(self, input, target):
+    def forward(self, input: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         target = target.squeeze()
         if target.size() == torch.Size([]):
             target = target.unsqueeze(0)
         # x = self.loss_fn(input.log(), target)
         if self.loss == 'ce_loss':
             x = self.loss_fn(F.log_softmax(input,dim=1), target)
-        elif self.loss == 'focal_loss':
+        else:
             x = self.loss_fn(input, target)
         return x

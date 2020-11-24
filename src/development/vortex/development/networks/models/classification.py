@@ -23,7 +23,7 @@ class Classification(BackbonePoolConnector):
             "class_confidence": {"indices": [1], "axis": 0}
         }
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.backbone(x)
         # x = self.head(x)
         return x
