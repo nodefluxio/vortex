@@ -45,20 +45,21 @@ def main(args):
     device = args.device
     output_dir = args.output_dir
 
-    kwargs = vars(args)
-    for key in ['config','weights','image','device','output_dir']:
-        kwargs.pop(key)
+    kwargs = {
+        "score_threshold": args.score_threshold,
+        "iou_threshold": args.iou_threshold
+    }
 
     # Load experiment file
     config = load_config(config_path)
     
     # Initialize Vortex Vanila Predictor
     vortex_predictor = PytorchPredictionPipeline(config, weights=weights_file, device=device)
-    
+
     # Make prediction
     results = vortex_predictor.run(images = test_images,
-                               visualize = True,
-                               dump_visual = True,
+                               visualize = (not args.no_visualize),
+                               dump_visual = (not args.no_save),
                                output_dir = output_dir,
                                **kwargs)
 
@@ -120,6 +121,16 @@ def add_parser(subparsers, parent_parser):
         choices=avail_devices,
         help="the device in which the prediction is performed, "
              "available: {}".format(avail_devices)
+    )
+    cmd_args_group.add_argument(
+        "--no-visualize", 
+        action='store_true', 
+        help='not visualizing prediction result'
+    )
+    cmd_args_group.add_argument(
+        "--no-save", 
+        action='store_true', 
+        help='not saving prediction result'
     )
 
     # Additional arguments for detection model

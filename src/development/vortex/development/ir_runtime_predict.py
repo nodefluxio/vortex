@@ -43,9 +43,10 @@ def main(args):
     output_directory = args.output_dir
     runtime = args.runtime
 
-    kwargs = vars(args)
-    for key in ['model','image','runtime','output_dir']:
-        kwargs.pop(key)
+    kwargs = {
+        "score_threshold": args.score_threshold,
+        "iou_threshold": args.iou_threshold
+    }
 
     available_runtime = []
     for runtime_map in model_runtime_map.values():
@@ -59,8 +60,8 @@ def main(args):
 
     # Make prediction
     results = vortex_ir_predictor.run(images = test_images,
-                                  visualize = True,
-                                  dump_visual = True,
+                                  visualize = (not args.no_visualize),
+                                  dump_visual = (not args.no_save),
                                   output_dir = output_directory,
                                   **kwargs)
     prediction = results.prediction
@@ -109,6 +110,16 @@ def add_parser(subparsers, parent_parser):
         "-r", "--runtime", 
         type=str, default='cpu', 
         help='runtime device/backend to use for prediction'
+    )
+    cmd_args_group.add_argument(
+        "--no-visualize", 
+        action='store_true', 
+        help='not visualizing prediction result'
+    )
+    cmd_args_group.add_argument(
+        "--no-save", 
+        action='store_true', 
+        help='not saving prediction result'
     )
 
     # Additional arguments for detection model

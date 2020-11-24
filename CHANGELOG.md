@@ -26,6 +26,7 @@ using `'param_groups'` key in model components.
 - yolov3 [converted darknet weight](experiments/outputs/yolov3_darknet_608) and [config file](experiments/configs/yolov3_darknet_608.yml)
 - get model path from `config.checkpoint` if found and valid for `predict` and `export`
 - yolov3 support for changing backbone stage to output with `backbone_stages` argument.
+- new `predict` and `ir_runtime_predict` argument to not visualise and not save prediction result.
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
