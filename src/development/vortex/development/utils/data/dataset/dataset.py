@@ -6,7 +6,6 @@ import torchvision.datasets
 
 from pathlib import Path, PurePath
 from typing import Union
-from pprint import PrettyPrinter
 from .torchvision import create_torchvision_dataset, SUPPORTED_TORCHVISION_DATASETS
 
 
@@ -25,8 +24,6 @@ _required_dataset_module_attributes = [
     'supported_dataset',
     'create_dataset',
 ]
-
-pp = PrettyPrinter(indent=4)
 
 all_datasets = {
     'torchvision.datasets': SUPPORTED_TORCHVISION_DATASETS,
@@ -113,17 +110,19 @@ def _scan_dvc_dataset(path: Path, dataset_env: str = 'VORTEX_DATASET_ROOT'):
                 if ok:
                     register_dvc_dataset(dir_name, path=path)
     else:
-        logger.info("{} directory is not found!, skipping external dataset scanning!".format(str(path)))
+        logger.info("{} directory is not found!, skipping external dataset "
+            "scanning!".format(str(path)))
 
-    logger.info('finished scanning dataset, available dataset(s) : \n{}'.format(pp.pformat(all_datasets)))
+    logger.info('finished scanning dataset, available datasets: \n{}'
+        .format(_format_dict(all_datasets)))
 
 
 def get_base_dataset(dataset: str, dataset_args: dict = {}):
     flatten_datasets = [
         dataset for sublist in all_datasets.values() for dataset in sublist]
     if not dataset in flatten_datasets:
-        raise RuntimeError("dataset %s not available, available dataset \n%s" % (
-            dataset, pp.pformat(all_datasets)))
+        raise RuntimeError("dataset {} not available, available datasets: \n{}"
+            .format(dataset, _format_dict(all_datasets)))
     for py_module, datasets in supported_dataset.items():
         if dataset in datasets:
             if py_module is torchvision.datasets:
