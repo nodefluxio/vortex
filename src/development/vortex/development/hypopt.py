@@ -12,7 +12,7 @@ def check_deprecated_args(args):
     if args.config is None and args.config_dep is not None:
         warnings.warn("Argument `--config` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex hypopt config.yml optconfig.yml`.")
+            "`$ vortex hypopt config.yml optconfig.yml`.", DeprecationWarning)
         args.config = args.config_dep
     elif args.config is not None and args.config_dep is not None:
         warnings.warn("Both positional and optional argument for config file "
@@ -24,7 +24,7 @@ def check_deprecated_args(args):
     if args.optconfig is None and args.optconfig_dep is not None:
         warnings.warn("Argument `--optconfig` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex hypopt config.yml optconfig.yml`.")
+            "`$ vortex hypopt config.yml optconfig.yml`.", DeprecationWarning)
         args.optconfig = args.optconfig_dep
     elif args.optconfig is not None and args.optconfig_dep is not None:
         warnings.warn("Both positional and optional argument for hypopt config "

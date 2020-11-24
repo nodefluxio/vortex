@@ -15,7 +15,7 @@ def check_deprecated_args(args):
     if args.config is None and args.config_dep is not None:
         warnings.warn("Argument `--config` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex validate config.yml`.")
+            "`$ vortex validate config.yml`.", DeprecationWarning)
         args.config = args.config_dep
     elif args.config is not None and args.config_dep is not None:
         warnings.warn("Both positional and optional argument for config file "
@@ -79,7 +79,7 @@ def add_parser(subparsers, parent_parser):
     cmd_args_group.add_argument(
         "-d", "--devices",
         metavar="DEVICE",
-        default=[],
+        default=[], nargs="*",
         choices=avail_devices,
         help="device(s) in which the validation is performed; multiple values are "
              "possible, if not specified use device from config. available: {}"

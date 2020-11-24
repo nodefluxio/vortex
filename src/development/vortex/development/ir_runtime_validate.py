@@ -15,7 +15,7 @@ def check_deprecated_args(args):
     if args.config is None and args.config_dep is not None:
         warnings.warn("Argument `--config` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex ir_runtime_validate config.yml model.onnx`.")
+            "`$ vortex ir_runtime_validate config.yml model.onnx`.", DeprecationWarning)
         args.config = args.config_dep
     elif args.config is not None and args.config_dep is not None:
         warnings.warn("Both positional and optional argument for config file "
@@ -27,7 +27,7 @@ def check_deprecated_args(args):
     if args.model is None and args.model_dep is not None:
         warnings.warn("Argument `--model` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex ir_runtime_validate config.yml model.onnx`.")
+            "`$ vortex ir_runtime_validate config.yml model.onnx`.", DeprecationWarning)
         args.model = args.model_dep
     elif args.model is not None and args.model_dep is not None:
         warnings.warn("Both positional and optional argument for IR model "

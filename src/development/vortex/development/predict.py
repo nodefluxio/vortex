@@ -13,7 +13,7 @@ def check_deprecated_args(args):
     if args.config is None and args.config_dep is not None:
         warnings.warn("Argument `--config` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex predict config.yml image.jpg`.")
+            "`$ vortex predict config.yml image.jpg`.", DeprecationWarning)
         args.config = args.config_dep
     elif args.config is not None and args.config_dep is not None:
         warnings.warn("Both positional and optional argument for config file "
@@ -26,7 +26,7 @@ def check_deprecated_args(args):
     if args.image == [] and args.image_dep != []:
         warnings.warn("Argument `--image` is DEPRECATED and will be removed "
             "in the future. Use positional argument instead, e.g. "
-            "`$ vortex predict config.yml image.jpg`.")
+            "`$ vortex predict config.yml image.jpg`.", DeprecationWarning)
         args.image = args.image_dep
     elif args.image != [] and args.image_dep != []:
         warnings.warn("Both positional and optional argument for image file(s) "
