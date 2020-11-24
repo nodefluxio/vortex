@@ -2,6 +2,7 @@ import os
 import shutil
 import pytz
 import warnings
+import logging
 
 from typing import Union
 from pathlib import Path
@@ -25,6 +26,8 @@ from vortex.development.core import engine
 
 __all__ = ['TrainingPipeline']
 
+logger = logging.getLogger(__name__)
+
 def _set_seed(config : EasyDict):
     """Set pytorch and numpy seed https://pytorch.org/docs/stable/notes/randomness.html
 
@@ -34,26 +37,26 @@ def _set_seed(config : EasyDict):
     try:
         seed = config.torch
         torch.manual_seed(seed)
-        warnings.warn('setting torch manual seed to %s' % seed)
+        logger.info('setting torch manual seed to %s' % seed)
     except AttributeError:
         pass
     try:
         seed = config.numpy
         np.random.seed(config.numpy)
-        warnings.warn('setting numpy manual seed to %s' % seed)
+        logger.info('setting numpy manual seed to %s' % seed)
     except AttributeError:
         pass
     try:
         cudnn_deterministic = config.cudnn.deterministic
         torch.backends.cudnn.deterministic = cudnn_deterministic
-        warnings.warn('setting cudnn.deterministic to %s' %
+        logger.info('setting cudnn.deterministic to %s' %
                       cudnn_deterministic)
     except AttributeError:
         pass
     try:
         cudnn_benchmark = config.cudnn.benchmark
         torch.backends.cudnn.benchmark = cudnn_benchmark
-        warnings.warn('setting cudnn.benchmark to %s' % cudnn_benchmark)
+        logger.info('setting cudnn.benchmark to %s' % cudnn_benchmark)
     except AttributeError:
         pass
 
@@ -269,7 +272,7 @@ class TrainingPipeline(BasePipeline):
             self.val_epoch = validator_cfg.val_epoch
             self.valid_for_validation = True
         except AttributeError as e:
-            warnings.warn('validation step not properly configured, will be skipped')
+            logger.warn('validation step not properly configured, will be skipped')
             self.valid_for_validation = False
         except Exception as e:
             raise Exception(str(e))
@@ -448,7 +451,7 @@ class TrainingPipeline(BasePipeline):
         self.config = config ## this is just a workaround for backward compatibility
         val_check_result = check_config(config, 'validate')
         if not val_check_result.valid:
-            warnings.warn('this config file is not valid for validation, validation step will be "\
+            logger.warn('this config file is not valid for validation, validation step will be "\
                 "skipped: \n%s' % str(val_check_result))
 
     def _create_local_runs_log(self,
@@ -523,7 +526,7 @@ class TrainingPipeline(BasePipeline):
                     filename = Path(filename.name)
                 if filename.suffix == "" or filename.suffix != ".pth":
                     if filename.suffix != ".pth":
-                        warnings.warn("filename for save checkpoint ({}) does not have "
+                        logger.info("filename for save checkpoint ({}) does not have "
                             ".pth extension, overriding it to .pth".format(str(filename)))
                     filename = filename.with_suffix(".pth")
 

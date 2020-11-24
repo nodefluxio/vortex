@@ -1,34 +1,18 @@
+import logging
 import onnx
-import numpy as np
 
-try :
-    from .helper import (
-        make_constants, make_slice_value_info, get_Ops,
-        get_inputs, get_outputs, replace_node
-    )
-except ImportError :
-    import os, sys, inspect
-    from pathlib import Path
-    # TODO: do not pollute system path (?)
-    repo_root = Path(__file__).parent
-    sys.path.insert(0, str(repo_root))
-    from helper import (
-        make_constants, make_slice_value_info, get_Ops,
-        get_inputs, get_outputs, replace_node
-    )
-
-from logging import Logger
 from onnx import helper
-from onnx import numpy_helper
-from typing import Union
-from pathlib import Path
+
+from .helper import (
+    get_Ops, get_inputs, get_outputs, replace_node
+)
 
 
 supported_ops = [
     'nms'
 ]
+logger = logging.getLogger(__name__)
 
-logger = Logger(__name__)
 
 def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_threshold', force_rewire=False) :
     """
@@ -73,16 +57,3 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
     logger.info(f'updated {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     return model
-
-def main(model_path, output) :
-    model = onnx.load(model_path)
-    model = nms_iou_threshold_as_input(model)
-    onnx.save(model, model_path if output is None else output)
-
-if __name__ == '__main__' :
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', required=True, type=str)
-    parser.add_argument('--output', default=None)
-    args = parser.parse_args()
-    main(args.model, args.output)

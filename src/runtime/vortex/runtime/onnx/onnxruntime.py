@@ -1,9 +1,12 @@
 import numpy as np
+import logging
 
 from vortex.runtime.basic_runtime import BaseRuntime
 
 from pathlib import Path
 from typing import Union, List, Tuple, Any
+
+logger = logging.getLogger(__name__)
 
 class OnnxRuntime(BaseRuntime) :
     """
@@ -45,9 +48,8 @@ class OnnxRuntime(BaseRuntime) :
         sess_options.graph_optimization_level = graph_optimization_level
         sess_options.execution_mode = execution_mode
         self.session = onnxruntime.InferenceSession(str(model),sess_options=sess_options,providers=providers)
-        if not fallback : 
-            import warnings
-            warnings.warn("disabling onnx runtime fallback")
+        if not fallback:
+            logging.info("disabling onnx runtime fallback")
             self.session.disable_fallback()
 
         onnx_protobuf = onnx.load(model)

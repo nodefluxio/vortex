@@ -13,14 +13,16 @@ from vortex.development.predictor.base_module import BasePredictor
 from vortex.development.predictor.utils import get_prediction_results
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
-
 from vortex.runtime.basic_runtime import BaseRuntime
+
+logger = logging.getLogger(__name__)
 
 ## set High DPI for matplotlib
 ## TODO: properly set image dpi
 matplotlib.rcParams['figure.dpi'] = 125
 
-def no_collate(batch) :
+
+def no_collate(batch):
     ## don't let pytorch default collater to try stacking targets
     images = list(map(lambda x: x[0], batch))
     targets = list(map(lambda x: x[1], batch))
@@ -89,13 +91,13 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor):
             self.predictor_name = '{}[{}]'.format(self.predictor_name, next(self.predictor.parameters()).device)
             if batch_size is None:
-                warnings.warn("batch size is not set, using default value of 1")
+                logger.warn("batch size is not set, using default value of 1")
                 self.batch_size = 1
         if isinstance(predictor, BaseRuntime):
             self.predictor_input_shape = predictor.input_specs['input']['shape']
             predictor_batch_size = self.predictor_input_shape[0]
             if predictor_batch_size != batch_size and batch_size is not None:
-                warnings.warn("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
+                logger.warn("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
                     "using batch size from model.".format(predictor_batch_size, batch_size))
             self.batch_size = predictor_batch_size
 
@@ -110,8 +112,7 @@ class BaseValidator:
         """
         default logger initialization
         """
-        logger = logging.getLogger(type(self).__name__)
-        self.logger = Logger(logger)
+        self.logger = Logger(logging.getLogger(type(self).__name__))
         self.logger('predictor type : {}'.format(type(self.predictor)))
 
     def _init_batch(self):

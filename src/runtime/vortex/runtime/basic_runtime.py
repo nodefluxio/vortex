@@ -1,10 +1,12 @@
 import cv2
 import numpy as np
+import logging
 
-from pathlib import Path
-from collections import namedtuple, OrderedDict
-from typing import Union, List, Dict, Tuple, Any
-import warnings
+from collections import OrderedDict
+from typing import Union, List, Dict, Tuple
+
+logger = logging.getLogger(__name__)
+
 
 class BaseRuntime:
     """
@@ -87,7 +89,7 @@ class BaseRuntime:
         predict_args = {}
         for name, value in kwargs.items() :
             if not name in self.input_specs :
-                warnings.warn('additional input arguments {} ignored'.format(name))
+                logger.info('additional input arguments {} ignored'.format(name))
                 continue
             ## note : onnx input dtype includes 'tensor()', e.g. 'tensor(uint8)'
             dtype = self.input_specs[name]['type'].replace('tensor(','').replace(')','')

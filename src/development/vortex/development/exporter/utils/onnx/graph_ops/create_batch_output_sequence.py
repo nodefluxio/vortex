@@ -1,21 +1,11 @@
 import onnx
-import numpy as np
 
-try :
-    from .helper import make_constants, make_slice_value_info, get_Ops, get_inputs, get_outputs, replace_node
-except ImportError :
-    import os, sys, inspect
-    from pathlib import Path
-    repo_root = Path(__file__).parent
-    sys.path.insert(0, str(repo_root))
-    from helper import make_constants, make_slice_value_info, get_Ops, get_inputs, get_outputs, replace_node
+from .helper import get_outputs
 
 from onnx import helper
-from onnx import numpy_helper
-from typing import Union
-from pathlib import Path
 
-def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='output', output_prefix : str='output_') :
+
+def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='output', output_prefix : str='output_'):
     """
     """
     outputs = get_outputs(model)
@@ -55,16 +45,3 @@ def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='out
     model.graph.node.append(sequence_construct_node)
     model.graph.output.append(sequence_value_info)
     return model
-
-def main(model_path, output) :
-    model = onnx.load(model_path)
-    model = create_batch_output_sequence(model)
-    onnx.save(model, model_path if output is None else output)
-
-if __name__ == '__main__' :
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', required=True, type=str)
-    parser.add_argument('--output', default='test.onnx')
-    args = parser.parse_args()
-    main(args.model, args.output)

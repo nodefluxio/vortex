@@ -1,28 +1,28 @@
+import logging
 import onnx
 import numpy as np
 
 from .helper import make_constants, make_slice_value_info
 
 from onnx import helper
-from onnx import numpy_helper
-from typing import Union
-from pathlib import Path
 
 
+logger = logging.getLogger(__name__)
 supported_ops = [
     'nms'
 ]
-
 
 INT_MAX = 2**32
 MAX_BOXES = INT_MAX
 
 
-def nms(graph : onnx.ModelProto, bboxes_name : str='bboxes', scores_name : str='scores', iou_threshold_name : str='iou_threshold', score_threshold_name : str='score_threshold', detections_name : str='detections', check_model=True):
+def nms(graph: onnx.ModelProto, bboxes_name: str = 'bboxes', scores_name: str = 'scores',
+        iou_threshold_name: str = 'iou_threshold', score_threshold_name: str = 'score_threshold',
+        detections_name : str = 'detections', check_model=True):
     """
     add nms operations to given graph
     """
-    print("performing nms operations on graph : %s" %graph.graph.name)
+    logger.info("adding nms operations on graph : %s" %graph.graph.name)
     nms_node = helper.make_node(
         'NonMaxSuppression',
         inputs=[bboxes_name, scores_name,'max_output_boxes_per_class',iou_threshold_name,score_threshold_name],
@@ -92,10 +92,10 @@ def nms(graph : onnx.ModelProto, bboxes_name : str='bboxes', scores_name : str='
         graph.graph.output.append(output)
     for node in additional_nodes :
         graph.graph.node.append(node)
-    if check_model :
-        print("performing nms operations on graph : %s CHECKING MODEL" %graph.graph.name)
+    if check_model:
+        logger.info("performing nms operations on graph : %s CHECKING MODEL" %graph.graph.name)
         onnx.checker.check_model(graph)
-    print("performing nms operations on graph : %s DONE" %graph.graph.name)
+    logger.info("performing nms operations on graph : %s DONE" %graph.graph.name)
     return graph
 
 
