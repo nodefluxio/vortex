@@ -85,10 +85,14 @@ def get_main_parser():
 
     return parser
 
-
-def main(argv=None):
+def parse_args(argv):
     parser = get_main_parser()
     args = parser.parse_args(argv)
+    return args
+
+
+def main(argv=None):
+    args = parse_args(argv)
 
     level = logging.WARNING
     if args.quiet == 1:
