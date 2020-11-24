@@ -1,17 +1,20 @@
 import os
 import sys
-import warnings
-from pathlib import Path, PurePath
-from typing import Union
+import logging
 import shutil
 import torchvision.datasets
+
+from pathlib import Path, PurePath
+from typing import Union
 from pprint import PrettyPrinter
-from .torchvision import create_torchvision_dataset,SUPPORTED_TORCHVISION_DATASETS
+from .torchvision import create_torchvision_dataset, SUPPORTED_TORCHVISION_DATASETS
+
+
+logger = logging.getLogger(__name__)
 
 _file_path = Path(__file__)
 _file_dir  = _file_path.parent
-_default_dataset_path = os.path.join(
-    os.getcwd(), "external", "datasets")
+_default_dataset_path = os.path.join(os.getcwd(), "external", "datasets")
 _exclude_dirs = [
     '__pycache__'
 ]
@@ -33,6 +36,18 @@ supported_dataset = {
     torchvision.datasets: SUPPORTED_TORCHVISION_DATASETS
 }
 
+def _format_dict(data: dict) -> str:
+    formatted = ""
+    for idx, (name, values) in enumerate(data.items()):
+        if idx > 0:
+            formatted += "\n"
+        formatted += "{}:\n".format(name)
+        for n, v in enumerate(values):
+            formatted += "    {}".format(v)
+            if n != len(values)-1 or idx != len(data)-1:
+                formatted += "\n"
+    return formatted
+
 
 # TODO: rename function name, support passing module directly as python module
 # NOTE: temporarily allow to skip submodule `utils`, TODO: cleanup by supporting python module directly
@@ -53,8 +68,8 @@ def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_
     try:
         # Added capability to automatic convert dir with '-' to '_'
         if len(module.split('-')) > 1:
-            warnings.warn(
-                "Found dataset %s contain '-' symbol, system automatically replace it with '_' symbol!" % (module))
+            logger.info("Found dataset {} contain '-' symbol, automatically replace it "
+                "with '_' symbol!".format(module))
             transformed_name = module.replace('-', '_')
             shutil.move(PurePath(_default_dataset_path, module),
                         PurePath(_default_dataset_path, transformed_name))
@@ -67,16 +82,15 @@ def register_dvc_dataset(module: str, path: Union[str, Path] = _default_dataset_
             # NOTE: assuming actual dataset is named after `dataset`
             exec('from %s.%s import dataset as %s' % (module, submodule, module))
     except Exception as e:
-        warnings.warn(
-            'failed to import dataset %s, original error message is "%s"' % (module, str(e)))
+        logger.info('failed to import dataset {}, original error message is "{}"'.format(module, str(e)))
         return
     py_module = eval('%s' % module)
     module_attributes = py_module.__dict__.keys()
     for attribute in _required_dataset_module_attributes:
         if not attribute in module_attributes:
-            warnings.warn('skipping dataset %s' % module)
+            logger.info('skipping dataset {}'.format(module))
             return
-    warnings.warn('adding %s to available datasets' % module)
+    logger.info('adding {} to available datasets'.format(module))
     all_datasets['external'] += py_module.supported_dataset
     supported_dataset[py_module] = py_module.supported_dataset
 
@@ -86,18 +100,9 @@ def _scan_dvc_dataset(path: Path, dataset_env: str = 'VORTEX_DATASET_ROOT'):
     """
     given path, find all standardized dvc dataset
     """
-    path = os.environ.get(dataset_env, path)
-    ## python >= 3.6
-    # path : Path = Path(path)
-    path = Path(path)
+    path = Path(os.environ.get(dataset_env, path))
     if path.exists() and path.is_dir():
-    # if not path.exists():
-    #     raise RuntimeError(
-    #         'trying to scan dataset from %s, but the path doesnt exists' % str(path))
-    # if not path.is_dir():
-    #     raise RuntimeError(
-    #         'trying to scan dataset from %s, but the path is not a directory' % str(path))
-        warnings.warn('scanning for dataset at: %s' % str(path))
+        logger.info('scanning for dataset at: {}'.format(str(path)))
         for child in path.iterdir():
             if child.is_dir():
                 dir_name = child.name
@@ -108,10 +113,9 @@ def _scan_dvc_dataset(path: Path, dataset_env: str = 'VORTEX_DATASET_ROOT'):
                 if ok:
                     register_dvc_dataset(dir_name, path=path)
     else:
-        warnings.warn("'external/datasets/' directory is not found!, skipping external dataset scanning!")
+        logger.info("{} directory is not found!, skipping external dataset scanning!".format(str(path)))
 
-    warnings.warn('finished scanning dataset, available dataset(s) : \n%s' %
-                  (pp.pformat(all_datasets)))
+    logger.info('finished scanning dataset, available dataset(s) : \n{}'.format(pp.pformat(all_datasets)))
 
 
 def get_base_dataset(dataset: str, dataset_args: dict = {}):
@@ -130,7 +134,7 @@ def get_base_dataset(dataset: str, dataset_args: dict = {}):
     raise RuntimeError("unexpected error")
 
 
+# TODO: support passing module directly as python module
+register_dvc_dataset('darknet', _file_dir, submodule=None)
 # automatically scans for available datasets in default dataset
 _scan_dvc_dataset(_default_dataset_path)
-# TODO: support passing module directly as python module
-register_dvc_dataset('darknet', _file_dir,submodule=None)
