@@ -34,7 +34,8 @@ setup(name=package_name,
       install_requires=install_requires,
       tests_require=tests_require,
       extras_require={
-        "optuna_vis":  optuna_vis_requires
+        "optuna_vis":  optuna_vis_requires,
+        "test": tests_require
       },
       author='Nodeflux - AI Platform',
       entry_points = entry_points,
