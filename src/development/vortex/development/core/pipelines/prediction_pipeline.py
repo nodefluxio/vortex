@@ -1,15 +1,17 @@
 from pathlib import Path
 from easydict import EasyDict
-from typing import Union,List, Type
+from typing import Union, List
 from collections import OrderedDict
 
 import os
 import warnings
+import logging
 import numpy as np
+import matplotlib.pyplot as plt
 import cv2
 import torch
 
-from vortex.development.core.factory import create_model,create_dataset , create_runtime_model
+from vortex.development.core.factory import create_model, create_dataset, create_runtime_model
 from vortex.runtime import model_runtime_map
 from vortex.development.utils.visual import visualize_result
 from vortex.development.predictor import create_predictor, get_prediction_results
@@ -17,6 +19,8 @@ from vortex.development.utils.common import check_and_create_output_dir
 from vortex.development.core.pipelines.base_pipeline import BasePipeline
 
 __all__ = ['PytorchPredictionPipeline','IRPredictionPipeline']
+
+logger = logging.getLogger(__name__)
 
 class BasePredictionPipeline(BasePipeline):
     """Vortex Base Prediction Pipeline
@@ -59,8 +63,8 @@ class BasePredictionPipeline(BasePipeline):
                 `'relative'`: the coordinate is relative to input size (have range of [0, 1]), so to visualize the output needs to be multplied by input size; 
                 `'absolute'`: the coordinate is absolute to input size (range of [widht, height]). 
                 Default `'relative'`.
-            visualize (bool, optional): option to return prediction visualization. Defaults to False.
-            dump_visual (bool, optional): option to dump prediction visualization. Defaults to False.
+            visualize (bool, optional): whether to visualize prediction result. Defaults to False.
+            dump_visual (bool, optional): option to save prediction result. Defaults to False.
             output_dir (Union[str,Path], optional): directory path to dump visualization. Defaults to '.' .
             kwargs (optional): forwarded to model's forward pass, so this kwargs is placement for additional input parameters, 
                 make sure to have this if your model needs an additional inputs, e.g. `score_threshold`, etc.
@@ -124,20 +128,16 @@ class BasePredictionPipeline(BasePipeline):
         ## assert self.class_names , "'self.class_names' must be implemented in the sub class"
         assert self.output_file_prefix , "'self.output_file_prefix' must be implemented in the sub class"
 
-        assert isinstance(images,list) or isinstance(images,np.ndarray), "'images' arguments must be "\
+        assert isinstance(images, (list, np.ndarray)), "'images' arguments must be "\
             "provided with list or numpy ndarray, found {}".format(type(images))
 
-        if isinstance(images[0],np.ndarray) and dump_visual:
-            warnings.warn("Provided 'images' arguments type is np ndarray and 'dump_visual' is set to "
-                "True, will not dump any image file due to lack of filename information")
-
         # Check image availability if image path is provided
-        if isinstance(images[0],str) or isinstance(images[0],Path):
+        if isinstance(images[0], (str, Path)):
             image_paths = [Path(image) for image in images]
             for image_path in image_paths :
                 assert image_path.exists(), "image {} doesn't exist".format(str(image_path))
             batch_mat = [cv2.imread(image) for image in images]
-        elif isinstance(images[0],np.ndarray):
+        elif isinstance(images[0], np.ndarray):
             batch_mat = images
             for image in batch_mat:
                 assert len(image.shape) == 3, "Provided 'images' list member in numpy ndarray must be "\
@@ -151,36 +151,49 @@ class BasePredictionPipeline(BasePipeline):
         # Resize input images
         batch_vis = [mat.copy() for mat in batch_mat]
         batch_imgs = batch_mat
-        results = self._run_inference(batch_imgs,**kwargs)
+        results = self._run_inference(batch_imgs, **kwargs)
 
         # Transform coordinate-based result from relative coordinates to absolute value
         if output_coordinate_format == 'relative':
-            results = self._check_and_transform(batch_vis = batch_vis, batch_results = results)
+            results = self._check_and_transform(batch_vis=batch_vis, batch_results=results)
 
         # Visualize prediction
-        if visualize:
-            result_vis = self._visualize(batch_vis=batch_vis,
-                                         batch_results=results)
+        result_vis = None
+        if visualize or dump_visual:
+            result_vis = self._visualize(batch_vis=batch_vis, batch_results=results)
+
             # Dump prediction
-            if dump_visual and isinstance(images,list):
+            if dump_visual:
                 filenames = []
                 filename_fmt = "{filename}.{suffix}"
-                for i, (vis, image_path) in enumerate(zip(batch_vis,images)) :
-                    filename = Path(image_path)
-                    suffix = filename.suffix.replace('.','')
+                for idx, (vis, image_path) in enumerate(zip(batch_vis, images)):
+                    if isinstance(image_path, (str, Path)):
+                        filepath = Path(image_path)
+                        suffix = filepath.suffix.replace('.', '')
+                        filename = filepath.stem
+                    else:
+                        filename = str(idx)
+                        suffix = "jpg"
 
                     filename = Path(output_dir) / filename_fmt.format_map(
-                        dict(filename='_'.join([self.output_file_prefix,filename.stem]),suffix=suffix)
+                        dict(filename='_'.join([self.output_file_prefix, filename]), suffix=suffix)
                     )
                     if not filename.parent.exists():
                         filename.parent.mkdir(parents=True)
                     cv2.imwrite(str(filename), vis)
                     filenames.append(str(filename))
-                print('prediction saved to {}'.format(str(', '.join(filenames))))
+                print('Prediction saved to {}'.format(str(', '.join(filenames))))
 
-            return EasyDict({'prediction' : results , 'visualization' : result_vis})
-        else:
-            return EasyDict({'prediction' : results , 'visualization' : None})
+            if visualize:
+                for idx, (img, path) in enumerate(zip(batch_vis, images)):
+                    if isinstance(path, (str, Path)):
+                        filename = Path(path).name
+                    else:
+                        filename = str(idx)
+                    show_image(img, title=filename)
+                plt.show()
+
+        return EasyDict({'prediction' : results , 'visualization' : result_vis})
 
 
     def _visualize(self,
@@ -449,7 +462,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
         model_type = Path(model).name.rsplit('.', 1)[1]
         runtime_map = model_runtime_map[model_type]
         for name, rt in runtime_map.items() :
-            print('Runtime {} <{}>: {}'.format(
+            logger.info('Runtime {} <{}>: {}'.format(
                 name, rt.__name__, 'available' \
                     if rt.is_available() else 'unavailable'
             ))
@@ -481,3 +494,11 @@ class IRPredictionPipeline(BasePredictionPipeline):
         results = self.model(batch_imgs, **kwargs)
 
         return results
+
+def show_image(image: np.ndarray, title=None):
+    fig = plt.figure()
+    fig.subplots_adjust(top=1.0, bottom=0.0, left=0.0, right=1.0)
+    if title:
+        fig.canvas.set_window_title(title)
+    plt.imshow(image[..., ::-1])
+    plt.gca().set_axis_off()
