@@ -11,7 +11,8 @@ from vortex.development.command import (
     hypopt,
     predict,
     ir_runtime_predict,
-    ir_runtime_validate
+    ir_runtime_validate,
+    list
 )
 from vortex.development import __version__
 
@@ -22,7 +23,8 @@ COMMAND = [
     predict,
     hypopt,
     ir_runtime_predict,
-    ir_runtime_validate
+    ir_runtime_validate,
+    list
 ]
 
 class VersionAction(argparse.Action):

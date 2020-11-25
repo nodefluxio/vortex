@@ -8,7 +8,8 @@ from vortex.development.command import (
     train, validate, predict,
     export, hypopt, 
     ir_runtime_predict,
-    ir_runtime_validate
+    ir_runtime_validate,
+    list
 )
 
 import pytest
@@ -499,3 +500,34 @@ def test_ir_predict_args():
     with pytest.raises(RuntimeError):
         args = parse_args(["ir_runtime_predict", model_name])
         ir_runtime_predict.check_deprecated_args(args)
+
+
+def test_list_args():
+    with pytest.raises(SystemExit):
+        args = parse_args(["list"])
+
+    ## backbone
+    args = parse_args(["list", "backbone"])
+    assert args.cmp_cls == list.BackboneList
+    assert args.component == "backbone"
+    assert args.family == None
+    assert args.filter == None
+
+    args = parse_args([
+        "list", "backbone", "--family", "resnet", "mobilenetv3", 
+        "--filter", "*resne*t*"
+    ])
+    assert args.cmp_cls == list.BackboneList
+    assert args.component == "backbone"
+    assert args.family == ["resnet", "mobilenetv3"]
+    assert args.filter == "*resne*t*"
+
+    ## model
+    args = parse_args(["list", "model"])
+    assert args.cmp_cls == list.ModelList
+    assert args.component == "model"
+
+    ## model
+    args = parse_args(["list", "dataset"])
+    assert args.cmp_cls == list.DatasetList
+    assert args.component == "dataset"
