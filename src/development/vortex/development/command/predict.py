@@ -107,7 +107,7 @@ def add_parser(subparsers, parent_parser):
     cmd_args_group = parser.add_argument_group(title="command arguments")
     cmd_args_group.add_argument(
         "-w", "--weights", 
-        help="path to model's weights (optional, inferred from config if not specified)"
+        help="path to model's weights\n(Optional, inferred from config if not specified)"
     )
     cmd_args_group.add_argument(
         "-o", "--output-dir",
@@ -119,8 +119,8 @@ def add_parser(subparsers, parent_parser):
         "-d", "--device",
         metavar="DEVICE",
         choices=avail_devices,
-        help="the device in which the prediction is performed, "
-             "available: {}".format(avail_devices)
+        help="the device in which the prediction is performed.\n"
+             "Available: {}".format(avail_devices)
     )
     cmd_args_group.add_argument(
         "--no-visualize", 
@@ -150,7 +150,7 @@ def add_parser(subparsers, parent_parser):
     deprecated_group.add_argument(
         "-c", "--config",
         dest="config_dep", metavar="CONFIG",
-        help="path to experiment config file. This argument is DEPRECATED "
+        help="path to experiment config file.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
     deprecated_group.add_argument(
@@ -158,7 +158,7 @@ def add_parser(subparsers, parent_parser):
         dest="image_dep", metavar="IMAGES",
         default=[],
         nargs='*', type=str, 
-        help="image(s) path to be predicted. This argument is DEPRECATED "
+        help="image(s) path to be predicted.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
 

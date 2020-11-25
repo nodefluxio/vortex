@@ -64,7 +64,7 @@ def add_parser(subparsers, parent_parser):
     cmd_args_group.add_argument(
         "-i", "--example-input",
         metavar="IMAGE",
-        help="path to example input for exporter tracing (optional, may be necessary "
+        help="path to example input for exporter tracing.\n(Optional, may be necessary "
              "to correctly trace the entire model especially for detection task)"
     )
 
@@ -72,7 +72,7 @@ def add_parser(subparsers, parent_parser):
     deprecated_group.add_argument(
         "-c", "--config",
         dest="config_dep", metavar="CONFIG",
-        help="path to experiment config file. This argument is DEPRECATED "
+        help="path to experiment config file.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
 

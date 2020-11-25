@@ -139,7 +139,7 @@ def add_parser(subparsers, parent_parser):
     deprecated_group.add_argument(
         "-m", "--model",
         dest="model_dep", metavar="MODEL",
-        help="path to IR model. This argument is DEPRECATED and will be "
+        help="path to IR model.\nThis argument is DEPRECATED and will be "
              "removed. Use the positional argument instead."
     )
     deprecated_group.add_argument(
@@ -147,7 +147,7 @@ def add_parser(subparsers, parent_parser):
         dest="image_dep", metavar="IMAGES",
         default=[],
         nargs='*', type=str, 
-        help="image(s) path to be predicted. This argument is DEPRECATED "
+        help="image(s) path to be predicted.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
 

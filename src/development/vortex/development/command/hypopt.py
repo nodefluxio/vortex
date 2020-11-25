@@ -91,21 +91,21 @@ def add_parser(subparsers, parent_parser):
     cmd_args_group = parser.add_argument_group(title="command arguments")
     cmd_args_group.add_argument(
         "-w", "--weights", 
-        help="path to model's weights (optional, inferred from config if not specified)"
-             "valid only for ValidationObjective, ignored otherwise"
+        help="path to model's weights. Valid only for 'ValidationObjective', ignored otherwise."
+             "\n(optional, inferred from config if not specified)"
     )
 
     deprecated_group = parser.add_argument_group(title="deprecated arguments")
     deprecated_group.add_argument(
         "-c", "--config",
         dest="config_dep", metavar="CONFIG",
-        help="path to experiment config file. This argument is DEPRECATED "
+        help="path to experiment config file.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
     deprecated_group.add_argument(
         "-o", "--optconfig",
         dest="optconfig_dep", metavar="OPTCONFIG",
-        help="path to hypopt config file. This argument is DEPRECATED "
+        help="path to hypopt config file.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
 

@@ -74,16 +74,15 @@ def add_parser(subparsers, parent_parser):
     cmd_args_group = parser.add_argument_group(title="command arguments")
     cmd_args_group.add_argument(
         "-w","--weights", 
-        help="path to model's weights (optional, inferred from config if not specified)"
+        help="path to model's weights\n(Optional, inferred from config if not specified)"
     )
     cmd_args_group.add_argument(
         "-d", "--devices",
         metavar="DEVICE",
         default=[], nargs="*",
         choices=avail_devices,
-        help="device(s) in which the validation is performed; multiple values are "
-             "possible, if not specified use device from config. available: {}"
-             .format(avail_devices)
+        help="device(s) in which the validation is performed, multiple values are possible."
+             "\nIf not specified use device from config. Available: {}".format(avail_devices)
     )
     cmd_args_group.add_argument(
         "-b", "--batch-size", 
@@ -95,7 +94,7 @@ def add_parser(subparsers, parent_parser):
     deprecated_group.add_argument(
         "-c", "--config",
         dest="config_dep", metavar="CONFIG",
-        help="path to experiment config file. This argument is DEPRECATED "
+        help="path to experiment config file.\nThis argument is DEPRECATED "
              "and will be removed. Use the positional argument instead."
     )
 
