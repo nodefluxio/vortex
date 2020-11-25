@@ -41,6 +41,8 @@ using `'param_groups'` key in model components.
 - make `class_label` for detection not required
 - update backbone components
 - use mobilenetv3 definition and pretrained from [rwightman](https://github.com/rwightman/pytorch-image-models)
+- improved cli help message
+- improved progress bar, on `train` also display some metrics when training
 
 
 ### Fixed
