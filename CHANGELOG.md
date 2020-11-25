@@ -27,6 +27,7 @@ using `'param_groups'` key in model components.
 - get model path from `config.checkpoint` if found and valid for `predict` and `export`
 - yolov3 support for changing backbone stage to output with `backbone_stages` argument.
 - new `predict` and `ir_runtime_predict` argument to not visualise and not save prediction result.
+- new `list` command in main cli to list available components
 
 ### Changed
 - model checkpoint not save on hyperparameter optimization
