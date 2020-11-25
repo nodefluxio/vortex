@@ -4,7 +4,7 @@ import logging
 
 logger = logging.getLogger("vortex")
 
-from vortex.development import (
+from vortex.development.command import (
     train,
     validate,
     export,

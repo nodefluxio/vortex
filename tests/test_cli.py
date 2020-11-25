@@ -3,10 +3,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1].joinpath('src', 'development')))
 
 from vortex.development.version import __version__
-from vortex.development.cli import (
-    parse_args, main
-)
-from vortex.development import (
+from vortex.development.cli import parse_args
+from vortex.development.command import (
     train, validate, predict,
     export, hypopt, 
     ir_runtime_predict,
