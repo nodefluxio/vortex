@@ -91,13 +91,13 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor):
             self.predictor_name = '{}[{}]'.format(self.predictor_name, next(self.predictor.parameters()).device)
             if batch_size is None:
-                logger.warn("batch size is not set, using default value of 1")
+                logger.warning("batch size is not set, using default value of 1")
                 self.batch_size = 1
         if isinstance(predictor, BaseRuntime):
             self.predictor_input_shape = predictor.input_specs['input']['shape']
             predictor_batch_size = self.predictor_input_shape[0]
             if predictor_batch_size != batch_size and batch_size is not None:
-                logger.warn("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
+                logger.warning("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
                     "using batch size from model.".format(predictor_batch_size, batch_size))
             self.batch_size = predictor_batch_size
 

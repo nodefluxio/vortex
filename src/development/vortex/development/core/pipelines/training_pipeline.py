@@ -272,7 +272,7 @@ class TrainingPipeline(BasePipeline):
             self.val_epoch = validator_cfg.val_epoch
             self.valid_for_validation = True
         except AttributeError as e:
-            logger.warn('validation step not properly configured, will be skipped')
+            logger.warning('validation step not properly configured, will be skipped')
             self.valid_for_validation = False
         except Exception as e:
             raise Exception(str(e))
@@ -451,7 +451,7 @@ class TrainingPipeline(BasePipeline):
         self.config = config ## this is just a workaround for backward compatibility
         val_check_result = check_config(config, 'validate')
         if not val_check_result.valid:
-            logger.warn('this config file is not valid for validation, validation step will be "\
+            logger.warning('this config file is not valid for validation, validation step will be "\
                 "skipped: \n%s' % str(val_check_result))
 
     def _create_local_runs_log(self,

@@ -278,7 +278,7 @@ class PytorchValidationPipeline(BaseValidationPipeline):
             filename = self.experiment_directory / ('%s.pth' % self.experiment_name)
         else:
             filename = weights
-        logger.warn('Loading state dict from {}'.format(str(filename)))
+        logger.warning('Loading state dict from {}'.format(str(filename)))
         self.model = create_model(config.model,state_dict=filename,stage='validate')
         self.filename_suffix = '_validation_{}'.format('_'.join(self.backends))
 
@@ -335,14 +335,14 @@ class IRValidationPipeline(BaseValidationPipeline):
             runtime = [runtime]
         for backend in runtime:
             if backend not in avail_runtime:
-                logger.warn("Unable to run {} model on '{}', make sure to specify '--runtime' "
+                logger.warning("Unable to run {} model on '{}', make sure to specify '--runtime' "
                     "argument properly".format(str(model), backend))
                 runtime.remove(backend)
 
         self.backends = runtime
         if not self.backends:
             self.backends = ['cpu'] # Fallback if configured device is empty and device in experiment file is unavailable
-            logger.warn("Runtime {} is not available, running IR validation on CPU".format(runtime))
+            logger.warning("Runtime {} is not available, running IR validation on CPU".format(runtime))
         self.model = model
 
         if model_type == 'pt':

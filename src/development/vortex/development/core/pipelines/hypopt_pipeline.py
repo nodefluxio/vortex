@@ -151,7 +151,7 @@ class HypOptPipeline(BasePipeline):
             study_name (str): name of Optuna study
         """
 
-        logger.warn("saving visualization")
+        logger.warning("saving visualization")
 
         contour = optuna.visualization.plot_contour(study)
         intermediate_value = optuna.visualization.plot_intermediate_values(study)
@@ -336,7 +336,7 @@ class BaseObjective :
         logger.info('metrics : {}'.format(metric))
         metric = self.reduction(metric, **self.reduction_args)
         logger.info('reduced metric : {}'.format(metric))
-        logger.warn('objective metric : %s' %metric)
+        logger.warning('objective metric : %s' %metric)
 
         # TODO eagerly save best params for allowing remote stopping via comet_ml
         if not self.best_metric:
