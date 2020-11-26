@@ -3,9 +3,11 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parents[1].joinpath('src', 'development')))
 
 from vortex.development import cli
+from vortex.development.command import list as list_cmd
 
 import pytest
 import shutil
+import fnmatch
 
 test_dir = Path(__file__).parent
 CONFIG_PATH = test_dir.joinpath("config", "test_classification_pipelines.yml")
@@ -143,3 +145,59 @@ def test_ir_predict(exported_models):
         "--no-visualize", "--output-dir", str(EXP_DIR)
     ])
     assert EXP_DIR.joinpath("torchscript_ir_prediction_1.jpeg")
+
+
+def test_list_backbone(capsys):
+    list_backbone = list_cmd.BackboneList()
+
+    ## get family
+    to_get = ['resnet', 'darknet']
+    result = list_backbone._get_family(to_get)
+    assert sorted(result.keys()) == sorted(to_get)
+
+    with pytest.raises(AssertionError):
+        list_backbone._get_family('resnet')
+
+    ## one not available
+    to_get = ['resnet', 'mobilenet'] # mobilenet is not available
+    result = list_backbone._get_family(to_get)
+    assert list(result.keys()) == ['resnet']
+    printed, _ = capsys.readouterr()
+    assert "'mobilenet' family is not available." in printed
+
+    ## two not available
+    to_get = ['resnet', 'mobilenet', "darkent"]
+    result = list_backbone._get_family(to_get)
+    assert list(result.keys()) == ['resnet']
+    printed, _ = capsys.readouterr()
+    assert "'mobilenet', and 'darkent' family is not available." in printed
+
+    ## three not available
+    to_get = ['renset', 'mobilenet', "darkent"]
+    result = list_backbone._get_family(to_get)
+    assert result == {}
+    printed, _ = capsys.readouterr()
+    assert "'renset', 'mobilenet', and 'darkent' family is not available." in printed
+
+    ## filter
+    data = list_backbone.available_backbone.copy()
+    pattern = '*resne*t*'
+    filtered = list_backbone._filter(data, pattern)
+    expected = {
+        n: [v for v in val if fnmatch.fnmatchcase(v, pattern)] for n, val in data.items()
+    }
+    expected = {n: v for n,v in expected.items() if v}
+    assert filtered == expected
+
+    ##  cli
+    cli.main([
+        "list", "backbone", "--family", "resnet", "resnest",
+        "--filter", "resne*t*"
+    ])
+
+def test_list_model_dataset():
+    ## just make sure it is running properly for now
+    ## TODO: do more testing
+
+    cli.main(["list", "model"])
+    cli.main(["list", "dataset"])
