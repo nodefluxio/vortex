@@ -60,9 +60,10 @@ def main(args):
 
     # Make prediction
     results = vortex_ir_predictor.run(images = test_images,
-                                  visualize = (not args.no_visualize),
+                                  visualize = True,
                                   dump_visual = (not args.no_save),
                                   output_dir = output_directory,
+                                  show_result = (not args.no_visualize),
                                   **kwargs)
     prediction = results.prediction
     visualization = results.visualization

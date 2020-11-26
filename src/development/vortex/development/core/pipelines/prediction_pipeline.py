@@ -53,6 +53,7 @@ class BasePredictionPipeline(BasePipeline):
             visualize : bool = False,
             dump_visual : bool = False,
             output_dir : Union[str,Path] = '.',
+            show_result:  bool = False,
             **kwargs) -> EasyDict:
         """Function to execute the prediction pipeline
 
@@ -64,8 +65,9 @@ class BasePredictionPipeline(BasePipeline):
                 `'absolute'`: the coordinate is absolute to input size (range of [widht, height]). 
                 Default `'relative'`.
             visualize (bool, optional): whether to visualize prediction result. Defaults to False.
-            dump_visual (bool, optional): option to save prediction result. Defaults to False.
+            dump_visual (bool, optional): option to save prediction result, only takes effect when `visualize` is True. Defaults to False.
             output_dir (Union[str,Path], optional): directory path to dump visualization. Defaults to '.' .
+            show_result (bool, optional): wheter to plot visualization result, only takes effect when `visualize` is True. Defeaults to True
             kwargs (optional): forwarded to model's forward pass, so this kwargs is placement for additional input parameters, 
                 make sure to have this if your model needs an additional inputs, e.g. `score_threshold`, etc.
 
@@ -159,7 +161,7 @@ class BasePredictionPipeline(BasePipeline):
 
         # Visualize prediction
         result_vis = None
-        if visualize or dump_visual:
+        if visualize:
             result_vis = self._visualize(batch_vis=batch_vis, batch_results=results)
 
             # Dump prediction
@@ -184,7 +186,7 @@ class BasePredictionPipeline(BasePipeline):
                     filenames.append(str(filename))
                 print('Prediction saved to {}'.format(str(', '.join(filenames))))
 
-            if visualize:
+            if show_result:
                 for idx, (img, path) in enumerate(zip(batch_vis, images)):
                     if isinstance(path, (str, Path)):
                         filename = Path(path).name
