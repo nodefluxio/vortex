@@ -98,6 +98,19 @@ class TrainingPipeline(BasePipeline):
             ```
         """
 
+        ## terminal output related manager
+        self.ui_manager = enlighten.get_manager()
+
+        ## title bar
+        title_fmt = "Vortex{fill}TRAIN: {exp_name}{fill}{elapsed}"
+        self.ui_manager.status_bar(
+            status_format=title_fmt, 
+            color="bold_underline_white",
+            justify=enlighten.Justify.CENTER, 
+            autorefresh=True, min_delay=0.5,
+            exp_name=config.experiment_name
+        )
+
         self.start_epoch = 0
         checkpoint, state_dict = None, None
         if resume or ('checkpoint' in config and config.checkpoint is not None):
@@ -302,34 +315,22 @@ class TrainingPipeline(BasePipeline):
             outputs = train_executor.run()
             ```
         """
-        ## terminal output related manager
-        manager = enlighten.get_manager()
-
-        ## title bar
-        title_fmt = "Vortex{fill}TRAIN: {exp_name}{fill}{elapsed}"
-        manager.status_bar(
-            status_format=title_fmt, 
-            color="bold_underline_white",
-            justify=enlighten.Justify.CENTER, 
-            autorefresh=True, min_delay=0.5,
-            exp_name=self.config.experiment_name
-        )
 
         ## metric bar
         metric_format = "metrics    lr: {lr:.4g}  loss: {loss:.4g}  {metrics}{fill}"
-        metric_stats = manager.status_bar(
+        metric_stats = self.ui_manager.status_bar(
             status_format=metric_format,
             justify=enlighten.Justify.LEFT, color="white_on_gray20",
             position=1,
             loss=0.0, lr=0.0, metrics=""
         )
-        manager.status_bar(status_format="{fill}", position=2)
+        self.ui_manager.status_bar(status_format="{fill}", position=2)
 
         epoch_bar_fmt = u'{desc}{desc_pad}{percentage:3.0f}%|{bar}| ' + \
                         u'{count:{len_total}d}/{total:d} ' + \
                         u'[{elapsed}<{eta}, {secs_per_iter:.2f}s/{unit}]'
         total_epoch = self.config.trainer.epoch
-        epoch_pbar = manager.counter(
+        epoch_pbar = self.ui_manager.counter(
             count=self.start_epoch, total=total_epoch,
             desc="Epoch:", unit="epoch",
             bar_format=epoch_bar_fmt,
@@ -345,7 +346,7 @@ class TrainingPipeline(BasePipeline):
         epoch_losses = []
         learning_rates = []
         for epoch in range(self.start_epoch, self.config.trainer.epoch):
-            train_pbar = manager.counter(
+            train_pbar = self.ui_manager.counter(
                 total=len(self.dataloader), desc="  Training:", 
                 unit='it', leave=False,
                 bar_format=default_bar_fmt,
@@ -368,7 +369,7 @@ class TrainingPipeline(BasePipeline):
             # Do validation process if configured
             if self.valid_for_validation and ((epoch+1) % self.val_epoch == 0):
                 assert(self.validator.predictor.model is self.model_components.network)
-                val_pbar = manager.counter(
+                val_pbar = self.ui_manager.counter(
                     total=len(self.validator.dataset), desc='  Validating:', 
                     unit='it', leave=False,
                     bar_format=default_bar_fmt
@@ -428,7 +429,7 @@ class TrainingPipeline(BasePipeline):
             epoch_pbar.update(secs_per_iter=epoch_elapsed)
         epoch_pbar.close()
         metric_stats.close()
-        manager.stop()
+        self.ui_manager.stop()
 
         return EasyDict({
             'epoch_losses' : epoch_losses, 
