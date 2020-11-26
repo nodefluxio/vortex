@@ -16,6 +16,9 @@ class ListBase:
         raise NotImplementedError
 
     def _format_output(self, to_print: dict, header: str, fill_neg: int = 9, space: int = 8) -> str:
+        if to_print == dict(): ## empty
+            return ""
+
         max_char = len(max([max(val, key=lambda v: len(v)) for val in to_print.values()], key=lambda v: len(v)))
         fill_len = (max_char-fill_neg) if max_char > fill_neg else 1
 
@@ -79,7 +82,14 @@ class BackboneList(ListBase):
             bb_to_print = self._filter(bb_to_print, args.filter)
 
         bb_to_print = self._format_output(bb_to_print, " Family   Backbone{fill}\n", 9)
-        print(bb_to_print)
+        if bb_to_print == "":
+            print("No backbone is found{family}{pad}{filter}.\n".format(
+                family=" with family of {}".format(args.family) if args.family else "",
+                pad=" and" if args.family and args.filter else " with" if args.filter else "",
+                filter=" '{}' filter".format(args.filter) if args.filter else ""
+            ))
+        else:
+            print(bb_to_print)
         return 0
 
     def _get_family(self, families: list) -> dict:
