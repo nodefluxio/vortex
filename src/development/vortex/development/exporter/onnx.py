@@ -7,6 +7,8 @@ from .utils.onnx.graph_ops.embed_output_format import embed_output_format
 from .utils.onnx.graph_ops.embed_class_names import embed_class_names
 from .utils.onnx.graph_ops.nms_iou_threshold_as_input import nms_iou_threshold_as_input
 from .utils.onnx.graph_ops.create_batch_output_sequence import create_batch_output_sequence
+from .utils.onnx.graph_ops.symbolic_shape_infer import SymbolicShapeInference
+from .utils.onnx.graph_ops.helper import get_Ops
 
 from typing import Union, List, Tuple, Any
 from pathlib import Path
@@ -31,7 +33,7 @@ from torch.onnx import register_custom_op_symbolic
 from vortex.development.exporter.base_exporter import BaseExporter
 
 class OnnxExporter(BaseExporter):
-    def __init__(self, filename : str, image_size : int, input_dtype : str='uint8', n_channels=3, n_batch=1, opset_version=11, **kwargs) :
+    def __init__(self, filename : str, image_size : int, input_dtype : str='uint8', n_channels=3, n_batch=1, opset_version=11, shape_inference=True, **kwargs) :
         super(OnnxExporter,self).__init__(
             image_size=image_size, input_dtype=input_dtype, 
             filename=filename, n_channels=n_channels, n_batch=n_batch,
@@ -39,6 +41,7 @@ class OnnxExporter(BaseExporter):
         self.export_args = kwargs
         self.opset_version = opset_version
         self.export_args.update({'opset_version' : opset_version})
+        self.shape_inference = shape_inference
         """
         adapted from
         https://github.com/pytorch/vision/blob/74679cc566f98398db13df0312cc11188733f1f3/torchvision/ops/_register_onnx_ops.py#L7
@@ -129,6 +132,13 @@ class OnnxExporter(BaseExporter):
             g_ops.append((nms_iou_threshold_as_input, {}))
         if n_batch > 1 and isinstance(postprocess, BatchedNMSPostProcess) :
             g_ops.append((create_batch_output_sequence, {}))
+
+        has_nms = len(get_Ops(model, 'NonMaxSuppression')[0]) > 0
+        append_list = has_nms and n_batch > 1
+        # doesnt support list for now
+        if self.shape_inference and not append_list:
+            g_ops.append((SymbolicShapeInference.infer_shapes, {}))
+
         for op, arg in g_ops :
             model = op(model, **arg)
         onnx.save(model, filename)
