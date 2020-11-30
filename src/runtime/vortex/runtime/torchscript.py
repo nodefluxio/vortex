@@ -15,6 +15,7 @@ class TorchScriptRuntime(BaseRuntime):
     def __init__(self, model: Union[str, Path], device: Union[str,None], 
                  *args, **kwargs):
         import torch
+        import torchvision
         if isinstance(model, (str, Path)):
             if not str(model).endswith('.pt') or str(model).endswith('.pth'):
                 raise RuntimeError("Unknown model file extension from {}".format(str(model)))
