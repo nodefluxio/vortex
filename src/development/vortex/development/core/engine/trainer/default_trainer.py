@@ -1,5 +1,4 @@
 import torch
-from tqdm import tqdm
 from easydict import EasyDict
 
 from vortex.development.core.engine.trainer.base_trainer import BaseTrainer
@@ -11,17 +10,16 @@ class DefaultTrainer(BaseTrainer):
             "accumulation_step should be >= 1, got {}".format(accumulation_step)
         self.accumulation_step = accumulation_step
         self.lr = self.optimizer.param_groups[0]['lr']
-        
 
-    def train(self, dataloader, epoch):
+
+    def train(self, dataloader, epoch, pbar):
         """
         default train
         """
         epoch_loss, step_loss = 0., 0.
         ## TODO : consider to move device deduction to BaseTrainer
         device = list(self.model.parameters())[0].device
-        for i, (inputs, targets) in tqdm(enumerate(dataloader), total=len(dataloader),
-                                         desc=" train", leave=False, dynamic_ncols=True):
+        for i, (inputs, targets) in enumerate(dataloader):
             inputs = inputs.to(device)
             if isinstance(targets, torch.Tensor):
                 targets = targets.to(device)
@@ -61,4 +59,6 @@ class DefaultTrainer(BaseTrainer):
                 step_loss = 0
             if self.scheduler is not None:
                 self.lr = self.scheduler.get_last_lr()[0]
+            pbar.update()
+        pbar.close()
         return (epoch_loss / len(dataloader)), self.lr

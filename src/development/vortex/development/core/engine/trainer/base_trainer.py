@@ -151,14 +151,12 @@ class BaseTrainer(object):
                 except:
                     scheduler.step(epoch)
 
-        
-
-    def train(self, dataloader, epoch: int):
+    def train(self, dataloader, epoch, pbar) -> Tuple:
         raise NotImplementedError
 
-    def __call__(self, dataloader, epoch: int):
+    def __call__(self, dataloader, epoch, pbar):
         is_training = self.model.training
         self.model.train()
-        train_results = self.train(dataloader, epoch)
+        train_results = self.train(dataloader, epoch, pbar)
         self.model.train(is_training)
         return train_results

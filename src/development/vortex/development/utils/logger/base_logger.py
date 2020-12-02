@@ -1,10 +1,6 @@
-from pprint import PrettyPrinter
-import logging
 import random
 import string
 import warnings
-
-pp = PrettyPrinter(indent=4)
 
 class ExperimentLogger():
     def __init__(self,config = None):

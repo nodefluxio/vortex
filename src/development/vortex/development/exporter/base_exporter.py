@@ -29,7 +29,7 @@ class BaseExporter :
                 example_input = (example_input * 255).long().type(torch.uint8)
         elif isinstance(example_image_path, (Path, str, list)):
             ## using example-input means infer type from image, warn (?)
-            type(self).logger.warn('using {} as example input'.format(example_image_path))
+            type(self).logger.warning('using {} as example input'.format(example_image_path))
             example_image_paths = example_image_path \
                 if isinstance(example_image_path, list) else [example_image_path]
             if len(example_image_paths)==1 :

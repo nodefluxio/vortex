@@ -1,10 +1,9 @@
-import os
-from pathlib import Path
+import logging
+import enlighten
 
+from pathlib import Path
 from easydict import EasyDict
 from typing import Union
-import warnings
-
 
 from vortex.development.utils.parser import check_config
 from vortex.development.utils.common import check_and_create_output_dir
@@ -16,6 +15,8 @@ from vortex.development.core import engine as engine
 
 __all__ = ['PytorchValidationPipeline','IRValidationPipeline']
 
+logger = logging.getLogger(__name__)
+
 class BaseValidationPipeline(BasePipeline):
     """Vortex Base Validation Pipeline
 
@@ -24,10 +25,11 @@ class BaseValidationPipeline(BasePipeline):
     """
 
     def __init__(self,
-                 config : EasyDict,
-                 backends : Union[list,str]=[],
-                 generate_report : bool = True,
-                 hypopt : bool =False
+                 config: EasyDict,
+                 backends: Union[list,str]=[],
+                 generate_report: bool = True,
+                 hypopt: bool = False,
+                 stage: str = "validate"
                  ) :
         """Class initialization
 
@@ -46,6 +48,20 @@ class BaseValidationPipeline(BasePipeline):
             raise RuntimeError("invalid config : %s" % str(check_result))
         self.hypopt = hypopt
         self.generate_report = generate_report
+
+        ## title bar
+        stage = stage.upper()
+        self.ui_manager = enlighten.get_manager()
+        title_fmt = "Vortex{fill}{stage}: {exp_name}{fill}{elapsed}"
+        self.ui_manager.status_bar(
+            status_format=title_fmt, 
+            color="bold_underline_white",
+            justify=enlighten.Justify.CENTER, 
+            autorefresh=True, min_delay=0.5,
+            stage=stage,
+            exp_name=config.experiment_name
+        )
+        self.ui_manager.status_bar(status_format="{fill}", position=1)
 
         # Output directory check and set
         self.experiment_name = config.experiment_name
@@ -100,8 +116,7 @@ class BaseValidationPipeline(BasePipeline):
         self.validation_args = validator_cfg.args
         self.val_experiment_name = self.experiment_name
 
-    def run(self,
-            batch_size : int = 1) -> EasyDict:
+    def run(self, batch_size : int = 1) -> EasyDict:
         """Function to execute the validation pipeline
 
         Args:
@@ -139,41 +154,53 @@ class BaseValidationPipeline(BasePipeline):
         assert self.model, "'self.model' must be initialized in the sub-class!!"
         assert self.filename_suffix, "'self.filename_suffix' must be initialized in the sub-class!!"
 
+        default_bar_fmt = '{desc}{desc_pad}{percentage:3.0f}%|{bar}| ' + \
+                          '{count:{len_total}d}/{total:d} ' + \
+                          '[{elapsed}<{eta}, {rate:.2f}{unit}/s]'
+
         # Initial validation process
         eval_results = {}
         metric_assets = {}
         resource_filenames = {}
         resource_usages = {}
+        validator = None
 
-        for backend in self.backends :
-
+        for backend in self.backends:
             # Computing device assignment
             if isinstance(self.model,EasyDict):
                 self.model.network = self.model.network.to(backend)
-            
+
             # Validator initialization
-            
-            if isinstance(self.model,EasyDict) :
+            if isinstance(self.model,EasyDict):
                 val_experiment_name = self.val_experiment_name + '_{}'.format(backend)
             else:
                 val_experiment_name = self.model.name.rsplit('.', 1)[0] + '_{}'.format(backend)
 
             if self.assets_dir:
-                self.validation_args.update(dict(output_directory=self.assets_dir,
-                                                experiment_name=val_experiment_name,
-                                                batch_size=batch_size,
-                                                ))
+                self.validation_args.update(
+                    dict(
+                        output_directory=self.assets_dir,
+                        experiment_name=val_experiment_name,
+                        batch_size=batch_size
+                    )
+                )
             else:
-                self.validation_args.update(dict(experiment_name=val_experiment_name,
-                                                batch_size=batch_size,
-                                                ))
+                self.validation_args.update(
+                    dict(experiment_name=val_experiment_name, batch_size=batch_size)
+                )
             validator = engine.create_validator(self.model, self.dataset, self.validation_args, device=backend)
 
-            # Validation process
-            eval_result = validator()
-            eval_results.update({backend : eval_result})
+            pbar = self.ui_manager.counter(
+                total=len(validator.dataset), desc='  Validating:', 
+                unit='it', leave=True,
+                bar_format=default_bar_fmt
+            )
 
-                # Disable several validation features for hyperparameter optimization
+            # Validation process
+            eval_result = validator(pbar)
+            eval_results.update({backend: eval_result})
+
+            # Disable several validation features for hyperparameter optimization
             if not self.hypopt:
                 metric_asset = validator.save_metrics(output_directory=self.assets_dir)
 
@@ -186,7 +213,7 @@ class BaseValidationPipeline(BasePipeline):
                 resource_usages.update({backend : resource_usage})
         validation_args = validator.validation_args()
     
-        if self.generate_report :
+        if self.generate_report:
             generate_reports(
                 eval_results=eval_results,
                 output_directory=(self.reports_dir),
@@ -201,19 +228,20 @@ class BaseValidationPipeline(BasePipeline):
             )
         ## NOTE : workaround for return values so other module still works as expected
         ## TODO : unify
-        if len(eval_results.keys())==1 :
+        if len(eval_results) == 1:
             eval_results = eval_results[backend]
+        self.ui_manager.stop()
         return EasyDict(eval_results)
 
 class PytorchValidationPipeline(BaseValidationPipeline):
     """Vortex Validation Pipeline API for Vortex model
     """
 
-    def __init__(self,config : EasyDict,
+    def __init__(self, config : EasyDict,
                  weights : Union[str,Path,None] = None,
                  backends : Union[list,str]=[],
                  generate_report : bool = True,
-                 hypopt : bool =False):
+                 hypopt : bool = False):
         """Class initialization
 
         Args:
@@ -242,15 +270,15 @@ class PytorchValidationPipeline(BaseValidationPipeline):
                                                             generate_report = True)
             ```
         """
-        super().__init__(config = config, backends = backends, generate_report = generate_report, hypopt = hypopt)
-        
-        # Model initialization
+        super().__init__(config=config, backends=backends, generate_report=generate_report, 
+                         hypopt=hypopt, stage="validate")
 
+        # Model initialization
         if weights is None:
             filename = self.experiment_directory / ('%s.pth' % self.experiment_name)
         else:
             filename = weights
-        warnings.warn('loading state dict from : %s' % str(filename))
+        logger.warning('Loading state dict from {}'.format(str(filename)))
         self.model = create_model(config.model,state_dict=filename,stage='validate')
         self.filename_suffix = '_validation_{}'.format('_'.join(self.backends))
 
@@ -292,8 +320,9 @@ class IRValidationPipeline(BaseValidationPipeline):
             ```
         """
 
-        super().__init__(config = config, backends = backends, generate_report = generate_report, hypopt = hypopt)
-        
+        super().__init__(config=config, backends=backends, generate_report=generate_report, 
+                         hypopt=hypopt, stage="ir_runtime_validate")
+
          # Model IR runtime check and selection
         runtime = backends
         model = Path(model)
@@ -306,14 +335,14 @@ class IRValidationPipeline(BaseValidationPipeline):
             runtime = [runtime]
         for backend in runtime:
             if backend not in avail_runtime:
-                warnings.warn("Unable to run {} model on '{}', make sure to specify '--runtime' "\
+                logger.warning("Unable to run {} model on '{}', make sure to specify '--runtime' "
                     "argument properly".format(str(model), backend))
                 runtime.remove(backend)
 
         self.backends = runtime
         if not self.backends:
             self.backends = ['cpu'] # Fallback if configured device is empty and device in experiment file is unavailable
-            warnings.warn('IR validation is running on CPU due to unavailability of selected device')
+            logger.warning("Runtime {} is not available, running IR validation on CPU".format(runtime))
         self.model = model
 
         if model_type == 'pt':

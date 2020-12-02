@@ -1,6 +1,7 @@
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
 
 *.jpg
+*.jpeg
 
 *.png
 *.bmp
@@ -280,4 +281,4 @@ experiments/outputs/**/reports
 *.tar.gz
 *cifar-10-batches-py
 
-!tests/test_dataset/obj_det_landmarks/train/data/images/*
+!tests/test_dataset/*

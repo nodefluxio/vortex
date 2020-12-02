@@ -3,26 +3,22 @@ opencv-python==4.2.0.34
 torch<=1.6.0
 torchvision<=0.7.0
 matplotlib
-tqdm
-tb-nightly
+enlighten
 future
 Pillow
 enforce
 onnx==1.6.0
 mypy
-autopep8
 pyyaml
 easydict
 pandas
-comet_ml    
+comet_ml
 multipledispatch 
 dvc[gs]
 optuna
 anytree
 scipy
 albumentations
-pytest
-pytest-cov
 sklearn
 flatten-dict
 graphviz
@@ -30,7 +26,6 @@ seaborn
 psutil
 gpustat
 thop
-setuptools>=41.0.0
 ray
 sympy
 # nvidia-dali-cuda100 # Cannot be installed via setuptools, spawn as subprocess pip installation in setup.py

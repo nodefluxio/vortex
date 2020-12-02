@@ -1,37 +1,28 @@
-from numpy.core.records import ndarray
 import torch
 import logging
 import warnings
 import matplotlib
 import numpy as np
-import pandas as pd
-import seaborn as sn
-import matplotlib.pyplot as plt
 
-from copy import copy
-from tqdm import tqdm
 from pathlib import Path
-from itertools import cycle
 from easydict import EasyDict
 from collections import OrderedDict
-from collections.abc import Sequence
-from functools import singledispatch
-from typing import Union, List, Dict, Type, Any, Iterable, Callable
+from typing import Union, List, Dict, Any, Callable
 
-from vortex.development.predictor.base_module import BasePredictor, create_predictor
+from vortex.development.predictor.base_module import BasePredictor
 from vortex.development.predictor.utils import get_prediction_results
-from vortex.development.networks.modules.preprocess.normalizer import to_tensor,normalize
 from vortex.development.utils.profiler.speed import TimeData
 from vortex.development.utils.profiler.resource import CPUMonitor, GPUMonitor
-from vortex.development.core.factory import create_runtime_model
-
 from vortex.runtime.basic_runtime import BaseRuntime
+
+logger = logging.getLogger(__name__)
 
 ## set High DPI for matplotlib
 ## TODO: properly set image dpi
 matplotlib.rcParams['figure.dpi'] = 125
 
-def no_collate(batch) :
+
+def no_collate(batch):
     ## don't let pytorch default collater to try stacking targets
     images = list(map(lambda x: x[0], batch))
     targets = list(map(lambda x: x[1], batch))
@@ -48,7 +39,7 @@ class Logger:
         self.logger = logger
         import types
         self.log = types.MethodType(getattr(self.logger, default_log_level), self)
-    
+
     def __call__(self, *args, **kwargs):
         self.log(*args, **kwargs)
 
@@ -100,13 +91,13 @@ class BaseValidator:
         if isinstance(self.predictor, BasePredictor):
             self.predictor_name = '{}[{}]'.format(self.predictor_name, next(self.predictor.parameters()).device)
             if batch_size is None:
-                warnings.warn("batch size is not set, using default value of 1")
+                logger.warning("batch size is not set, using default value of 1")
                 self.batch_size = 1
         if isinstance(predictor, BaseRuntime):
             self.predictor_input_shape = predictor.input_specs['input']['shape']
             predictor_batch_size = self.predictor_input_shape[0]
             if predictor_batch_size != batch_size and batch_size is not None:
-                warnings.warn("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
+                logger.warning("model batch size found {} is not the same as provided 'batch_size' arguments {}, "
                     "using batch size from model.".format(predictor_batch_size, batch_size))
             self.batch_size = predictor_batch_size
 
@@ -121,8 +112,7 @@ class BaseValidator:
         """
         default logger initialization
         """
-        logger = logging.getLogger(type(self).__name__)
-        self.logger = Logger(logger)
+        self.logger = Logger(logging.getLogger(type(self).__name__))
         self.logger('predictor type : {}'.format(type(self.predictor)))
 
     def _init_batch(self):
@@ -366,13 +356,14 @@ class BaseValidator:
         assert isinstance(results[0], (dict, OrderedDict)), "result type {} not understood".format(type(results))
         return results
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, pbar, *args, **kwargs):
         """
         default validation pipeline
         """
         is_training = True
         validation_handler, val_loss_err_msg = None, None
         val_loss = 0.
+        val_loss_stats = False
         if isinstance(self.predictor, BasePredictor):
             is_training = self.predictor.training
             self.predictor.eval()
@@ -383,8 +374,7 @@ class BaseValidator:
 
         self.eval_init(*args, **kwargs)
         with self.monitor as m:
-            for index, (image, targets) in tqdm(enumerate(self.dataset), total=len(self.dataset), 
-                                                desc=" VAL", leave=True, dynamic_ncols=True):
+            for index, (image, targets) in enumerate(self.dataset):
                 with self.predict_timedata:
                     results = self.predict(image=image)
                 results = self.format_output(results)
@@ -409,9 +399,11 @@ class BaseValidator:
                     except Exception as e:
                         val_loss_err_msg = e
                         val_loss_stats = False
+                pbar.update()
+            pbar.close()
 
         self.metrics = self.compute_metrics()
-        if isinstance(self.predictor, BasePredictor) :
+        if isinstance(self.predictor, BasePredictor):
             self.predictor.train(is_training)
             if self.criterion:
                 validation_handler.remove()
@@ -419,5 +411,5 @@ class BaseValidator:
                     print(val_loss_err_msg)
                 else:
                     val_loss /= len(self.dataset)
-                    self.metrics.update(EasyDict({'val_loss' : val_loss}))
+                    self.metrics.update({'val_loss': val_loss.cpu().item()})
         return self.metrics

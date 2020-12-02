@@ -1,13 +1,11 @@
+import logging
 import onnx
-import numpy as np
 
-from .helper import make_constants, make_slice_value_info, make_output_format
+from .helper import make_output_format
 
-from onnx import helper
-from onnx import numpy_helper
 from typing import Union, Dict, List
-from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 supported_ops = [
     'embed_output_format'
@@ -17,9 +15,9 @@ def embed_output_format(model : onnx.ModelProto, output_format : Dict[str,Union[
     """
     embed output_format to model as `Constants`
     """
-    print("embedding output_format to model : {}".format(model.graph.name))
+    logger.info("embedding output_format to model")
     output_format_constants, output_format_value_info = make_output_format(output_format)
-    for output_format_constant, value_info in zip(output_format_constants, output_format_value_info) :
+    for output_format_constant, value_info in zip(output_format_constants, output_format_value_info):
         model.graph.node.append(output_format_constant)
         model.graph.output.append(value_info)
     return model

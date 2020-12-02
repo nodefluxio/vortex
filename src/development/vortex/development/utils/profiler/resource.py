@@ -1,20 +1,15 @@
-import matplotlib
 import matplotlib.pyplot as plt
 import re
 import time
 import psutil
 import threading
-import contextlib
+import gpustat
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from copy import copy
 from pathlib import Path
-from typing import Union
-from contextlib import ContextDecorator
 
-import gpustat
 
 def get_uname() :
     import subprocess

@@ -416,6 +416,7 @@ class TestPredictionPipeline():
                                     visualize = True,
                                     dump_visual = True,
                                     output_dir = 'tests/output_predict_test',
+                                    show_result = False,
                                     **kwargs)
             self._check_result(results)
             self._check_pipeline(predictor)
@@ -451,6 +452,7 @@ class TestPredictionPipeline():
         image_data = cv2.imread('tests/images/cat.jpg')
         results = vortex_predictor.run(images = [image_data],
                                        visualize = visualize,
+                                       show_result = False,
                                        **kwargs)
         self._check_result(results, visualize=visualize)
         self._check_pipeline(vortex_predictor)
@@ -461,7 +463,8 @@ class TestPredictionPipeline():
                                                      device = 'cpu')
         image_data = cv2.imread('tests/images/cat.jpg')
         results = vortex_predictor.run(images = [image_data],
-                                   visualize = False)
+                                   visualize = False,
+                                   show_result=False)
         self._check_result(results, visualize=False)
         self._check_pipeline(vortex_predictor)
 
@@ -598,6 +601,7 @@ class TestIRPredictionPipeline():
                                       visualize = True,
                                       dump_visual = True,
                                       output_dir = 'tests/output_predict_test',
+                                      show_result = False,
                                       **kwargs)
         
         # Prediction pipeline output must be EasyDict
@@ -633,6 +637,7 @@ class TestIRPredictionPipeline():
 
         results = vortex_ir_predictor.run(images = [image_data],
                                       visualize = True,
+                                      show_result = False,
                                       **kwargs)
         
         # Prediction pipeline output must be EasyDict
@@ -660,6 +665,7 @@ class TestIRPredictionPipeline():
 
         results = vortex_ir_predictor.run(images = [image_data],
                                       visualize = False,
+                                      show_result = False,
                                       **kwargs)
         
         # Prediction pipeline output must be EasyDict
@@ -698,6 +704,5 @@ class TestHypOptPipeline:
         assert isinstance(trial_result,EasyDict)
         assert 'best_trial' in trial_result.keys()
         assert dump_report_path.exists()
-    
+
     # TODO add test_validation_obj
-        
