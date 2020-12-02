@@ -1,8 +1,9 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import vortex.development
-from . import modules
+from .. import modules
 
 def test_alexnet():
     assert 'alexnet' in vortex.development.networks.models.all_models

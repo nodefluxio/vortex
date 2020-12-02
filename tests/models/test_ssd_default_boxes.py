@@ -1,10 +1,11 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import torch
 
 from math import sqrt
-from torch import Tensor, tensor, allclose, Size, eq
+from torch import tensor, allclose, Size, eq
 
 from vortex.development.networks.models.detection.retinaface import PriorBox, DefaultBox, compute_ssd_anchors
 

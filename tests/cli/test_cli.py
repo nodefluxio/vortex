@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[1].joinpath('src', 'development')))
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 from vortex.development import cli
 from vortex.development.command import list as list_cmd
@@ -9,7 +9,7 @@ import pytest
 import shutil
 import fnmatch
 
-test_dir = Path(__file__).parent
+test_dir = Path(__file__).parents[1]
 CONFIG_PATH = test_dir.joinpath("config", "test_classification_pipelines.yml")
 OPTCONFIG_PATH = test_dir.joinpath("config", "test_hypopt_train_objective.yml")
 IMG_SAMPLE = test_dir.joinpath("test_dataset", "classification", "val", "cat", "1.jpeg")

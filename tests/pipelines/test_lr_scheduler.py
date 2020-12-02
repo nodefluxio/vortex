@@ -1,11 +1,13 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import math
 import torch
 import unittest
 import torchvision
-from vortex.development.core.engine.trainer.lr_scheduler import CosineLRWithWarmUp, MultiStepLR
+
+from vortex.development.core.engine.trainer.lr_scheduler import CosineLRWithWarmUp
 
 class TestLRScheduler(unittest.TestCase) :
     def test_cosine(self) :

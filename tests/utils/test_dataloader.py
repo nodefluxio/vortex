@@ -1,9 +1,10 @@
 import sys
-sys.path.insert(0,'src/development')
-sys.path.insert(0, 'src/runtime')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 from vortex.development.core.factory import create_dataloader
 from vortex.development.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper
+
 from easydict import EasyDict
 import torch
 import pytest
@@ -51,9 +52,7 @@ def test_dataloader(dataloader_cfg):
                                    dataset_config=classification_config,
                                    preprocess_config = preprocess_args,
                                    collate_fn=None)
-    for data in dataloader:
-        fetched_data = data
-        break
+    fetched_data = next(iter(dataloader))
     assert isinstance(fetched_data[0],torch.Tensor)
     assert len(fetched_data[0].shape)==4 # N,C,H,W
     assert fetched_data[0].shape[2] == preprocess_args.input_size # Assume square input

@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import torch
 import unittest
@@ -7,7 +8,6 @@ import numpy as np
 import onnxruntime
 from pathlib import Path
 
-from vortex.runtime.onnx.onnxruntime import OnnxRuntimeCpu as Runtime
 from vortex.development.exporter.onnx import export
 from vortex.development.networks.modules.postprocess import get_postprocess
 

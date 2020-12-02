@@ -1,14 +1,14 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import numpy as np
-import torch.nn as nn
 from easydict import EasyDict
 
 from vortex.development.core.factory import create_model
-from vortex.development.predictor.base_module import create_predictor
-from .dummy_dataset.utils import dataset
 import vortex.development.core.engine as engine
+
+from ..dummy_dataset.utils import dataset
 
 
 class DummyDataset(dataset.DummyDataset):

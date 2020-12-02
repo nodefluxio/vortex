@@ -2,8 +2,9 @@
 test case for core trainer
 """
 import sys
-sys.path.insert(0,'src/development')
-sys.path.insert(0,'src/runtime')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'runtime')))
 
 
 import pytest
@@ -45,7 +46,7 @@ class BrokenDummyModel(nn.Module) :
 
 class BrokenCustomTrainer(BaseTrainer):
     def __init__(self, *args, **kwargs):
-        super(type(self),*args, **kwargs)
+        super(type(self), self).__init__(*args, **kwargs)
 
 class CustomTrainer(BaseTrainer):
     def __init__(self, *args, **kwargs):

@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-proj_path = Path(__file__).parents[1]
+proj_path = Path(__file__).parents[2]
 sys.path.insert(0, str(proj_path.joinpath('src', 'runtime')))
 sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 

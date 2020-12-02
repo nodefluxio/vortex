@@ -1,13 +1,7 @@
-
-
-import os
 import sys
-import subprocess
 from pathlib import Path
-proj_path = os.path.abspath(Path(__file__).parents[1])
-sys.path.append(proj_path)
-sys.path.insert(0,'src/development')
-sys.path.insert(0,'src/runtime')
+proj_path = Path(__file__).parents[2]
+sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 
 from easydict import EasyDict
 
@@ -59,7 +53,7 @@ def test_torchvision_dataset():
             'train' : {
                 'dataset' : "ImageFolder",
                 'args' : {
-                    'root' : proj_path
+                    'root' : str(proj_path)
                 }
             }
         }
@@ -74,9 +68,9 @@ def test_darknet_dataset():
     ## make sure that "base" dataset can be instantiated
     ## note that this test is dependent on external files
     args = dict(
-        txt_path=str(Path(proj_path)/'tests/test_dataset/obj_det/train.txt'),
-        img_root=str(Path(proj_path)/'tests/test_dataset/obj_det/images'),
-        names=str(Path(proj_path)/'tests/test_dataset/obj_det/names.txt'),
+        txt_path=str(proj_path/'tests/test_dataset/obj_det/train.txt'),
+        img_root=str(proj_path/'tests/test_dataset/obj_det/images'),
+        names=str(proj_path/'tests/test_dataset/obj_det/names.txt'),
     )
     base_dataset = dataset.get_base_dataset("DarknetDataset", args)
     assert len(base_dataset) == 5

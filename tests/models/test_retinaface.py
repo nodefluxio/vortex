@@ -1,9 +1,10 @@
 import sys
-sys.path.insert(0,'src/development')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 import torch
 from easydict import EasyDict
-from torch import Tensor, Size, allclose, tensor
+from torch import Size, tensor
 
 from vortex.development.networks.modules.postprocess.retinaface import RetinaFaceDecoder
 from vortex.development.networks.models.detection.retinaface import RetinaFace, create_model_components

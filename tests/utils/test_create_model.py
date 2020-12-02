@@ -1,10 +1,10 @@
-import os
 import sys
-sys.path.insert(0,'src/development')
-sys.path.insert(0, 'src/runtime')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 from vortex.development.core.factory import create_model
 from easydict import EasyDict
+
 
 def test_create_softmax_model():
     softmax_model_conf = EasyDict({
