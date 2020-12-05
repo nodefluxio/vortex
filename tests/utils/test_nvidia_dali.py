@@ -1,12 +1,11 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 from easydict import EasyDict
-from vortex.development.utils.data.dataset import dataset
 from pathlib import Path
+
+from vortex.development.utils.data.dataset import dataset
 from vortex.development.core.factory import create_dataloader
+
 import pytest
+
 
 dataset.register_dvc_dataset("obj_det_landmarks", path=Path("tests/test_dataset"))
 

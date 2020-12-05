@@ -1,10 +1,5 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 import unittest
 import torch
-import sys
 
 from vortex.development.networks.models.detection.yolov3 import YoloV3
 from vortex.development.networks.modules.losses.utils.yolov3 import build_targets, encode_grid_labels, encode_yolo_bbox_labels

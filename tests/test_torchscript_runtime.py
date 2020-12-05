@@ -1,20 +1,18 @@
-import sys
-sys.path.insert(0,'src/development')
-sys.path.insert(0,'src/runtime')
-
 import os
 import cv2
 import torch
 import pytest
+
 from pathlib import Path
 from easydict import EasyDict
+from collections import OrderedDict
 
 from vortex.development.exporter.torchscript import TorchScriptExporter
 from vortex.development.networks.models import create_model_components
 from vortex.development.predictor import create_predictor
 from vortex.runtime.torchscript import TorchScriptRuntime
 from vortex.runtime.torchscript import TorchScriptRuntimeCpu, TorchScriptRuntimeCuda
-from collections import OrderedDict
+
 
 project_dir = Path(__file__).parents[1]
 output_dir = os.path.join(project_dir, "tmp", "torchscript")
@@ -112,7 +110,7 @@ def test_torchscript(model_name, device):
 
     runtime = TorchScriptRuntime(output_path, device=device)
     n, h, w, c = runtime.input_specs["input"]["shape"]
-    img = cv2.imread(os.path.join(project_dir, "tests", "images", "cat.jpg"))
+    img = cv2.imread(os.path.join(project_dir, "tests", "test_dataset", "classification", "val", "cat", "1.jpeg"))
     img = cv2.resize(img, (h, w))[None, :]
 
     kwargs = {"score_threshold": 0.05, "iou_threshold": 0.02}

@@ -8,15 +8,13 @@ class FocalLoss(nn.Module):
         super(FocalLoss, self).__init__()
         self.gamma = gamma
         self.alpha = alpha
-        print("focal loss gamma : ", self.gamma)
-        print("focal loss alpha : ", self.alpha)
         if isinstance(alpha,(float,int,int)): self.alpha = torch.Tensor([alpha,1-alpha])
         if isinstance(alpha,list): self.alpha = torch.Tensor(alpha)
-        
+
         if reduction not in ['mean','sum',None]:
             raise KeyError('Unknown classification loss "reduction" args, should be \
                            "mean" or "sum", got {}'.format(reduction))
-        
+
         self.reduction = reduction
 
     def forward(self, input, target):

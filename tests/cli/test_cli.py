@@ -1,6 +1,4 @@
-import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
 
 from vortex.development import cli
 from vortex.development.command import list as list_cmd

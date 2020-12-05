@@ -1,13 +1,10 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 from vortex.development.networks.modules import backbones
 from vortex.development.networks.modules.utils.layers import EvoNormBatch2d
 from vortex.development.networks.modules.utils import inplace_abn
 
 import torch
 import pytest
+
 
 no_pretrained = ['darknet21', 'shufflenetv2_x1.5', 'shufflenetv2_x2.0']
 all_backbone = [m.__name__.split('.')[-1] for m in list(backbones.supported_models.keys())]

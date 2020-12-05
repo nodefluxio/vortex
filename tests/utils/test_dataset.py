@@ -1,12 +1,11 @@
-import sys
-from pathlib import Path
-proj_path = Path(__file__).parents[2]
-sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
-
 from easydict import EasyDict
+from pathlib import Path
 
 from vortex.development.utils.data.dataset import dataset
 from vortex.development.core.factory import create_dataset
+
+
+proj_path = Path(__file__).parents[2]
 
 def test_dataset_register_dvc():
     dataset.register_dvc_dataset("dummy_dataset", path=Path("tests"))

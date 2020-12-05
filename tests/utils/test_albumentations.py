@@ -1,10 +1,6 @@
 from easydict import EasyDict
 import numpy as np
 
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 from vortex.development.utils.data.augment import create_transform
 from vortex.development.utils.data.dataset.wrapper.basic_wrapper import check_data_format_standard
 

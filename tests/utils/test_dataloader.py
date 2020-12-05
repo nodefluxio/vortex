@@ -1,7 +1,3 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 from vortex.development.core.factory import create_dataloader
 from vortex.development.utils.data.dataset.wrapper.basic_wrapper import BasicDatasetWrapper
 

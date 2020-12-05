@@ -1,13 +1,10 @@
-import sys
-from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parents[2].joinpath('src', 'development')))
-
 import torch
+
 from easydict import EasyDict
-from torch import Size, tensor
 
 from vortex.development.networks.modules.postprocess.retinaface import RetinaFaceDecoder
 from vortex.development.networks.models.detection.retinaface import RetinaFace, create_model_components
+
 
 def test_darknet53_retinaface() :
     """
@@ -24,9 +21,9 @@ def test_darknet53_retinaface() :
     assert landmarks.dim() == 3
     assert bounding_boxes.dim() == 3
     assert classifications.dim() == 3
-    assert landmarks.size() == Size([1,predcition_channels,10])
-    assert bounding_boxes.size() == Size([1,predcition_channels,4])
-    assert classifications.size() == Size([1,predcition_channels,2])
+    assert landmarks.size() == torch.Size([1,predcition_channels,10])
+    assert bounding_boxes.size() == torch.Size([1,predcition_channels,4])
+    assert classifications.size() == torch.Size([1,predcition_channels,2])
 
     """
     eval
@@ -34,13 +31,13 @@ def test_darknet53_retinaface() :
     retinaface.eval()
     predictions = retinaface(torch.rand(1,3,640,640))
     assert predictions.dim() == 3
-    assert predictions.size() == Size([1,predcition_channels,16])
+    assert predictions.size() == torch.Size([1,predcition_channels,16])
 
 def test_darknet53_retinaface_decoder() :
     retinaface = RetinaFace(image_size=640, backbone='darknet53', pyramid_channels=256).eval()
     predictions = retinaface(torch.rand(1,3,640,640))
     decoder = RetinaFaceDecoder(retinaface.default_boxes,retinaface.anchor_gen.variance,n_landmarks=retinaface.n_landmarks)
-    decoded = decoder(predictions, tensor([0.5]))
+    decoded = decoder(predictions, torch.tensor([0.5]))
     assert len(decoded) == 4
     bounding_boxes, confidences, classes, detections = decoded
     assert classes.dim() == 1
@@ -72,7 +69,7 @@ def test_darknet53_retinaface_create_components() :
     gt = [[
         0.5, 0.5, 0.6, 0.6, 0.4, 0.4, 0.6, 0.6, 0.4, 0.4, 0.6, 0.6, 0.4, 0.4, 0
     ]]
-    gt = tensor(gt).unsqueeze(0)
+    gt = torch.tensor(gt).unsqueeze(0)
     loss = loss_fn(predictions, gt)
     assert not any(torch.isinf(loss).view(-1)) and not any(torch.isnan(loss).view(-1))
     retinaface.eval()
@@ -104,7 +101,7 @@ def test_create_model_components() :
     gt = [[
         0.5, 0.5, 0.6, 0.6, 0.4, 0.4, 0.6, 0.6, 0.4, 0.4, 0.6, 0.6, 0.4, 0.4, 0
     ]]
-    gt = tensor(gt).unsqueeze(0)
+    gt = torch.tensor(gt).unsqueeze(0)
     loss = loss_fn(predictions, gt)
     assert not any(torch.isinf(loss).view(-1)) and not any(torch.isnan(loss).view(-1))
     retinaface.eval()
@@ -137,7 +134,7 @@ def test_darknet53_retinaface_predictor() :
     ).eval()
     detections = predictor(
         torch.rand(1,3,640,640),
-        tensor([0.01]),
-        tensor([0.01])
+        torch.tensor([0.01]),
+        torch.tensor([0.01])
     )
     assert detections[0].dim() == 2

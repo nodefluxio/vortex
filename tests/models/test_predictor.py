@@ -1,8 +1,4 @@
-import sys
 from pathlib import Path
-proj_path = Path(__file__).parents[2]
-sys.path.insert(0, str(proj_path.joinpath('src', 'runtime')))
-sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 
 import torch
 import torch.nn as nn
@@ -15,6 +11,8 @@ from vortex.development.networks import create_model_components
 from vortex.development.utils.parser.parser import load_config, check_config
 from vortex.development.predictor import get_prediction_results
 
+
+proj_path = Path(__file__).parents[2]
 
 torch.manual_seed(123)
 

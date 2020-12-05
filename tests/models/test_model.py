@@ -1,8 +1,4 @@
-import sys
 from pathlib import Path
-proj_path = Path(__file__).parents[2]
-sys.path.insert(0, str(proj_path.joinpath('src', 'runtime')))
-sys.path.insert(0, str(proj_path.joinpath('src', 'development')))
 
 import torch
 import pytest
@@ -11,6 +7,8 @@ from vortex.development.networks.models import create_model_components
 from vortex.development.networks.modules.backbones import supported_models as supported_backbone
 from vortex.development.utils.parser.parser import load_config, check_config
 from vortex.development.networks.modules.utils import inplace_abn
+
+proj_path = Path(__file__).parents[2]
 
 backbones = [bb[0] for bb in supported_backbone.values()]
 backbones.insert(0, 'darknet53')
@@ -42,8 +40,6 @@ def test_model(task, backbone):
         "result:\n%s" % (config_path, task, str(check_result))
 
     config.model.network_args.backbone = backbone
-    if backbones[0] == 'darknet53':
-        config.model.network_args.pretrained_backbone = None
     args = {
         'model_name': config.model.name,
         'preprocess_args': config.model.preprocess_args,

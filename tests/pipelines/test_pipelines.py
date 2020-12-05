@@ -1,5 +1,4 @@
 import os
-import sys
 import shutil
 import pytest
 import numpy as np
@@ -11,10 +10,6 @@ from pathlib import Path
 from easydict import EasyDict
 from collections import OrderedDict
 from copy import deepcopy
-
-project_path = Path(__file__).parents[2]
-sys.path.insert(0, str(project_path.joinpath('src', 'runtime')))
-sys.path.insert(0, str(project_path.joinpath('src', 'development')))
 
 from vortex.development.core.pipelines import (
     TrainingPipeline,
@@ -92,6 +87,9 @@ class TestTrainingPipeline():
             old_cfg_dev = deepcopy(cfg)
             old_cfg_dev.trainer.device = device
             old_cfg_dev.pop('device', None)
+
+            if device == "cuda:0" and not torch.cuda.is_available():
+                pytest.skip(reason="test requires GPU")
 
             for cfg_dev in (old_cfg_dev, orig_cfg_dev):
                 train_executor = TrainingPipeline(config=cfg_dev, config_path=config_path, hypopt=False)
@@ -412,7 +410,7 @@ class TestPredictionPipeline():
 
         def _test(predictor):
             kwargs = {}
-            results = predictor.run(images = ['tests/images/cat.jpg'],
+            results = predictor.run(images = ['tests/test_dataset/classification/val/cat/1.jpeg'],
                                     visualize = True,
                                     dump_visual = True,
                                     output_dir = 'tests/output_predict_test',
@@ -422,7 +420,7 @@ class TestPredictionPipeline():
             self._check_pipeline(predictor)
 
             # If dump_visualization and images is provided as string, allow for dump visualized image
-            vis_dump_path = Path('tests/output_predict_test') / 'prediction_cat.jpg'
+            vis_dump_path = Path('tests/output_predict_test') / 'prediction_1.jpeg'
             assert vis_dump_path.exists()
 
             assert all([isinstance(spec, dict) and \
@@ -449,7 +447,7 @@ class TestPredictionPipeline():
                                                      device = 'cpu')
 
         # Read image
-        image_data = cv2.imread('tests/images/cat.jpg')
+        image_data = cv2.imread('tests/test_dataset/classification/val/cat/1.jpeg')
         results = vortex_predictor.run(images = [image_data],
                                        visualize = visualize,
                                        show_result = False,
@@ -461,7 +459,7 @@ class TestPredictionPipeline():
         vortex_predictor = PytorchPredictionPipeline(config=config,
                                                      weights=pth_model_path,
                                                      device = 'cpu')
-        image_data = cv2.imread('tests/images/cat.jpg')
+        image_data = cv2.imread('tests/test_dataset/classification/val/cat/1.jpeg')
         results = vortex_predictor.run(images = [image_data],
                                    visualize = False,
                                    show_result=False)
@@ -597,7 +595,7 @@ class TestIRPredictionPipeline():
         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
                                                 runtime = 'cpu')
 
-        results = vortex_ir_predictor.run(images = ['tests/images/cat.jpg'],
+        results = vortex_ir_predictor.run(images = ['tests/test_dataset/classification/val/cat/1.jpeg'],
                                       visualize = True,
                                       dump_visual = True,
                                       output_dir = 'tests/output_predict_test',
@@ -620,9 +618,9 @@ class TestIRPredictionPipeline():
         # If dump_visualization and images is provided as string, allow for dump visualized image
         vis_dump_path = None
         if model_input==onnx_model_path:
-            vis_dump_path = Path('tests/output_predict_test') / 'onnx_ir_prediction_cat.jpg'
+            vis_dump_path = Path('tests/output_predict_test') / 'onnx_ir_prediction_1.jpeg'
         elif model_input==pt_model_path:
-            vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_cat.jpg'
+            vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_1.jpeg'
         assert vis_dump_path is not None and vis_dump_path.exists()
 
     @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
@@ -633,7 +631,7 @@ class TestIRPredictionPipeline():
                                                 runtime = 'cpu')
         
         # Read image
-        image_data = cv2.imread('tests/images/cat.jpg')
+        image_data = cv2.imread('tests/test_dataset/classification/val/cat/1.jpeg')
 
         results = vortex_ir_predictor.run(images = [image_data],
                                       visualize = True,
@@ -659,9 +657,9 @@ class TestIRPredictionPipeline():
         kwargs = {}
         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
                                                 runtime = 'cpu')
-        
+
         # Read image
-        image_data = cv2.imread('tests/images/cat.jpg')
+        image_data = cv2.imread('tests/test_dataset/classification/val/cat/1.jpeg')
 
         results = vortex_ir_predictor.run(images = [image_data],
                                       visualize = False,

@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0,'src/development')
-
 import os
 import torch
 import pytest
@@ -85,7 +82,7 @@ model_argmap = EasyDict(
 
 @pytest.mark.parametrize(
     "model_name, image",
-    [(name, img) for name in model_argmap for img in (None, "tests/images/cat.jpg")]
+    [(name, img) for name in model_argmap for img in (None, "tests/test_dataset/classification/val/cat/1.jpeg")]
 )
 def test_exporter(model_name, image, backbone="resnet18", remove_output=True):
     args = model_argmap[model_name]
