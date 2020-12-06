@@ -1,4 +1,4 @@
-from setuptools import setup, Extension, distutils, find_namespace_packages
+from setuptools import setup, find_namespace_packages
 
 # Package Information
 import importlib.util

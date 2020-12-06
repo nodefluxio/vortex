@@ -1,8 +1,8 @@
 import torch
-import torchvision
 import torch.nn as nn
-from typing import Type, List, Tuple, Dict, Callable, Union
 import warnings
+
+from typing import Tuple, Callable, Union
 
 
 def check_annotations(lhs, rhs):

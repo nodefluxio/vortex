@@ -14,7 +14,6 @@ from typing import Optional, List
 from easydict import EasyDict
 from scipy.optimize import linear_sum_assignment
 
-from ..base_connector import BackbonePoolConnector
 from ...modules.backbones import get_backbone
 
 supported_models = [

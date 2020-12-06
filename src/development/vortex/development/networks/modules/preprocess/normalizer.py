@@ -1,8 +1,6 @@
 import torch
-import torchvision
 import torch.nn as nn
-from typing import Type, List, Tuple, Dict, Union
-import numpy as np
+
 
 def flip(img: torch.Tensor, dim: int=-1):
     """

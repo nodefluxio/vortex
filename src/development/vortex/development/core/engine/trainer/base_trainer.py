@@ -1,18 +1,17 @@
-import torch
 import torch.nn as nn
 import torch.optim as optim
 
 import inspect
 import warnings
 import types
-
-from collections import OrderedDict
-from typing import Tuple, List, Union, Type, Any, Dict
 import math
+
+from typing import Tuple, List, Union, Type, Any, Dict
 
 from vortex.development.utils import type_utils
 from vortex.development.utils.logger.base_logger import ExperimentLogger
 from . import lr_scheduler
+
 
 class BaseTrainer(object):
     __loss_parameters__ = ['input', 'target']

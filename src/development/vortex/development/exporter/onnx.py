@@ -1,6 +1,7 @@
 import onnx
 import torch
 import enforce
+import sys
 
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
 from .utils.onnx.graph_ops.embed_output_format import embed_output_format
@@ -22,12 +23,11 @@ def export(model : Any, example_input : Union[Tuple[torch.Tensor,...],torch.Tens
     torch.onnx.export(model, example_input, filename, input_names=input_names, output_names=output_names, opset_version=opset_version, *args, **kwargs)
     return Path(filename).exists()
 
-import sys
 import torch
 
 from torch.onnx.symbolic_helper import parse_args, scalar_type_to_onnx, scalar_type_to_pytorch_type, \
     cast_pytorch_to_onnx
-from torch.onnx.symbolic_opset9 import select, unsqueeze, squeeze, _cast_Long, reshape
+from torch.onnx.symbolic_opset9 import select, unsqueeze, squeeze, _cast_Long
 from torch.onnx import register_custom_op_symbolic
 
 from vortex.development.exporter.base_exporter import BaseExporter

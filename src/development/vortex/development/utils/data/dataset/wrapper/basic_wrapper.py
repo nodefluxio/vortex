@@ -1,4 +1,4 @@
-from typing import Dict, List, Union, Callable, Tuple
+from typing import List, Union, Tuple
 from easydict import EasyDict
 from pathlib import Path
 

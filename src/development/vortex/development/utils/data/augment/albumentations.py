@@ -1,12 +1,10 @@
 import cv2
-import torch
 import numpy as np
+
 from easydict import EasyDict
-from typing import List, Dict, Tuple, Union, Any
+from typing import List, Dict
 
-from albumentations.pytorch import ToTensor
 import albumentations.core.composition as albumentations_compose
-
 import albumentations.augmentations.transforms as albumentations_tf
 
 supported_transforms = [

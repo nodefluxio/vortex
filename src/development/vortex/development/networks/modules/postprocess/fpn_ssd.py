@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch import Tensor, Size, tensor
-from typing import Tuple, List, Union
+from typing import Tuple
 
-from ..losses.utils.ssd import decode_landm, decode
+from ..losses.utils.ssd import decode
 
 class FPNSSDDecoder(nn.Module) :
     __constants__ = ['variance', 'priors', 'n_classes']

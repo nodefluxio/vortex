@@ -17,9 +17,6 @@ For the more details argument you can use, see the `--help` argument.
 
 import sys
 from pathlib import Path
-from matplotlib.pyplot import plot
-import math
-from easydict import EasyDict
 
 from torch import optim
 sys.path.append(str(Path(__file__).parents[1].joinpath('src', 'development')))

@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Dict, List, Union
 from easydict import EasyDict
-from collections import namedtuple,OrderedDict
+from collections import OrderedDict
 
 __all__ = [
     'get_prediction_results'

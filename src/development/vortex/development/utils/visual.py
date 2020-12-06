@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from typing import Tuple, Union, List, Dict, Sequence
+from typing import Tuple, List, Dict, Sequence
 
 colors = [
     (255, 0, 0), (0, 255, 0), (0, 0, 255),

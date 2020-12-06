@@ -2,7 +2,7 @@ import numpy as np
 
 from vortex.runtime.basic_runtime import BaseRuntime
 from pathlib import Path
-from typing import Union, List
+from typing import Union
 from collections import OrderedDict
 
 # __all__ = [

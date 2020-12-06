@@ -1,15 +1,14 @@
-import os, sys, inspect
+import sys
 from pathlib import Path
 import torch
 import pandas as pd
 
-repo_root = Path(__file__).parent.parent.joinpath('src/development')
+repo_root = Path(__file__).parents[1].joinpath('src/development')
 
 if __name__=='__main__' :
     sys.path.insert(0, str(repo_root))
 
 from vortex.development.networks.modules import backbones
-from vortex.development.networks import models
 from thop import profile
 from mod_torchsummary import summary
 from easydict import EasyDict

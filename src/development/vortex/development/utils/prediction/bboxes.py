@@ -2,8 +2,7 @@ from __future__ import print_function
 from __future__ import division
 
 from .tools import is_intersect, intersection, union
-from pathlib import Path
-from typing import Union, List, Dict
+
 
 __all__ = [
     'BoundingBox',

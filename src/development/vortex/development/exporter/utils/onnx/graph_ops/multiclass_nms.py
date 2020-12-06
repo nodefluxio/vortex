@@ -4,9 +4,7 @@ import numpy as np
 from .helper import make_constants, make_slice_value_info
 
 from onnx import helper
-from onnx import numpy_helper
-from typing import Union
-from pathlib import Path
+
 
 INT_MAX = 2**32
 MAX_BOXES = INT_MAX

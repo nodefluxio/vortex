@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 
-from typing import Union, Tuple, List
+from typing import Union, List
+
 
 def conv_bn(in_channels, out_channels, kernel_size : int, stride=1, bias=False, relu=True) -> nn.Sequential :
     """

@@ -2,10 +2,9 @@
 
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
+import numpy as np
 
 from collections import OrderedDict
-import numpy as np
 
 
 def summary(model, input_size, batch_size=-1, device=torch.device('cuda:0'), dtypes=None):

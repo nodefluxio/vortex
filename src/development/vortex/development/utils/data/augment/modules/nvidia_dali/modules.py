@@ -1,8 +1,8 @@
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
+
 from easydict import EasyDict
-from typing import Union,Tuple,List
-import numpy as np
+from typing import Union, List
 from .utils import _check_and_convert_limit_value
 
 __all__ = ['StandardAugment',

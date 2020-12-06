@@ -1,5 +1,4 @@
 import logging
-import math
 import warnings
 
 import torch
@@ -52,6 +51,7 @@ class StepLRWithWarmUp(_LRScheduler):
             return [base_lr for base_lr in self.base_lrs]
         else:
             gamma = 1
+            lrs = []
             for step, scale in zip(self.steps, self.scales):
                 gamma *= scale
                 if self.last_epoch >= step:
