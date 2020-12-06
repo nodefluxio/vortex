@@ -7,8 +7,8 @@ import numpy as np
 
 from collections import OrderedDict
 from onnx import TensorProto
-from copy import copy
-from typing import List, Tuple, Dict
+from copy import copy, deepcopy
+from typing import List, Dict
 
 def get_inputs(model : onnx.ModelProto) :
     inputs = []

@@ -13,8 +13,6 @@ __all__ = [
     'darknet_maxpool',
     'darknet_conv',
     'yolo_feature_maps',
-    'intermediate_layer_codegen',
-    'create_intermediate_layer'
 ]
 
 act_map = {
