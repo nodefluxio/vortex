@@ -66,15 +66,14 @@ class TestTrainingPipeline():
 
 
     @pytest.mark.parametrize(
-        "device",
-        [
-            "cpu",
-            pytest.param(
-                "cuda:0",
-                marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
-            )
-        ]
-    )
+        "device", [
+        "cpu",
+        pytest.param(
+            "cuda:0",
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU"),
+            id="gpu"
+        )
+    ])
     def test_train_device(self, device):
         orig_cfg_dev = deepcopy(config)
         orig_cfg_dev.device = device
@@ -93,7 +92,10 @@ class TestTrainingPipeline():
                 assert loss_device == torch.device(device)
 
 
-    @pytest.mark.parametrize("scheduler", [False, True])
+    @pytest.mark.parametrize("scheduler", [
+        pytest.param(False, id="no scheduler"),
+        pytest.param(True, id="with scheduler")
+    ])
     def test_fresh_train(self, scheduler):
         if not scheduler: # Clear existing output file on first run only
             if Path(config.output_directory).exists():
@@ -222,7 +224,10 @@ class TestTrainingPipeline():
         assert tuple(ckpt['class_names']) == ('cat', 'dog')
         assert not 'scheduler_state' in ckpt
 
-    @pytest.mark.parametrize("scheduler", [False, True])
+    @pytest.mark.parametrize("scheduler", [
+        pytest.param(False, id="no scheduler"),
+        pytest.param(True, id="with scheduler")
+    ])
     def test_continue_train(self, scheduler):
         if scheduler:
             cfg = self.cfg_scheduler
@@ -339,7 +344,8 @@ def test_create_model():
         "cpu",
         pytest.param(
             "cuda:0",
-            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU"),
+            id="gpu"
         )
     ]
 )
