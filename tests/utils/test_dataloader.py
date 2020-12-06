@@ -42,16 +42,24 @@ preprocess_args = EasyDict({
     },
 })
 
-@pytest.mark.parametrize("dataloader_cfg", [pytorch_loader, dali_loader])
+@pytest.mark.parametrize(
+    "dataloader_cfg", [
+        pytest.param(pytorch_loader, id="pytorch dataloader"), 
+        pytest.param(
+            dali_loader, id="dali dataloader",
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+        )
+    ]
+)
 def test_dataloader(dataloader_cfg):
     dataloader = create_dataloader(dataloader_config=dataloader_cfg,
                                    dataset_config=classification_config,
                                    preprocess_config = preprocess_args,
                                    collate_fn=None)
     fetched_data = next(iter(dataloader))
-    assert isinstance(fetched_data[0],torch.Tensor)
-    assert len(fetched_data[0].shape)==4 # N,C,H,W
+    assert isinstance(fetched_data[0], torch.Tensor)
+    assert len(fetched_data[0].shape) == 4 # N,C,H,W
     assert fetched_data[0].shape[2] == preprocess_args.input_size # Assume square input
-    assert isinstance(len(dataloader),int)
-    assert hasattr(dataloader,'dataset')
-    assert isinstance(dataloader.dataset,BasicDatasetWrapper)
+    assert isinstance(len(dataloader), int)
+    assert hasattr(dataloader, 'dataset')
+    assert isinstance(dataloader.dataset, BasicDatasetWrapper)

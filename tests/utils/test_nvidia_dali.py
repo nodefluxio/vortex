@@ -5,6 +5,7 @@ from vortex.development.utils.data.dataset import dataset
 from vortex.development.core.factory import create_dataloader
 
 import pytest
+import torch
 
 
 dataset.register_dvc_dataset("obj_det_landmarks", path=Path("tests/test_dataset"))
@@ -18,21 +19,7 @@ preprocess_args = EasyDict({
     },
 })
 
-# # Obj Detection
-# obj_det_collate_fn = 'SSDCollate'
-# obj_det_dataset_config = EasyDict(
-#     {
-#         'train': {
-#             'dataset' : 'VOC2007DetectionDataset',
-#             'args' : {
-#                 'image_set' : 'train'
-#             }
-#         }
-#     }
-# )
-
 # Classification
-class_collate_fn = None
 class_dataset_config = EasyDict(
     {
         'train': {
@@ -46,16 +33,14 @@ class_dataset_config = EasyDict(
 class_dataset_config.collate_fn = None
 
 # Obj Det with Landmark
-lndmrks_dataset_config = EasyDict(
-    {
-        'train': {
-            'name': 'TestObjDetLandmarksDataset',
-            'args': {
-                'train': True
-            },
-        }
+lndmrks_dataset_config = EasyDict({
+    'train': {
+        'name': 'TestObjDetLandmarksDataset',
+        'args': {
+            'train': True
+        },
     }
-)
+})
 lndmrks_dataset_config.collate_fn = 'RetinaFaceCollate'
 
 dali_loader = EasyDict({
@@ -65,7 +50,7 @@ dali_loader = EasyDict({
         'num_thread': 1,
         'batch_size': 1,
         'shuffle': False,
-        },
+    },
 })
 
 pytorch_loader = EasyDict({
@@ -76,43 +61,52 @@ pytorch_loader = EasyDict({
     },
 })
 
-transforms = [{'transform': 'HorizontalFlip','args':{'p':1}},
-              {'transform': 'VerticalFlip','args':{'p':1}},
-              {'transform': 'RandomBrightnessContrast','args':{'p':1,'brightness_limit' : .2,'contrast_limit' : .2}},
-              {'transform': 'RandomJitter','args':{'p' : 1,'nDegree' : 2}},
-              {'transform': 'RandomHueSaturationValue','args':{'p' :1,'hue_limit' : 20,'saturation_limit': .3,'value_limit': .3}},
-              {'transform': 'RandomWater','args':{'p' :1}},
-              {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
-              ]
+transforms = [
+    {'transform': 'HorizontalFlip','args':{'p':1}},
+    {'transform': 'VerticalFlip','args':{'p':1}},
+    {'transform': 'RandomBrightnessContrast','args':{'p':1,'brightness_limit' : .2,'contrast_limit' : .2}},
+    {'transform': 'RandomJitter','args':{'p' : 1,'nDegree' : 2}},
+    {'transform': 'RandomHueSaturationValue','args':{'p' :1,'hue_limit' : 20,'saturation_limit': .3,'value_limit': .3}},
+    {'transform': 'RandomWater','args':{'p' :1}},
+    {'transform': 'RandomRotate','args':{'p':1,'angle_limit':45}},
+]
 
 excpected_raise_error_transform = ['RandomWater','RandomRotate']
 
-@pytest.mark.parametrize("dataset_config", [class_dataset_config,lndmrks_dataset_config])
-@pytest.mark.parametrize("transform", [transform for transform in transforms])
-def test_dali(dataset_config,transform):
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+@pytest.mark.parametrize(
+    ("dataset_config", "transform"), 
+    [
+        pytest.param(
+            cfg, trfm,
+            marks=pytest.mark.xfail(
+                cfg == lndmrks_dataset_config and trfm['transform'] in excpected_raise_error_transform,
+                reason="expected transform error in landmarks"
+            ),
+            id="{} {}".format(name, n)
+        )
+        for (cfg, name) in [(class_dataset_config, "classification"), (lndmrks_dataset_config, "landmarks")]
+        for (n, trfm) in enumerate(transforms)
+    ]
+)
+def test_dali(dataset_config, transform):
     augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transform]}})]
     dataset_config.train.augmentations = augmentations
 
-    if dataset_config == lndmrks_dataset_config and transform['transform'] in excpected_raise_error_transform:
-        with pytest.raises(RuntimeError):
-            dataloader = create_dataloader(dataloader_config=dali_loader,
-                                        dataset_config=dataset_config,
-                                        preprocess_config = preprocess_args,
-                                        collate_fn=dataset_config.collate_fn)
-    else:
-        dataloader = create_dataloader(dataloader_config=dali_loader,
-                                        dataset_config=dataset_config,
-                                        preprocess_config = preprocess_args,
-                                        collate_fn=dataset_config.collate_fn)
+    dataloader = create_dataloader(dataloader_config=dali_loader,
+                                    dataset_config=dataset_config,
+                                    preprocess_config = preprocess_args,
+                                    collate_fn=dataset_config.collate_fn)
 
-        for data in dataloader:
-            fetched_data = data
-            break
-    
+    data = next(iter(dataloader))
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
 def test_neg_dali_aug_and_pytorch_data_loader():
     augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}})]
     class_dataset_config.train.augmentations = augmentations
-    
+
     # Expect RuntimeError if nvidia dali augmentation module used with pytorch dataloader
     with pytest.raises(RuntimeError):
         dataloader = create_dataloader(dataloader_config=pytorch_loader,
@@ -120,6 +114,8 @@ def test_neg_dali_aug_and_pytorch_data_loader():
                                         preprocess_config = preprocess_args,
                                         collate_fn=class_dataset_config.collate_fn)
 
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
 def test_dali_loader_with_no_dali_aug():
     augmentations = [EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}})]
     class_dataset_config.train.augmentations = augmentations
@@ -129,6 +125,7 @@ def test_dali_loader_with_no_dali_aug():
                                     preprocess_config = preprocess_args,
                                     collate_fn=class_dataset_config.collate_fn)
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
 def test_dali_loader_with_additional_external_aug():
     augmentations = [EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}}),
                      EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}})]
@@ -139,6 +136,7 @@ def test_dali_loader_with_additional_external_aug():
                                     preprocess_config = preprocess_args,
                                     collate_fn=class_dataset_config.collate_fn)
 
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
 def test_neg_dali_aug_not_the_first_aug():
     augmentations = [EasyDict({'module' : 'albumentations','args' : {'transforms': [transforms[0]]}}),
                      EasyDict({'module' : 'nvidia_dali','args' : {'transforms': [transforms[0]]}})]
