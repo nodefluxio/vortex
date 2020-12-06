@@ -64,6 +64,35 @@ class TestTrainingPipeline():
         'args': {'step_size': 1}
     }
 
+
+    @pytest.mark.parametrize(
+        "device",
+        [
+            "cpu",
+            pytest.param(
+                "cuda:0",
+                marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+            )
+        ]
+    )
+    def test_train_device(self, device):
+        orig_cfg_dev = deepcopy(config)
+        orig_cfg_dev.device = device
+        old_cfg_dev = deepcopy(config)
+        old_cfg_dev.trainer.device = device
+        old_cfg_dev.pop('device', None)
+
+        for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+            train_executor = TrainingPipeline(config=cfg_dev, config_path=config_path, hypopt=False)
+            assert train_executor.device == device
+            model_device = list(train_executor.model_components.network.parameters())[0].device
+            assert model_device == torch.device(device)
+            loss_param = list(train_executor.criterion.parameters())
+            if len(loss_param):
+                loss_device = loss_param[0].device
+                assert loss_device == torch.device(device)
+
+
     @pytest.mark.parametrize("scheduler", [False, True])
     def test_fresh_train(self, scheduler):
         if not scheduler: # Clear existing output file on first run only
@@ -80,34 +109,13 @@ class TestTrainingPipeline():
             cfg = config
             info_holder = train_info
 
-        ## test device
-        for device in ("cpu", "cuda:0"):
-            orig_cfg_dev = deepcopy(cfg)
-            orig_cfg_dev.device = device
-            old_cfg_dev = deepcopy(cfg)
-            old_cfg_dev.trainer.device = device
-            old_cfg_dev.pop('device', None)
-
-            if device == "cuda:0" and not torch.cuda.is_available():
-                pytest.skip(reason="test requires GPU")
-
-            for cfg_dev in (old_cfg_dev, orig_cfg_dev):
-                train_executor = TrainingPipeline(config=cfg_dev, config_path=config_path, hypopt=False)
-                assert train_executor.device == device
-                model_device = list(train_executor.model_components.network.parameters())[0].device
-                assert model_device == torch.device(device)
-                loss_param = list(train_executor.criterion.parameters())
-                if len(loss_param):
-                    loss_device = loss_param[0].device
-                    assert loss_device == torch.device(device)
-
         train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False)
         info_holder.run_directory = train_executor.run_directory
 
         output = train_executor.run()
 
         # Check output type
-        assert isinstance(output,EasyDict)
+        assert isinstance(output, EasyDict)
 
         # Check every enforce key
         assert 'epoch_losses' in output.keys()
@@ -167,6 +175,7 @@ class TestTrainingPipeline():
     def test_fresh_train_with_ckpt(self):
         # Instantiate Training
         cfg = deepcopy(config)
+        cfg.device = "cpu"
         cfg.checkpoint = train_info.run_directory/'test_classification_pipelines-epoch-0.pth'
         train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False)
 
@@ -221,6 +230,7 @@ class TestTrainingPipeline():
         else:
             cfg = deepcopy(config)
             info_holder = train_info
+        cfg.device = "cpu"
         cfg.checkpoint = info_holder.run_directory/'test_classification_pipelines-epoch-0.pth'
         train_executor = TrainingPipeline(config=cfg, config_path=config_path, hypopt=False, resume=True)
 
@@ -323,24 +333,36 @@ def test_create_model():
     state_dict_is_equal(ckpt_ep0['state_dict'], model.network.state_dict())
 
 
+@pytest.mark.parametrize(
+    "device",
+    [
+        "cpu",
+        pytest.param(
+            "cuda:0",
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+        )
+    ]
+)
+def test_validation_pipeline_device(device):
+    orig_cfg_dev = deepcopy(config)
+    orig_cfg_dev.device = device
+    old_cfg_dev = deepcopy(config)
+    old_cfg_dev.trainer.device = device
+    old_cfg_dev.pop('device', None)
+
+    for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+        predictor = PytorchValidationPipeline(config=cfg_dev, weights=None, backends=[device])
+        assert torch.device(predictor.backends[0]) == torch.device(device)
+
+
 def test_validation_pipeline():
-    ## test device and old config
-    for device in ("cpu", "cuda:0"):
-        orig_cfg_dev = deepcopy(config)
-        orig_cfg_dev.device = device
-        old_cfg_dev = deepcopy(config)
-        old_cfg_dev.trainer.device = device
-        old_cfg_dev.pop('device', None)
+    val_cfg = deepcopy(config)
 
-        for cfg_dev in (old_cfg_dev, orig_cfg_dev):
-            predictor = PytorchValidationPipeline(config=cfg_dev, weights=None, backends=[device])
-            assert torch.device(predictor.backends[0]) == torch.device(device)
-
-    # Instantiate Validation
-    validation_executor = PytorchValidationPipeline(config=config,
-                                                 weights = None,
-                                                 backends = 'cpu',
-                                                 generate_report = True)
+    validation_executor = PytorchValidationPipeline(
+        config=val_cfg, weights = None, 
+        backends = 'cpu',
+        generate_report = True
+    )
 
     eval_results = validation_executor.run(batch_size=2)
 
@@ -351,6 +373,7 @@ def test_validation_pipeline():
     report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
     generated_report = Path(report_dir) / '{}_validation_cpu.md'.format(config.experiment_name)
     assert generated_report.exists()
+
 
 class TestPredictionPipeline():
 
@@ -389,24 +412,31 @@ class TestPredictionPipeline():
         assert isinstance(vortex_predictor.model.input_specs, OrderedDict)
         assert isinstance(vortex_predictor.model.class_names, list)
 
+    @pytest.mark.parametrize(
+        "device",
+        [
+            "cpu",
+            pytest.param(
+                "cuda:0",
+                marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+            )
+        ]
+    )
+    def test_device(self, device):
+        orig_cfg_dev = deepcopy(config)
+        orig_cfg_dev.device = device
+        old_cfg_dev = deepcopy(config)
+        old_cfg_dev.trainer.device = device
+        old_cfg_dev.pop('device', None)
+
+        for cfg_dev in (old_cfg_dev, orig_cfg_dev):
+            predictor = PytorchPredictionPipeline(config=cfg_dev, weights=None, device=device)
+            model_device = list(predictor.model.parameters())[0].device
+            assert model_device == torch.device(device)
+
     def test_input_from_image_path(self):
-        ## test device and old config
-        for device in ("cpu", "cuda:0"):
-            orig_cfg_dev = deepcopy(config)
-            orig_cfg_dev.device = device
-            old_cfg_dev = deepcopy(config)
-            old_cfg_dev.trainer.device = device
-            old_cfg_dev.pop('device', None)
-
-            for cfg_dev in (old_cfg_dev, orig_cfg_dev):
-                predictor = PytorchPredictionPipeline(config=cfg_dev, weights=None, device=device)
-                model_device = list(predictor.model.parameters())[0].device
-                assert model_device == torch.device(device)
-
-        # Instantiate predictor
-        vortex_predictor = PytorchPredictionPipeline(config = config,
-                                        weights = None,
-                                        device = 'cpu')
+        pred_cfg = deepcopy(config)
+        vortex_predictor = PytorchPredictionPipeline(config=pred_cfg, weights=None, device='cpu')
 
         def _test(predictor):
             kwargs = {}
@@ -438,7 +468,10 @@ class TestPredictionPipeline():
         vortex_predictor.model.class_names = None
         _test(vortex_predictor)
 
-    @pytest.mark.parametrize("visualize", [False, True])
+    @pytest.mark.parametrize("visualize", [
+        pytest.param(False, id="no visualize"), 
+        pytest.param(True, id="visualize")
+    ])
     def test_input_from_numpy(self, visualize):
         # Instantiate predictor
         kwargs = {}
@@ -466,7 +499,13 @@ class TestPredictionPipeline():
         self._check_result(results, visualize=False)
         self._check_pipeline(vortex_predictor)
 
-@pytest.mark.parametrize("weight", [None, pth_model_path])
+
+@pytest.mark.parametrize(
+    "weight", [
+        pytest.param(None, id="default weight"),
+        pytest.param(pth_model_path, id="custom weight path")
+    ]
+)
 def test_export_pipeline(weight):
     exported_paths = [
         Path(config.output_directory).joinpath(config.experiment_name, "{}.onnx".format(config.experiment_name)),
@@ -496,18 +535,21 @@ def test_export_pipeline(weight):
     state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
     assert state_dict_is_equal(state_dict, graph_exporter.predictor.model.state_dict())
 
+
 class TestIRValidationPipeline():
 
-    def test_onnx_validation_single_batch(self):
-        # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.onnx')
+    @pytest.mark.parametrize("batch_size", [
+        pytest.param(1, id="single batch"),
+        pytest.param(8, id="multi batch")
+    ])
+    def test_onnx_validation(self, batch_size):
+        suffix = "{}.onnx".format('_bs8' if batch_size == 8 else '')
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name + suffix)
 
-        validation_executor = IRValidationPipeline(config=config,
-                                                model = model_path,
-                                                backends = 'cpu',
-                                                generate_report = True)
+        validation_executor = IRValidationPipeline(config=config, model=model_path,
+            backends = 'cpu', generate_report = True)
 
-        eval_results = validation_executor.run(batch_size=1)
+        eval_results = validation_executor.run(batch_size=batch_size)
 
         # Check return value
         assert isinstance(eval_results,EasyDict)
@@ -516,61 +558,23 @@ class TestIRValidationPipeline():
         report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
         generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
         assert generated_report.exists()
-    
-    def test_onnx_validation_multi_batch(self):
-        # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs8.onnx')
+
+    @pytest.mark.parametrize("batch_size", [
+        pytest.param(1, id="single batch"),
+        pytest.param(8, id="multi batch")
+    ])
+    def test_torchscript_validation(self, batch_size):
+        suffix = "{}.pt".format('_bs8' if batch_size == 8 else '')
+        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name + suffix)
 
         validation_executor = IRValidationPipeline(config=config,
                                                 model = model_path,
                                                 backends = 'cpu',
                                                 generate_report = True)
 
-        eval_results = validation_executor.run(batch_size=8)
-        assert isinstance(eval_results, EasyDict)
-
-        ## batch size None
-        eval_results = validation_executor.run(batch_size=None)
-        assert isinstance(eval_results, EasyDict)
-
-        # Check generated reports
-        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-        generated_report = Path(report_dir) / '{}_onnx_IR_validation_cpu.md'.format(config.experiment_name)
-        assert generated_report.exists()
-
-    def test_torchscript_validation_single_batch(self):
-        # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'.pt')
-
-        validation_executor = IRValidationPipeline(config=config,
-                                                model = model_path,
-                                                backends = 'cpu',
-                                                generate_report = True)
-
-        eval_results = validation_executor.run(batch_size=1)
+        eval_results = validation_executor.run(batch_size=batch_size)
 
         # Check return value
-        assert isinstance(eval_results,EasyDict)
-
-        # Check generated reports
-        report_dir = Path(config.output_directory) / config.experiment_name / 'reports'
-        generated_report = Path(report_dir) / '{}_torchscript_IR_validation_cpu.md'.format(config.experiment_name)
-        assert generated_report.exists()
-    
-    def test_torchscript_validation_multi_batch(self):
-        # Instantiate Validation
-        model_path = Path(config.output_directory) / config.experiment_name / (config.experiment_name +'_bs8.pt')
-
-        validation_executor = IRValidationPipeline(config=config,
-                                                model = model_path,
-                                                backends = 'cpu',
-                                                generate_report = True)
-
-        eval_results = validation_executor.run(batch_size=8)
-        assert isinstance(eval_results,EasyDict)
-
-        ## not specified batch size
-        eval_results = validation_executor.run(batch_size=None)
         assert isinstance(eval_results,EasyDict)
 
         # Check generated reports
@@ -580,28 +584,37 @@ class TestIRValidationPipeline():
 
 class TestIRPredictionPipeline(): 
 
-    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-    def test_model_api(self,model_input):
-        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-                                                runtime = 'cpu')
+    @pytest.mark.parametrize(
+        "model_input", [
+            pytest.param(onnx_model_path, id="onnx"),
+            pytest.param(pt_model_path, id="torchscript")
+        ]
+    )
+    def test_model_api(self, model_input):
+        vortex_ir_predictor = IRPredictionPipeline(model=model_input, runtime='cpu')
         
         assert isinstance(vortex_ir_predictor.model.input_specs,OrderedDict)
         assert isinstance(vortex_ir_predictor.model.class_names,list)
 
-    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-    def test_input_from_image_path(self,model_input):
+    @pytest.mark.parametrize(
+        "model_input", [
+            pytest.param(onnx_model_path, id="onnx"),
+            pytest.param(pt_model_path, id="torchscript")
+        ]
+    )
+    def test_input_from_image_path(self, model_input):
         # Instantiate predictor
         kwargs = {}
-        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-                                                runtime = 'cpu')
+        vortex_ir_predictor = IRPredictionPipeline(model=model_input, runtime='cpu')
 
-        results = vortex_ir_predictor.run(images = ['tests/test_dataset/classification/val/cat/1.jpeg'],
-                                      visualize = True,
-                                      dump_visual = True,
-                                      output_dir = 'tests/output_predict_test',
-                                      show_result = False,
-                                      **kwargs)
-        
+        results = vortex_ir_predictor.run(
+            images = ['tests/test_dataset/classification/val/cat/1.jpeg'],
+            visualize = True, dump_visual = True,
+            output_dir = 'tests/output_predict_test',
+            show_result = False,
+            **kwargs
+        )
+
         # Prediction pipeline output must be EasyDict
         assert isinstance(results,EasyDict)
         assert 'prediction' in results.keys()
@@ -623,8 +636,13 @@ class TestIRPredictionPipeline():
             vis_dump_path = Path('tests/output_predict_test') / 'torchscript_ir_prediction_1.jpeg'
         assert vis_dump_path is not None and vis_dump_path.exists()
 
-    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
-    def test_input_from_numpy_with_vis(self,model_input):
+    @pytest.mark.parametrize(
+        "model_input", [
+            pytest.param(onnx_model_path, id="onnx"),
+            pytest.param(pt_model_path, id="torchscript")
+        ]
+    )
+    def test_input_from_numpy_with_vis(self, model_input):
         # Instantiate predictor
         kwargs = {}
         vortex_ir_predictor = IRPredictionPipeline(model = model_input,
@@ -651,20 +669,24 @@ class TestIRPredictionPipeline():
         assert isinstance(results.prediction[0],EasyDict)
         assert isinstance(results.visualization[0],np.ndarray)
 
-    @pytest.mark.parametrize("model_input", [onnx_model_path,pt_model_path])
+    @pytest.mark.parametrize(
+        "model_input", [
+            pytest.param(onnx_model_path, id="onnx"),
+            pytest.param(pt_model_path, id="torchscript")
+        ]
+    )
     def test_input_from_numpy_wo_vis(self,model_input):
         # Instantiate predictor
         kwargs = {}
-        vortex_ir_predictor = IRPredictionPipeline(model = model_input,
-                                                runtime = 'cpu')
+        vortex_ir_predictor = IRPredictionPipeline(model=model_input, runtime='cpu')
 
         # Read image
         image_data = cv2.imread('tests/test_dataset/classification/val/cat/1.jpeg')
 
-        results = vortex_ir_predictor.run(images = [image_data],
-                                      visualize = False,
-                                      show_result = False,
-                                      **kwargs)
+        results = vortex_ir_predictor.run(
+            images = [image_data], visualize = False,
+            show_result = False, **kwargs
+        )
         
         # Prediction pipeline output must be EasyDict
         assert isinstance(results,EasyDict)
@@ -677,6 +699,7 @@ class TestIRPredictionPipeline():
 
         # Check list member type
         assert isinstance(results.prediction[0],EasyDict)
+
 
 class TestHypOptPipeline:
 
@@ -691,8 +714,8 @@ class TestHypOptPipeline:
         assert 'best_trial' in trial_result.keys()
         assert dump_report_path.exists()
 
-    def test_gpu_train_obj(self):
-
+    @pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+    def test_train_obj_gpu(self):
         config.trainer.device = 'cuda'
         hypopt = HypOptPipeline(config=config,optconfig=hypopt_train_obj_config)
         trial_result = hypopt.run()
@@ -703,4 +726,12 @@ class TestHypOptPipeline:
         assert 'best_trial' in trial_result.keys()
         assert dump_report_path.exists()
 
-    # TODO add test_validation_obj
+    # TODO add validation objective test
+    def test_val_obj(self):
+        pass
+
+    def test_remove_output(self):
+        ## remove test output
+        ## TODO: have a better implementation with fixtures
+        shutil.rmtree("tests/output_test/test_classification_pipelines")
+        shutil.rmtree("tests/output_predict_test")
