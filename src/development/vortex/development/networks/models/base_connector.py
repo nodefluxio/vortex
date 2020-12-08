@@ -1,9 +1,7 @@
-import torch
 import torch.nn as nn
-from vortex.development.networks.modules.backbones import get_backbone
 
-from typing import Union, Type
-from ..modules.backbones.base_backbone import supported_feature_type
+from vortex.development.networks.modules.backbones import get_backbone
+from vortex.development.networks.modules.backbones.base_backbone import supported_feature_type
 
 class BackbonePoolConnector(nn.Module):
     def __init__(self, backbone: str, feature_type='tri_stage_fpn',

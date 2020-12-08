@@ -2,7 +2,7 @@ import numpy as np
 
 from vortex.runtime.basic_runtime import BaseRuntime
 from pathlib import Path
-from typing import Union, List
+from typing import Union
 from collections import OrderedDict
 
 # __all__ = [
@@ -24,7 +24,7 @@ class TorchScriptRuntime(BaseRuntime):
             raise RuntimeError("Unknown model type of {}, TorchScriptRuntime only "\
                 "accept model of type 'torch.jit.ScriptModule'".format(type(model)))
         if isinstance(device, str):
-            if device is "gpu":
+            if device == "gpu":
                 device = "cuda"
             device = torch.device(device)
         self.device = device

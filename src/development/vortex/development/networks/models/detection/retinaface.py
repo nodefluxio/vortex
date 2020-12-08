@@ -10,7 +10,7 @@ import warnings
 
 from math import sqrt
 from itertools import product
-from typing import List, Tuple, Union, Sequence
+from typing import List, Union, Sequence
 
 
 """

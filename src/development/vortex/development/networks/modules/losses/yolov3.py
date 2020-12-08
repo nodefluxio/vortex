@@ -56,8 +56,8 @@ class YoloV3Loss(_DetectorWeightedLoss):
             if self.check:
                 x_min, x_max = x[x < 0.], x[x > 1.]
                 y_min, y_max = y[y < 0.], y[y > 1.]
-                raise RuntimeError("YOLO Loss assume xy center is [0.,1.], got %s" % (
-                    [x_min, x_max, y_min, y_max]))
+                raise RuntimeError("YOLO Loss assume xy center is [0.,1.], got {}"
+                    .format([x_min, x_max, y_min, y_max]))
             else:
                 warnings.warn("YOLO Loss assume xy center is [0.,1.]")
         targets = build_targets(

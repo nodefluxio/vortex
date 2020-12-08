@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from torch import Tensor
-from typing import Tuple, Union, List
+from typing import Tuple, List
 from torch.autograd import Variable
 
 from .utils.ssd import match, match_landm, log_sum_exp

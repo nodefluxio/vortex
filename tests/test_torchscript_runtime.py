@@ -1,20 +1,18 @@
-import sys
-sys.path.insert(0,'src/development')
-sys.path.insert(0,'src/runtime')
-
 import os
 import cv2
 import torch
 import pytest
+
 from pathlib import Path
 from easydict import EasyDict
+from collections import OrderedDict
 
 from vortex.development.exporter.torchscript import TorchScriptExporter
 from vortex.development.networks.models import create_model_components
 from vortex.development.predictor import create_predictor
 from vortex.runtime.torchscript import TorchScriptRuntime
 from vortex.runtime.torchscript import TorchScriptRuntimeCpu, TorchScriptRuntimeCuda
-from collections import OrderedDict
+
 
 project_dir = Path(__file__).parents[1]
 output_dir = os.path.join(project_dir, "tmp", "torchscript")
@@ -103,7 +101,15 @@ def export_model(model_name):
 
 @pytest.mark.parametrize(
     "model_name, device",
-    [(name, device) for name in model_argmap for device in ("cpu", "cuda")]
+    [
+        (name, device) if device == "cpu" else
+        pytest.param(
+            name, device, 
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+        )
+        for name in model_argmap
+        for device in ("cpu", "cuda")
+    ]
 )
 def test_torchscript(model_name, device):
     assert TorchScriptRuntime.is_available(device), "Runtime for device '{}' is "\
@@ -112,7 +118,7 @@ def test_torchscript(model_name, device):
 
     runtime = TorchScriptRuntime(output_path, device=device)
     n, h, w, c = runtime.input_specs["input"]["shape"]
-    img = cv2.imread(os.path.join(project_dir, "tests", "images", "cat.jpg"))
+    img = cv2.imread(os.path.join(project_dir, "tests", "test_dataset", "classification", "val", "cat", "1.jpeg"))
     img = cv2.resize(img, (h, w))[None, :]
 
     kwargs = {"score_threshold": 0.05, "iou_threshold": 0.02}
@@ -124,6 +130,7 @@ def test_torchscript(model_name, device):
 
     os.remove(output_path)
 
+
 def test_torchscript_failed_file():
     ## runtime should not accept model with extension other
     ## than '.pt' or '.pth'
@@ -134,6 +141,7 @@ def test_torchscript_failed_file():
         filepath = "experiments/configs/shufflenetv2x100_classification_cifar10.yml"
         runtime = TorchScriptRuntime(project_dir.joinpath(filepath), "cpu")
 
+
 def test_torchscript_failed_module():
     ## runtime should not accept model of type `nn.Module`
     ## only accept `torch.jit.ScriptModule`
@@ -143,19 +151,31 @@ def test_torchscript_failed_module():
     with pytest.raises(RuntimeError):
         runtime = TorchScriptRuntime(model, device="cuda")
 
+
 def test_torchscript_cpu():
     assert TorchScriptRuntimeCpu.is_available(), "Torchscript CPU runtime is not available"
     output_path = export_model("softmax")
     runtime = TorchScriptRuntimeCpu(output_path)
     os.remove(output_path)
 
+
+@pytest.mark.xfail(
+    not torch.cuda.is_available(), 
+    reason="Runtime GPU not available when cuda not available",
+    raises=AssertionError
+)
 def test_torchscript_cuda():
     assert TorchScriptRuntimeCuda.is_available(), "Torchscript CUDA runtime is not available"
     output_path = export_model("softmax")
     runtime = TorchScriptRuntimeCuda(output_path)
     os.remove(output_path)
 
-def test_torchscript_cuda_invalid():
+
+@pytest.mark.xfail(
+    not torch.cuda.is_available(), 
+    reason="Runtime GPU not available when cuda not available"
+)
+def test_torchscript_cuda_invalid_device():
     device = torch.cuda.device_count()
     assert not TorchScriptRuntimeCuda.is_available(device)
     with pytest.raises(RuntimeError):

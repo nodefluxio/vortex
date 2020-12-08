@@ -7,7 +7,6 @@
 import argparse
 import numpy as np
 import onnx
-import sys
 from onnx import helper, numpy_helper, shape_inference
 import sympy
 

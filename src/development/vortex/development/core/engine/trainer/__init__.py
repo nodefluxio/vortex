@@ -1,4 +1,4 @@
-from typing import Type, Union
+from typing import Union
 from copy import deepcopy
 from easydict import EasyDict
 

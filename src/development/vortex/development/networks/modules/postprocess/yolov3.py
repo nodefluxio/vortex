@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
-from typing import Union, Tuple, List
+
+from typing import Tuple
 
 from .base_postprocess import BatchedNMSPostProcess
 

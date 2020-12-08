@@ -3,12 +3,10 @@ https://github.com/pytorch/vision/blob/0156d58ec867590b1c78fe1bc834c7da9afdf46a/
 """
 
 import torch
-import enforce
 import torch.nn as nn
 import torch.nn.functional as F
 
-from collections import namedtuple
-from typing import Tuple, List, Union, Type
+from typing import List, Union
 
 def basic_lateral_block(in_channel : int, out_channel : int, bias : bool=True) :
     return nn.Sequential(
@@ -80,16 +78,16 @@ class FPNProto(nn.Module) :
             assert hasattr(extra_block_factory.__init__, '__annotations__')
             annotations = extra_block_factory.__init__.__annotations__
             assert all([arg in ['input_channels', 'output_channels'] for arg in annotations.keys()])
-            if n_outputs == n_inputs :
+            if n_outputs == n_inputs:
                 output_channels = output_channels[-1]
-            else :
-                output_channels = out_channels[n_inputs:]
+            else:
+                output_channels = output_channels[n_inputs:]
             ## TODO : check (or enforce) `output_channels` to accept Union[int,list]
             self.extra_conv = extra_block_factory(input_channels=last_in_channels,output_channels=output_channels)
         elif n_outputs > n_inputs :
             import warnings
             warnings.warn("ignoring output_channles[{}:]".format(n_inputs))
-    
+
     def forward(self, c3 : torch.Tensor, c4 : torch.Tensor, c5 : torch.Tensor) :
         """
         extra_conv  ->          -> out3

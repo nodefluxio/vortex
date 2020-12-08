@@ -1,13 +1,8 @@
-import os
-import os.path
-import sys
-
 import cv2
-import random
 import logging
 import numpy as np
 from pathlib import Path
-from typing import List, Union, Tuple, Callable
+from typing import Union
 
 from .dvc import dvc_pull
 

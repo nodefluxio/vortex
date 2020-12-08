@@ -266,14 +266,15 @@ def create_model_components(
             network_args.get('num_encoder_layers',6)==6 and \
             network_args.get('num_decoder_layers',6)==6,    \
             "pretrained not available"
-        
+
         # start from pretrained
         model = coco_detr()
 
         # looking at the implementation, we restore number of class if necessary
         if num_classes != 91:
+            hidden_dim = network_args.get('hidden_dim', 256)
             model.linear_class = nn.Linear(hidden_dim, num_classes + 1)
-        
+
         # override preprocess to match with pretrained preprocess
         preprocess_args = {
                 'input_size': 800,

@@ -45,8 +45,8 @@ def register_module_(supported_preprocess: Union[list,str], module) :
     return module
 
 def get_preprocess(preprocess : str, *args, **kwargs) :
-    if not preprocess in preproc_registry.keys():
-        raise ValueError("%s preprocess not supported, available : %s" %(preprocess, supported_preprocess.keys()))
+    if not preprocess in preproc_registry:
+        raise ValueError("%s preprocess not supported, available : %s" %(preprocess, list(preproc_registry.keys())))
     return preproc_registry[preprocess].get_preprocess(preprocess, *args, **kwargs)
 
 ## for maintainer, register your module here :

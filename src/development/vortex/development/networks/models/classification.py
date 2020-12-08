@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 
 from .base_connector import BackbonePoolConnector
 # from ..modules.heads.classification import get_head, all_models, supported_models

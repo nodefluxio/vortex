@@ -2,7 +2,6 @@ import warnings
 import torchvision.datasets
 import inspect
 import numpy as np
-import pathlib
 
 CLASSIFICATION_DATASET = [
     'MNIST',

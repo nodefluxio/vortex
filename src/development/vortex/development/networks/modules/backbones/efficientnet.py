@@ -9,9 +9,7 @@ Hacked together by Vortex Team
 
 import re
 import math
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 
 from torch.hub import load_state_dict_from_url

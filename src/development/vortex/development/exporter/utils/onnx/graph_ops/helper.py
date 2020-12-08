@@ -1,6 +1,6 @@
 import onnx
 import numpy as np
-from typing import Union, List
+
 from onnx import helper
 from copy import copy, deepcopy
 

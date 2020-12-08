@@ -5,7 +5,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import multipledispatch
 import warnings
 import enforce

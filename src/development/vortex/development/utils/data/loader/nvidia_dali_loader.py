@@ -1,19 +1,20 @@
 from easydict import EasyDict
-from typing import Type, Union, List, Callable
-from pathlib import Path
-import random
-import numpy as np
+from typing import Type, Callable
+from PIL import Image
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
+
+import numpy as np
 import copy
 import torch
-from ..dataset.wrapper.default_wrapper import check_and_fix_coordinates
-from ....networks.modules.preprocess.normalizer import to_tensor,normalize
 import cv2
-from PIL import Image
 import ray
-from .modules.nvidia_dali import DALIIteratorWrapper,DALIExternalSourcePipeline
-from ..augment import create_transform
+
 from ..dataset.wrapper import BasicDatasetWrapper
+from ..dataset.wrapper.default_wrapper import check_and_fix_coordinates
+from ....networks.modules.preprocess.normalizer import to_tensor, normalize
+from .modules.nvidia_dali import DALIIteratorWrapper, DALIExternalSourcePipeline
+from ..augment import create_transform
+
 
 class DALIDataloader():
     """DataLoader for Nvidia DALI augmentation pipeline,

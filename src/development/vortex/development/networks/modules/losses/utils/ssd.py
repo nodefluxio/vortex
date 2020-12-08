@@ -7,8 +7,8 @@ import torch
 import numpy as np
 
 from numpy import ndarray
-from torch import Tensor, tensor
-from typing import Tuple, List, Union
+from torch import Tensor
+
 
 def point_form(boxes : Tensor) -> Tensor:
     """ Convert prior_boxes to (xmin, ymin, xmax, ymax)

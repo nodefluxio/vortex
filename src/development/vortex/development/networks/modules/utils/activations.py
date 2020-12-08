@@ -11,8 +11,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .config import is_exportable, is_scriptable, is_no_jit
-
 
 ## ======= SWISH ======= ## 
 

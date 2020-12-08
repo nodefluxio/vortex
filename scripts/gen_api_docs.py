@@ -5,7 +5,7 @@ Reference : https://pdoc3.github.io/pdoc/doc/pdoc/#gsc.tab=0
 
 import inspect
 from docstring_parser import parse
-import docstring_parser
+
 
 PUBLIC_API_PACKAGE_LIST = [
     'vortex.development.core.pipelines',

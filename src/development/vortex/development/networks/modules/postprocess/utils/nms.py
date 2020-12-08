@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.ops as ops
-from typing import List, Tuple
+
+from typing import Tuple
 
 
 class NoNMS:

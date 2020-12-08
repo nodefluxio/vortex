@@ -1,4 +1,3 @@
-from pathlib import Path
 from easydict import EasyDict
 from typing import Dict, List, Union, Callable, Tuple
 
@@ -6,11 +5,8 @@ import cv2
 import torch
 import numpy as np
 # import torchvision.transforms.functional as tf
-from .....networks.modules.preprocess.normalizer import to_tensor,normalize
-import albumentations.core.composition as albumentations_compose
-import albumentations.augmentations.transforms as albumentations_tf
+from .....networks.modules.preprocess.normalizer import to_tensor, normalize
 from PIL import Image
-import warnings
 
 from ...augment import create_transform
 from .basic_wrapper import BasicDatasetWrapper
