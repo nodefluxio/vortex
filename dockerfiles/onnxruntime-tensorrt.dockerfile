@@ -48,7 +48,7 @@ RUN git clone --single-branch --branch ${ONNXRUNTIME_BRANCH} --recursive ${ONNXR
     rm -rf onnxruntime cmake-3.14.3-Linux-x86_64
 
 # opencv deps
-RUN apt update && apt install -y libsm6 libxext6 libxrender-dev ffmpeg x264 libx264-dev libsm6
+RUN apt update && apt install -y libsm6 libxext6 libxrender-dev ffmpeg x264 libx264-dev libsm6 pciutils
 
 WORKDIR /app/
 
@@ -59,8 +59,14 @@ COPY examples examples
 # need to manually install onnx instead of using extras
 RUN cd src/runtime && pip install -U setuptools onnx==1.6.0 && pip install -e .
 
+# TODO: use CMD instead of RUN for proper testing
+RUN python -c "import vortex.runtime as vrt; assert(vrt.model_runtime_map['onnx']['tensorrt'].is_available())"
+
 FROM runtime AS development
 # install vortex-development
 COPY src/development src/development
 RUN pip install --upgrade pip
 RUN cd src/development && pip install --ignore-installed --timeout=10000 -e .
+
+# TODO: use CMD instead of RUN for proper testing
+RUN python -c "import vortex.development"
