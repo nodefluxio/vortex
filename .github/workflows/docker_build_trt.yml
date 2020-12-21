@@ -37,7 +37,7 @@ jobs:
           target: runtime
           dockerfile: dockerfiles/onnxruntime-tensorrt.dockerfile
           push: ${{ github.event_name == 'release' }}
-        timeout-minutes: 120
+        timeout-minutes: 180
   
   build-development:
     runs-on: ubuntu-20.04
@@ -62,4 +62,4 @@ jobs:
           target: development
           dockerfile: dockerfiles/onnxruntime-tensorrt.dockerfile
           push: ${{ github.event_name == 'release' }}
-        timeout-minutes: 120
+        timeout-minutes: 180
