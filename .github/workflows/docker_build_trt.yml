@@ -58,7 +58,7 @@ jobs:
           repository: nodefluxio/vortex
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          tags: "${{ env.RELEASE_VERSION }},trt-latest"
+          tags: "${{ env.RELEASE_VERSION }}-tensorrt"
           target: development
           dockerfile: dockerfiles/onnxruntime-tensorrt.dockerfile
           push: ${{ github.event_name == 'release' }}
