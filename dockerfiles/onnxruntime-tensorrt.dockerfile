@@ -11,21 +11,21 @@ FROM nvcr.io/nvidia/tensorrt:20.07.1-py3 AS runtime
 
 ARG ONNXRUNTIME_REPO=https://github.com/Microsoft/onnxruntime
 ARG ONNXRUNTIME_BRANCH=v1.5.3
+ARG DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /code
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:/code/cmake-3.14.3-Linux-x86_64/bin:/opt/miniconda/bin:${PATH}
 ENV LD_LIBRARY_PATH /opt/miniconda/lib:$LD_LIBRARY_PATH
 
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get update && apt-get install -y --no-install-recommends \
-            wget \
-            zip \
-            ca-certificates \
-            build-essential \
-            curl \
-            libcurl4-openssl-dev \
-            libssl-dev \
-            python3-dev
+RUN apt update && apt install -y --no-install-recommends \
+        wget \
+        zip \
+        ca-certificates \
+        build-essential \
+        curl \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        python3-dev
 
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh -O ~/miniconda.sh --no-check-certificate && /bin/bash ~/miniconda.sh -b -p /opt/miniconda && \
     rm ~/miniconda.sh && \
