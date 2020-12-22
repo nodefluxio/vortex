@@ -12,7 +12,7 @@ FROM nvcr.io/nvidia/tensorrt:20.07.1-py3 AS runtime
 ARG ONNXRUNTIME_REPO=https://github.com/Microsoft/onnxruntime
 ARG ONNXRUNTIME_BRANCH=v1.5.3
 ARG DEBIAN_FRONTEND=noninteractive
-ARG PYTHON_VERSION=3,6
+ARG PYTHON_VERSION=3.6
 
 WORKDIR /code
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:/code/cmake-3.14.3-Linux-x86_64/bin:/opt/miniconda/bin:${PATH}
