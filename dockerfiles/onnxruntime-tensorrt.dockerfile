@@ -12,6 +12,7 @@ FROM nvcr.io/nvidia/tensorrt:20.07.1-py3 AS runtime
 ARG ONNXRUNTIME_REPO=https://github.com/Microsoft/onnxruntime
 ARG ONNXRUNTIME_BRANCH=v1.5.3
 ARG DEBIAN_FRONTEND=noninteractive
+ARG PYTHON_VERSION=3,6
 
 WORKDIR /code
 ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:/code/cmake-3.14.3-Linux-x86_64/bin:/opt/miniconda/bin:${PATH}
@@ -27,12 +28,16 @@ RUN apt update && apt install -y --no-install-recommends \
         libssl-dev \
         python3-dev
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh -O ~/miniconda.sh --no-check-certificate && /bin/bash ~/miniconda.sh -b -p /opt/miniconda && \
+RUN curl -fsSL -v -o ~/miniconda.sh -O  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
-    /opt/miniconda/bin/conda clean -ya && \
-    pip install numpy && \
-    rm -rf /opt/miniconda/pkgs && \
-    wget --quiet https://github.com/Kitware/CMake/releases/download/v3.14.3/cmake-3.14.3-Linux-x86_64.tar.gz && \
+    /opt/conda/bin/conda install -y python=${PYTHON_VERSION} && \
+    /opt/conda/bin/conda install -c pytorch -y cudatoolkit=10.2 && \
+    /opt/conda/bin/conda clean -ya
+RUN python -c "import sys; assert sys.version[:3] == '$PYTHON_VERSION', sys.version"
+RUN pip install numpy
+RUN wget --quiet https://github.com/Kitware/CMake/releases/download/v3.14.3/cmake-3.14.3-Linux-x86_64.tar.gz && \
     tar zxf cmake-3.14.3-Linux-x86_64.tar.gz && \
     rm -rf cmake-3.14.3-Linux-x86_64.tar.gz
 
