@@ -15,8 +15,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG PYTHON_VERSION=3.6
 
 WORKDIR /code
-ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:/code/cmake-3.14.3-Linux-x86_64/bin:/opt/miniconda/bin:${PATH}
-ENV LD_LIBRARY_PATH /opt/miniconda/lib:$LD_LIBRARY_PATH
+ENV PATH /usr/local/nvidia/bin:/usr/local/cuda/bin:/code/cmake-3.14.3-Linux-x86_64/bin:/opt/conda/bin:${PATH}
+ENV LD_LIBRARY_PATH /opt/conda/lib:$LD_LIBRARY_PATH
 
 RUN apt update && apt install -y --no-install-recommends \
         wget \
