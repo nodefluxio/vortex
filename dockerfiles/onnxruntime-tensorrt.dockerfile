@@ -71,7 +71,7 @@ FROM runtime AS development
 # install vortex-development
 COPY src/development src/development
 RUN pip install --upgrade pip
-RUN cd src/development && pip install --ignore-installed --timeout=10000 -e .
+RUN pip install --ignore-installed --timeout=10000 ./src/development[optuna_vis]
 
 # TODO: use CMD instead of RUN for proper testing
 RUN python -c "import vortex.development"
