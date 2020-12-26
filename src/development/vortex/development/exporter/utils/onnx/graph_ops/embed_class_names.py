@@ -24,3 +24,12 @@ def embed_class_names(model : onnx.ModelProto, class_names : Dict[str,int]) -> o
 
 def get_ops(*args, **kwargs) :
     return embed_class_names
+
+from .base_ops import GraphOpsBase
+
+class EmbedClassNames(GraphOpsBase):
+    def __init__(self, class_names: Dict[str,int]):
+        self.class_names = class_names
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        return embed_class_names(model, **vars(self))

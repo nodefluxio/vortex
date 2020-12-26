@@ -24,3 +24,12 @@ def embed_output_format(model : onnx.ModelProto, output_format : Dict[str,Union[
 
 def get_ops(*args, **kwargs) :
     return embed_output_format
+
+from .base_ops import GraphOpsBase
+
+class EmbedOutputFormat(GraphOpsBase):
+    def __init__(self, output_format: Dict[str,Union[List[int],int]]):
+        self.output_format = output_format
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        return embed_output_format(model, **vars(self))

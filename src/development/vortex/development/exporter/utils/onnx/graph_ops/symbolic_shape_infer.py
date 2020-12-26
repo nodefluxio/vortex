@@ -1301,6 +1301,18 @@ class SymbolicShapeInference:
             raise Exception("Incomplete symbolic shape inference")
         return symbolic_shape_inference.out_mp_
 
+from .base_ops import GraphOpsBase
+
+class SymbolicShapeInfer(GraphOpsBase):
+    def __init__(self, int_max=2**31 - 1, auto_merge=False, guess_output_rank=False, verbose=0):
+        self.int_max    = int_max
+        self.verbose    = verbose
+        self.auto_merge = auto_merge
+        self.guess_output_rank = guess_output_rank
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        return SymbolicShapeInference.infer_shapes(model, **vars(self))
+
 def parse_arguments():
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', required=True, help='The input model file')

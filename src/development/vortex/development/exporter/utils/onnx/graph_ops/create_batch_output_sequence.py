@@ -45,3 +45,13 @@ def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='out
     model.graph.node.append(sequence_construct_node)
     model.graph.output.append(sequence_value_info)
     return model
+
+from .base_ops import GraphOpsBase
+
+class CreateBatchOutputSequence(GraphOpsBase):
+    def __init__(self, output_name: str='output', output_prefix: str='output_'):
+        self.output_name = output_name
+        self.output_prefix = output_prefix
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        return create_batch_output_sequence(model, **vars(self))

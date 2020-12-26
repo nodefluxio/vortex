@@ -57,3 +57,13 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
     logger.info(f'updated {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     return model
+
+from .base_ops import GraphOpsBase
+
+class IOUThresholdAsInput(GraphOpsBase):
+    def __init__(self, input_name: str='iou_threshold', force_rewire=False):
+        self.input_name   = input_name
+        self.force_rewire = force_rewire
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        return nms_iou_threshold_as_input(model, **vars(self))
