@@ -1,24 +1,33 @@
-suported_ops = {}
+from .base_ops import GraphOpsBase
+from .create_batch_output_sequence import CreateBatchOutputSequence
+from .embed_class_names import EmbedClassNames
+from .embed_output_format import EmbedOutputFormat
+from .nms_iou_threshold_as_input import IOUThresholdAsInput
+from .symbolic_shape_infer import SymbolicShapeInfer
 
-_REQUIRED_ATTRIBUTES = [
-    'get_ops',
-    'supported_ops'
-]
+class OpsRegistry:
+    def __init__(self, base_class=None):
+        self.base_class = base_class
+        self.ops = {}
+    
+    def add(self, op: type):
+        assert isinstance(op,type), "expect a type"
+        if self.base_class is not None:
+            assert issubclass(op,self.base_class), f"expect {op} to be derived from {self.base_class}"
+        self.ops[op.__name__] = op
+    
+    def get(self, op: str, *args, **kwargs):
+        assert op in self.ops, f"op {op} not registered"
+        op_type = self.ops[op]
+        return op_type(*args, **kwargs)
 
-def register_module(module : str) :
-    global suported_ops
-    exec('from . import %s' %module)
-    module_attributes = eval('%s' %module).__dict__.keys()
-    for attribute in _REQUIRED_ATTRIBUTES :
-        if not attribute in module_attributes :
-            raise RuntimeError("dear maintainer, your module(s) is supposed to have the following attribute(s) : %s; got %s, please check!" %(_REQUIRED_ATTRIBUTES, module_attributes))
-    suported_ops[module] = eval('%s' %module)
+supported_ops = OpsRegistry(base_class=GraphOpsBase)
 
-def get_ops(ops : str, *args, **kwargs) :
-    if not ops in suported_ops.keys() :
-        raise ValueError("%s ops not supported, avaliable : %s" %(ops, suported_ops.keys()))
-    return suported_ops[ops].get_ops(*args, **kwargs)
+def get_op(op: str, *args, **kwargs):
+    return supported_ops.get(op, *args, **kwargs)
 
-## for maintainer, register your module here :
-register_module('nms')
-register_module('multiclass_nms')
+supported_ops.add(CreateBatchOutputSequence)
+supported_ops.add(EmbedClassNames)
+supported_ops.add(EmbedOutputFormat)
+supported_ops.add(IOUThresholdAsInput)
+supported_ops.add(SymbolicShapeInfer)
