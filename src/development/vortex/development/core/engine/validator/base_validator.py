@@ -308,7 +308,7 @@ class BaseValidator:
             if isinstance(kwargs[i], np.ndarray) :
                 kwargs[i] = torch.from_numpy(kwargs[i])
             kwargs[i] = kwargs[i].to(device)
-        return predictor(image, *args, **kwargs)
+        return predictor(image, *args, **kwargs).cpu().numpy()
 
     @staticmethod
     def runtime_predict(predictor: BaseRuntime, image : Union[List[np.ndarray],np.ndarray], batch_size=None, *args, **kwargs) :
