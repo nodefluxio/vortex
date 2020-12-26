@@ -4,11 +4,7 @@ import enforce
 import sys
 
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
-from .utils.onnx.graph_ops.embed_output_format import embed_output_format
-from .utils.onnx.graph_ops.embed_class_names import embed_class_names
-from .utils.onnx.graph_ops.nms_iou_threshold_as_input import nms_iou_threshold_as_input
-from .utils.onnx.graph_ops.create_batch_output_sequence import create_batch_output_sequence
-from .utils.onnx.graph_ops.symbolic_shape_infer import SymbolicShapeInference
+from .utils.onnx.graph_ops import get_op
 from .utils.onnx.graph_ops.helper import get_Ops
 
 from typing import Union, List, Tuple, Any
@@ -125,21 +121,22 @@ class OnnxExporter(BaseExporter):
         )
         model = onnx.load(filename)
         g_ops = [
-            (embed_output_format, dict(output_format=output_format)),
-            (embed_class_names, dict(class_names=class_names)),
+            get_op('EmbedOutputFormat', output_format=output_format),
+            get_op('EmbedClassNames', class_names=class_names)
         ]
         if isinstance(postprocess, (BatchedNMSPostProcess, BasicNMSPostProcess)) :
-            g_ops.append((nms_iou_threshold_as_input, {}))
+            g_ops.append(get_op('IOUThresholdAsInput'))
         if n_batch > 1 and isinstance(postprocess, BatchedNMSPostProcess) :
-            g_ops.append((create_batch_output_sequence, {}))
-
+            g_ops.append(get_op('CreateBatchOutputSequence'))
+        
         has_nms = len(get_Ops(model, 'NonMaxSuppression')[0]) > 0
         append_list = has_nms and n_batch > 1
         # doesnt support list for now
         if self.shape_inference and not append_list:
-            g_ops.append((SymbolicShapeInference.infer_shapes, {}))
+            g_ops.append(get_op('SymbolicShapeInfer'))
 
-        for op, arg in g_ops :
-            model = op(model, **arg)
+        for op in g_ops :
+            model = op(model)
+
         onnx.save(model, filename)
         return ok
