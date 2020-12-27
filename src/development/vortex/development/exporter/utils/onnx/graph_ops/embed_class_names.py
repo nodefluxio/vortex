@@ -2,14 +2,10 @@ import logging
 import onnx
 
 from .helper import make_class_names
-
+from .base_ops import GraphOpsBase
 from typing import Dict
 
 logger = logging.getLogger(__name__)
-
-supported_ops = [
-    'embed_class_names'
-]
 
 def embed_class_names(model : onnx.ModelProto, class_names : Dict[str,int]) -> onnx.ModelProto:
     """
@@ -21,11 +17,6 @@ def embed_class_names(model : onnx.ModelProto, class_names : Dict[str,int]) -> o
         model.graph.node.append(class_names_constant)
         model.graph.output.append(value_info)
     return model
-
-def get_ops(*args, **kwargs) :
-    return embed_class_names
-
-from .base_ops import GraphOpsBase
 
 class EmbedClassNames(GraphOpsBase):
     def __init__(self, class_names: Dict[str,int]):

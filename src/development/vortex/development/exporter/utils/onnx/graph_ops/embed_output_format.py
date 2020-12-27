@@ -7,10 +7,6 @@ from typing import Union, Dict, List
 
 logger = logging.getLogger(__name__)
 
-supported_ops = [
-    'embed_output_format'
-]
-
 def embed_output_format(model : onnx.ModelProto, output_format : Dict[str,Union[List[int],int]]) -> onnx.ModelProto:
     """
     embed output_format to model as `Constants`

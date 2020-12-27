@@ -2,17 +2,12 @@ import logging
 import onnx
 
 from onnx import helper
-
+from .base_ops import GraphOpsBase
 from .helper import (
     get_Ops, get_inputs, get_outputs, replace_node
 )
 
-
-supported_ops = [
-    'nms'
-]
 logger = logging.getLogger(__name__)
-
 
 def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_threshold', force_rewire=False) :
     """
@@ -57,8 +52,6 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
     logger.info(f'updated {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     return model
-
-from .base_ops import GraphOpsBase
 
 class IOUThresholdAsInput(GraphOpsBase):
     def __init__(self, input_name: str='iou_threshold', force_rewire=False):

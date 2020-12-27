@@ -13,6 +13,8 @@ import sympy
 from packaging import version
 assert version.parse(onnx.__version__) >= version.parse("1.5.0")
 
+from .base_ops import GraphOpsBase
+
 def get_attribute(node, attr_name, default_value=None):
     found = [attr for attr in node.attribute if attr.name == attr_name]
     if found:
@@ -1300,8 +1302,6 @@ class SymbolicShapeInference:
         if not all_shapes_inferred:
             raise Exception("Incomplete symbolic shape inference")
         return symbolic_shape_inference.out_mp_
-
-from .base_ops import GraphOpsBase
 
 class SymbolicShapeInfer(GraphOpsBase):
     def __init__(self, int_max=2**31 - 1, auto_merge=False, guess_output_rank=False, verbose=0):
