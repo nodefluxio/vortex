@@ -20,7 +20,20 @@ def embed_class_names(model : onnx.ModelProto, class_names : Dict[str,int]) -> o
 
 class EmbedClassNames(GraphOpsBase):
     def __init__(self, class_names: Dict[str,int]):
+        """Embed class_names to model as `Constants`
+
+        Args:
+            class_names (Dict[str,int]): mapping from string to int respresenting class_names
+        """        
         self.class_names = class_names
     
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Actually embed class_names to model
+
+        Args:
+            model (onnx.ModelProto): model to be embedded with class_names
+
+        Returns:
+            onnx.ModelProto: transformed model
+        """        
         return embed_class_names(model, **vars(self))
