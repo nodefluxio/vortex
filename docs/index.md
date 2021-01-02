@@ -4,7 +4,7 @@
 
 A Deep Learning Model Development Framework for Computer Vision
 
-**Version : 0.2.0**
+**Version : 0.2.1**
 
 ---
 
