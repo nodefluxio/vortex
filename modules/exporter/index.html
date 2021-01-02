@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Graph Exporter - Vortex</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer-guides/custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_classification/" class="dropdown-item">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="../logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="../augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="../data_loader/" class="dropdown-item">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="../scheduler/" class="dropdown-item">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="../train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="../models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="../backbones/" class="dropdown-item">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../backbones/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../../api/vortex.development.core.pipelines/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#graph-exporter" class="nav-link">Graph Exporter</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#onnx" class="nav-link">ONNX</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#torchscript" class="nav-link">Torchscript</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="graph-exporter">Graph Exporter<a class="headerlink" href="#graph-exporter" title="Permanent link">&para;</a></h1>
+<p>This section listed all available <code>exporter</code> configuration. Part of <a href="../../user-guides/experiment_file_config/#graph-exporter">graph exporter section</a> in experiment file.</p>
+<hr />
+<h2 id="onnx">ONNX<a class="headerlink" href="#onnx" title="Permanent link">&para;</a></h2>
+<p>This module will produce ONNX IR from a trained Vortex model. Further reading : <a href="https://onnx.ai/">onnx.ai</a></p>
+<p>Currently, we provide export support for opset version 9,10, and 11. However it must be noted that not all models and backbones are supported to be converted to ONNX. The list of supported and not supported models and backbones can be found in the COMPATIBILITY REPORT on the repo :</p>
+<ul>
+<li><a href="https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset9.md">COMPATIBILITY REPORT Opset Version 9</a></li>
+<li><a href="https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset10.md">COMPATIBILITY REPORT Opset Version 10</a></li>
+<li><a href="https://github.com/nodefluxio/vortex/blob/master/COMPATIBILITY_REPORT_opset11.md">COMPATIBILITY REPORT Opset Version 11</a></li>
+</ul>
+<p>E.g. :</p>
+<pre><code class="language-yaml">exporter: {
+    module: onnx,
+    args: {
+        n_batch: 4,
+        opset_version: 11,
+        filename: somemodel_bs4
+    },
+}
+</code></pre>
+<p>Arguments : </p>
+<ul>
+<li><code>n_batch</code> (int) : number of input batches that can be processed by this model at a time. An IR graph input batch size must be pre configured during export and cannot be modified afterwise</li>
+<li><code>opset_version</code> (int) : selected ONNX opset version. For complete information check this link</li>
+<li><code>filename</code> (str) : A new filename which will be given to the exported IR with <code>.onnx</code> suffix. If not given, the default is <code>{experiment_name}.onnx</code></li>
+</ul>
+<p>Outputs :</p>
+<ul>
+<li>ONNX IR : ONNX file model <code>(*.onnx)</code> will be produced at experiment output directory</li>
+</ul>
+<hr />
+<h2 id="torchscript">Torchscript<a class="headerlink" href="#torchscript" title="Permanent link">&para;</a></h2>
+<p>This module will produce Torchscript IR from a trained Vortex model. Further reading : <a href="https://pytorch.org/docs/stable/jit.html">torchscript</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">exporter: {
+    module: torchscript,
+    args: {
+        n_batch: 4,
+        filename: somemodel_bs4
+    },
+}
+</code></pre>
+<p>Arguments : </p>
+<ul>
+<li><code>n_batch</code> (int) : number of input batches that can be processed by this model at a time. An IR graph input batch size must be pre configured during export and cannot be modified afterwise</li>
+<li><code>filename</code> (str) : A new filename which will be given to the exported IR with <code>.pt</code> suffix. If not given, the default is <code>{experiment_name}.pt</code></li>
+</ul>
+<p>Outputs :</p>
+<ul>
+<li>Torhscript IR : Torchscript file model <code>(*.pt)</code> will be produced at experiment output directory</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

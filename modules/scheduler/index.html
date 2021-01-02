@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Learning Rates Scheduler - Vortex</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer-guides/custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_classification/" class="dropdown-item">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="../logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="../augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="../data_loader/" class="dropdown-item">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="../train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="../models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="../backbones/" class="dropdown-item">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="../exporter/" class="dropdown-item">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../data_loader/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../train_driver/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#learning-rates-scheduler" class="nav-link">Learning Rates Scheduler</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#pytorch-scheduler" class="nav-link">Pytorch Scheduler</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="3"><a href="#steplr" class="nav-link">StepLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#multisteplr" class="nav-link">MultiStepLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#exponentiallr" class="nav-link">ExponentialLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#cosineannealinglr" class="nav-link">CosineAnnealingLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#cosineannealingwarmrestarts" class="nav-link">CosineAnnealingWarmRestarts</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#cycliclr" class="nav-link">CyclicLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#onecyclelr" class="nav-link">OneCycleLR</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#custom-implementation" class="nav-link">Custom Implementation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="3"><a href="#cosinelr-with-warm-up" class="nav-link">CosineLR With Warm Up</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#tanhlr-with-warm-up" class="nav-link">TanhLR With Warm Up</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#steplr-with-warm-up" class="nav-link">StepLR With Warm Up</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="learning-rates-scheduler">Learning Rates Scheduler<a class="headerlink" href="#learning-rates-scheduler" title="Permanent link">&para;</a></h1>
+<p>This section listed all available <code>lr_scheduler</code> configuration. Part of <a href="../../user-guides/experiment_file_config/#trainer"><code>trainer</code> configurations</a> in experiment file. </p>
+<p>Additionally, we have a utility script <code>scripts/visualize_learning_rate.py</code> on our repository to help user visualize their learning rate scheduler. </p>
+<pre><code class="language-console">usage: visualize_learning_rate.py [-h] [-c CONFIG] [--epochs EPOCHS] [CFG]
+
+Visualize learning rate scheduler
+
+positional arguments:
+  CFG                   experiment configuration file path (.yml)
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config CONFIG
+                        experiment configuration file path (choose either one
+                        of this or positional argument)
+  --epochs EPOCHS       number of epoch of learning rate to be calculated,
+                        override epoxh in experiment file
+</code></pre>
+<p>E.g. :</p>
+<pre><code class="language-console">python3 scripts/visualize_learning_rate.py -c experiments/configs/shufflenetv2x100_retinaface_frontal_fddb_640.yml --epochs 300
+</code></pre>
+<hr />
+<h2 id="pytorch-scheduler">Pytorch Scheduler<a class="headerlink" href="#pytorch-scheduler" title="Permanent link">&para;</a></h2>
+<p>Vortex support several Pytorch original scheduler implementation. User only need to specify the arguments beside the <code>optimizer</code> arguments which have already handled internally</p>
+<hr />
+<h3 id="steplr">StepLR<a class="headerlink" href="#steplr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.StepLR"><code>StepLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: StepLR,
+    args: {
+        step_size: 100,
+        gamma: .1,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="StepLR Visualization" src="../../images/step_lr.jpg" /></p>
+<hr />
+<h3 id="multisteplr">MultiStepLR<a class="headerlink" href="#multisteplr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.MultiStepLR"><code>MultiStepLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: MultiStepLR,
+    args: {
+        milestones: [225,275],
+        gamma: .1,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="MultiStepLR Visualization" src="../../images/multistep_lr.jpg" /></p>
+<hr />
+<h3 id="exponentiallr">ExponentialLR<a class="headerlink" href="#exponentiallr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.ExponentialLR"><code>ExponentialLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: ExponentialLR,
+    args: {
+        gamma: .98,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="ExponentialLR Visualization" src="../../images/exponential_lr.jpg" /></p>
+<hr />
+<h3 id="cosineannealinglr">CosineAnnealingLR<a class="headerlink" href="#cosineannealinglr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingLR"><code>CosineAnnealingLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: CosineAnnealingLR,
+    args: {
+        T_max: 100,
+        eta_min: 0.00001,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="CosineAnnealingLR Visualization" src="../../images/cosine_annealing_lr.jpg" /></p>
+<hr />
+<h3 id="cosineannealingwarmrestarts">CosineAnnealingWarmRestarts<a class="headerlink" href="#cosineannealingwarmrestarts" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CosineAnnealingWarmRestarts"><code>CosineAnnealingWarmRestarts</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: CosineAnnealingWarmRestarts,
+    args: {
+        T_0: 50,
+        T_mult: 2,
+        eta_min: .00001,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="CosineAnnealingWarmRestarts Visualization" src="../../images/cosine_annealing_warm_restarts.jpg" /></p>
+<hr />
+<h3 id="cycliclr">CyclicLR<a class="headerlink" href="#cycliclr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.CyclicLR"><code>CyclicLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: CyclicLR,
+    args: {
+        base_lr: 0.00001,
+        max_lr: 0.001,
+        step_size_up: 2000,
+        mode: triangular,
+        gamma: 1.0,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="CyclicLR Visualization" src="../../images/cyclic_lr.jpg" /></p>
+<hr />
+<h3 id="onecyclelr">OneCycleLR<a class="headerlink" href="#onecyclelr" title="Permanent link">&para;</a></h3>
+<p><a href="https://pytorch.org/docs/stable/optim.html#torch.optim.lr_scheduler.OneCycleLR"><code>OneCycleLR</code> Documentation</a></p>
+<p>E.g. :</p>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: OneCycleLR,
+    args: {
+        max_lr: 0.001,
+        steps_per_epoch: 200,
+        epochs: 300,
+        pct_start: .3,
+        anneal_strategy: cos,
+        last_epoch: -1
+    }
+},
+</code></pre>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="OneCycleLR Visualization" src="../../images/one_cycle_lr.jpg" /></p>
+<hr />
+<h2 id="custom-implementation">Custom Implementation<a class="headerlink" href="#custom-implementation" title="Permanent link">&para;</a></h2>
+<hr />
+<h3 id="cosinelr-with-warm-up">CosineLR With Warm Up<a class="headerlink" href="#cosinelr-with-warm-up" title="Permanent link">&para;</a></h3>
+<p>Implement Cosine decay scheduler with warm restarts</p>
+<p>Reference : </p>
+<ul>
+<li><a href="https://arxiv.org/abs/1608.03983">SGDR: Stochastic Gradient Descent with Warm Restarts</a></li>
+<li><a href="https://github.com/allenai/allennlp/blob/master/allennlp/training/learning_rate_schedulers/cosine.py">allennlp/cosine.py</a></li>
+</ul>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: CosineLRWithWarmUp,
+    args: {
+        t_initial: 100,
+        t_mul: 1.0,
+        lr_min: 0.00001,
+        warmup_lr_init: 0.00001,
+        warmup_t: 5,
+        cycle_limit: 3,
+        t_in_epochs: True,
+        decay_rate: 0.75,
+    }
+},
+</code></pre>
+<p>Arguments : </p>
+<ul>
+<li><code>t_initial</code> (int) : the number of iterations (epochs) within the first cycle</li>
+<li><code>t_mul</code> (float) : determines the number of iterations (epochs) in the i-th decay cycle, which is the length of the last cycle multiplied by <code>t_mul</code>. default : 1</li>
+<li><code>lr_min</code> (float) : minimum learning rate after decay. default : 0.</li>
+<li><code>warmup_lr_init</code> (float) : starting learning rate on warmup stage. default : 0</li>
+<li><code>warmup_t</code> (int) : number of epoch of warmup stage. default : 0</li>
+<li><code>cycle_limit</code> (int) : number of cosine cycle. default : 0</li>
+<li><code>t_in_epochs</code> (bool) : if True, update learning rate per epoch, if not, update per step. default : True</li>
+<li><code>decay_rate</code> (float) : learning rate decay rate. default : 1</li>
+</ul>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="CosineLRWithWarmUp Visualization" src="../../images/cosine_lr_with_warmup.jpg" /></p>
+<hr />
+<h3 id="tanhlr-with-warm-up">TanhLR With Warm Up<a class="headerlink" href="#tanhlr-with-warm-up" title="Permanent link">&para;</a></h3>
+<p>Implement Hyperbolic-Tangent decay with warm restarts</p>
+<p>Reference :</p>
+<ul>
+<li><a href="https://arxiv.org/abs/1806.01593">Stochastic Gradient Descent with Hyperbolic-Tangent Decay on Classification</a></li>
+</ul>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: TanhLRWithWarmUp,
+    args: {
+        t_initial: 100,
+        t_mul: 1.0,
+        lb: -6.,
+        ub: 4.,
+        lr_min: 0.00001,
+        warmup_lr_init: 0.00001,
+        warmup_t: 5,
+        cycle_limit: 3,
+        t_in_epochs: True,
+        decay_rate: 0.75,
+    }
+}
+</code></pre>
+<p>Arguments : </p>
+<ul>
+<li><code>t_initial</code> (int) : the number of iterations (epochs) within the first cycle</li>
+<li><code>t_mul</code> (float) : determines the number of iterations (epochs) in the i-th decay cycle, which is the length of the last cycle multiplied by <code>t_mul</code>. default : 1</li>
+<li><code>lb</code> (float) : tanh function lower bound value</li>
+<li><code>ub</code> (float) : tanh function upper bound value</li>
+<li><code>lr_min</code> (float) : Minimum learning rate after decay. default : 0.</li>
+<li><code>warmup_lr_init</code> (float) : starting learning rate on warmup stage. default : 0</li>
+<li><code>warmup_t</code> (int) : number of epoch of warmup stage. default : 0</li>
+<li><code>cycle_limit</code> (int) : number of cosine cycle. default : 0</li>
+<li><code>t_in_epochs</code> (bool) : if True, update learning rate per epoch, if not, update per step. default : True</li>
+<li><code>decay_rate</code> (float) : learning rate decay rate. default : 1</li>
+</ul>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 300,</p>
+<p><img alt="TanhLRWithWarmUp Visualization" src="../../images/tanh_lr_with_warmup.jpg" /></p>
+<hr />
+<h3 id="steplr-with-warm-up">StepLR With Warm Up<a class="headerlink" href="#steplr-with-warm-up" title="Permanent link">&para;</a></h3>
+<p>Implement StepLR scheduler with burn in (warm start), adapted from YOLOv3 training method</p>
+<p>Reference : </p>
+<ul>
+<li><a href="https://github.com/DeNA/PyTorch_YOLOv3">DeNA/PyTorch_YOLOv3: Implementation of YOLOv3 in PyTorch</a></li>
+</ul>
+<pre><code class="language-yaml">lr_scheduler: {
+    method: StepLRWithWarmUp,
+    args: {
+        warm_up: 5,
+        steps: [180,190],
+        scales: [.1,.1],
+        last_epoch: -1
+    }
+}
+</code></pre>
+<p>Arguments :</p>
+<ul>
+<li><code>warm_up</code> (int) : number of epochs for warm up</li>
+<li><code>steps</code> (list) : list of epoch when the learning rate will be reduced, e.g. [180,190] --&gt; learning rate will be reduced on epoch 180 and epoch 190</li>
+<li><code>scales</code> (list) : scale of the reduced learning rate, e.g. [0.1,0.1] --&gt; e.g. initial lr == 0.01 , on epoch 180 will be reduced to 0.1 * 0.01 = 0.001 and on epoch 190 will be reduced to 0.1 * 0.001 = 0.0001</li>
+<li><code>last_epoch</code> (int) : last epoch number. default : -1</li>
+</ul>
+<p>Example Visualization :</p>
+<p>Using above configuration, and epoch of 200,</p>
+<p><img alt="StepLRWithWarmUp Visualization" src="../../images/step_lr_with_warmup.jpg" /></p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

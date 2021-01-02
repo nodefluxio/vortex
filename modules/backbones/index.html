@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Backbones Network - Vortex</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer-guides/custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_classification/" class="dropdown-item">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="../logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="../augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="../data_loader/" class="dropdown-item">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="../scheduler/" class="dropdown-item">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="../train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="../models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="../exporter/" class="dropdown-item">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../models_zoo/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../exporter/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#backbones-network" class="nav-link">Backbones Network</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#cspnet" class="nav-link">CSPNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#darknet" class="nav-link">Darknet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#efficientnet" class="nav-link">EfficientNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#mobilenet" class="nav-link">MobileNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#regnet" class="nav-link">RegNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#resnest" class="nav-link">ResNest</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#resnet" class="nav-link">ResNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#rexnet" class="nav-link">RexNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#shufflenet" class="nav-link">ShuffleNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#tresnet" class="nav-link">TResNet</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#vgg" class="nav-link">VGG</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="backbones-network">Backbones Network<a class="headerlink" href="#backbones-network" title="Permanent link">&para;</a></h1>
+<p>This section listed all available <code>backbone</code> configuration. Part of <a href="../../user-guides/experiment_file_config/#model"><code>model.name</code> configurations</a> (if the model support it) in experiment file.</p>
+<p>Backbones refers to the network which takes as input the image and extracts the feature map upon which the rest of the network is based. Usually, a famous image classification network is used as a backbone for other computer vision tasks, such as object detection. For example we can see figure below :</p>
+<p><img alt="Backbone Visualization Example" src="../../images/backbone_vis.jpg" /></p>
+<p>In the figure, Resnet is used as a backbone in the Feature Pyramid Network (FPN) model for object detection. In Vortex, we provide various backbone that can be combined in different models.</p>
+<p>Backbones params and MAC/FLOPS comparison ( to compare which backbones is the lightest or heaviest ) can be found on this <a href="https://docs.google.com/spreadsheets/d/1M18Bm08P983_-5diHXAmlUmHusjpHdYMmcN0FmrNS74/edit#gid=0">spreadsheet link</a></p>
+<p><strong>NOTES</strong> :</p>
+<ul>
+<li>Params : total parameters in the model’s weight</li>
+<li>MAC / FLOPS : Multiply-Accumulate Operation divided by Floating Point Operations per Second</li>
+</ul>
+<hr />
+<h2 id="cspnet">CSPNet<a class="headerlink" href="#cspnet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1911.11929">CSPNet: A New Backbone that can Enhance Learning Capability of CNN</a>:</p>
+<ul>
+<li><code>cspresnet50</code></li>
+<li><code>cspresnext50</code></li>
+<li><code>cspdarknet53</code></li>
+</ul>
+<hr />
+<h2 id="darknet">Darknet<a class="headerlink" href="#darknet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1804.02767">YOLOv3: An Incremental Improvement</a>:</p>
+<ul>
+<li><code>darknet53</code></li>
+</ul>
+<hr />
+<h2 id="efficientnet">EfficientNet<a class="headerlink" href="#efficientnet" title="Permanent link">&para;</a></h2>
+<p>The pretrained model for EfficientNet base model <code>(b0 - l2)</code> is trained using Noisy Student, except for <code>b8</code>.</p>
+<p>Variants from reference <a href="https://arxiv.org/abs/1905.11946">EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks</a> :</p>
+<ul>
+<li><code>efficientnet_b0</code></li>
+<li><code>efficientnet_b1</code> </li>
+<li><code>efficientnet_b2</code> </li>
+<li><code>efficientnet_b3</code> </li>
+<li><code>efficientnet_b4</code> </li>
+<li><code>efficientnet_b5</code> </li>
+<li><code>efficientnet_b6</code> </li>
+<li><code>efficientnet_b7</code> </li>
+<li><code>efficientnet_b8</code> </li>
+</ul>
+<p>Variants from reference <a href="https://arxiv.org/abs/1911.04252">Self-training with Noisy Student improves ImageNet classification</a> :</p>
+<ul>
+<li><code>efficientnet_l2</code> </li>
+<li><code>efficientnet_l2_475</code></li>
+</ul>
+<p>Variants from reference <a href="https://ai.googleblog.com/2019/08/efficientnet-edgetpu-creating.html">EfficientNet-EdgeTPU: Creating Accelerator-Optimized Neural Networks with AutoML</a> :</p>
+<ul>
+<li><code>efficientnet_edge_s</code> </li>
+<li><code>efficientnet_edge_m</code> </li>
+<li><code>efficientnet_edge_l</code> </li>
+</ul>
+<p>Variants from reference <a href="https://blog.tensorflow.org/2020/03/higher-accuracy-on-vision-models-with-efficientnet-lite.html">Higher accuracy on vision models with EfficientNet-Lite</a> :</p>
+<ul>
+<li><code>efficientnet_lite0</code> </li>
+<li><code>efficientnet_lite1</code> </li>
+<li><code>efficientnet_lite2</code> </li>
+<li><code>efficientnet_lite3</code> </li>
+<li><code>efficientnet_lite4</code></li>
+</ul>
+<hr />
+<h2 id="mobilenet">MobileNet<a class="headerlink" href="#mobilenet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1801.04381">MobileNetV2: Inverted Residuals and Linear Bottlenecks</a> :</p>
+<ul>
+<li><code>mobilenet_v2</code></li>
+</ul>
+<p>Variants from reference <a href="https://arxiv.org/abs/1905.02244">Searching for MobileNetV3</a> :</p>
+<ul>
+<li><code>mobilenetv3_large_075</code></li>
+<li><code>mobilenetv3_large_100</code></li>
+<li><code>mobilenetv3_large_minimal_100</code></li>
+<li><code>mobilenetv3_small_075</code></li>
+<li><code>mobilenetv3_small_100</code></li>
+<li><code>mobilenetv3_small_minimal_100</code></li>
+<li><code>mobilenetv3_rw</code></li>
+</ul>
+<hr />
+<h2 id="regnet">RegNet<a class="headerlink" href="#regnet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/2003.13678">Designing Network Design Spaces</a>:</p>
+<ul>
+<li><code>regnetx_002</code></li>
+<li><code>regnetx_004</code></li>
+<li><code>regnetx_006</code></li>
+<li><code>regnetx_008</code></li>
+<li><code>regnetx_016</code></li>
+<li><code>regnetx_032</code></li>
+<li><code>regnetx_040</code></li>
+<li><code>regnetx_064</code></li>
+<li><code>regnetx_080</code></li>
+<li><code>regnetx_120</code></li>
+<li><code>regnetx_160</code></li>
+<li><code>regnetx_320</code></li>
+<li><code>regnety_002</code></li>
+<li><code>regnety_004</code></li>
+<li><code>regnety_006</code></li>
+<li><code>regnety_008</code></li>
+<li><code>regnety_016</code></li>
+<li><code>regnety_032</code></li>
+<li><code>regnety_040</code></li>
+<li><code>regnety_064</code></li>
+<li><code>regnety_080</code></li>
+<li><code>regnety_120</code></li>
+<li><code>regnety_160</code></li>
+<li><code>regnety_320</code></li>
+</ul>
+<hr />
+<h2 id="resnest">ResNest<a class="headerlink" href="#resnest" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/2004.08955">ResNeSt: Split-Attention Networks</a>:</p>
+<ul>
+<li><code>resnest14</code></li>
+<li><code>resnest26</code></li>
+<li><code>resnest50</code></li>
+<li><code>resnest101</code></li>
+<li><code>resnest200</code></li>
+<li><code>resnest269</code></li>
+<li><code>resnest50d_4s2x40d</code></li>
+<li><code>resnest50d_1s4x24d</code></li>
+</ul>
+<hr />
+<h2 id="resnet">ResNet<a class="headerlink" href="#resnet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1512.03385">Deep Residual Learning for Image Recognition</a> :</p>
+<ul>
+<li><code>resnet18</code> </li>
+<li><code>resnet34</code> </li>
+<li><code>resnet50</code> </li>
+<li><code>resnet101</code> </li>
+<li><code>resnet152</code></li>
+</ul>
+<p>Variants from reference <a href="https://arxiv.org/abs/1611.05431">Aggregated Residual Transformations for Deep Neural Networks</a> :</p>
+<ul>
+<li><code>resnext50_32x4d</code> </li>
+<li><code>resnext101_32x8d</code> </li>
+</ul>
+<p>Variants from reference <a href="https://arxiv.org/abs/1605.07146">Wide Residual Networks</a> :</p>
+<ul>
+<li><code>wide_resnet50_2</code></li>
+<li><code>wide_resnet101_2</code></li>
+</ul>
+<hr />
+<h2 id="rexnet">RexNet<a class="headerlink" href="#rexnet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/2007.00992">ReXNet: Diminishing Representational Bottleneck on Convolutional Neural Network</a>:</p>
+<ul>
+<li><code>rexnet_100</code></li>
+<li><code>rexnet_130</code></li>
+<li><code>rexnet_150</code></li>
+<li><code>rexnet_200</code></li>
+</ul>
+<hr />
+<h2 id="shufflenet">ShuffleNet<a class="headerlink" href="#shufflenet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1807.11164">ShuffleNet V2: Practical Guidelines for Efficient CNN Architecture Design</a> :</p>
+<ul>
+<li><code>shufflenetv2_x0.5</code></li>
+<li><code>shufflenetv2_x1.0</code> </li>
+<li><code>shufflenetv2_x1.5</code> </li>
+<li><code>shufflenetv2_x2.0</code> </li>
+</ul>
+<hr />
+<h2 id="tresnet">TResNet<a class="headerlink" href="#tresnet" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/pdf/2003.13630.pdf">TResNet: High Performance GPU-Dedicated Architecture</a>:</p>
+<ul>
+<li><code>tresnet_m</code></li>
+<li><code>tresnet_l</code></li>
+<li><code>tresnet_xl</code></li>
+<li><code>tresnet_m_448</code></li>
+<li><code>tresnet_l_448</code></li>
+<li><code>tresnet_xl_448</code></li>
+</ul>
+<hr />
+<h2 id="vgg">VGG<a class="headerlink" href="#vgg" title="Permanent link">&para;</a></h2>
+<p>Variants from reference <a href="https://arxiv.org/abs/1409.1556">Very Deep Convolutional Networks for Large-Scale Image Recognition</a> :</p>
+<ul>
+<li><code>vgg11</code> </li>
+<li><code>vgg11_bn</code> </li>
+<li><code>vgg13</code> </li>
+<li><code>vgg13_bn</code> </li>
+<li><code>vgg16</code> </li>
+<li><code>vgg16_bn</code> </li>
+<li><code>vgg19</code> </li>
+<li><code>vgg19_bn</code></li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

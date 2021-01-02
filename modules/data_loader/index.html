@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Data Loader - Vortex</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../developer-guides/custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_classification/" class="dropdown-item">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="../../developer-guides/custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="../logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="../augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="../scheduler/" class="dropdown-item">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="../train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="../models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="../backbones/" class="dropdown-item">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="../exporter/" class="dropdown-item">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../augmentation/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../scheduler/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#data-loader" class="nav-link">Data Loader</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#pytorch-data-loader" class="nav-link">Pytorch Data Loader</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#nvidia-dali-data-loader" class="nav-link">Nvidia DALI Data Loader</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="data-loader">Data Loader<a class="headerlink" href="#data-loader" title="Permanent link">&para;</a></h1>
+<p>This section listed all available <a href="../../user-guides/experiment_file_config/#data-loader"><code>dataloader</code></a> modules configurations.</p>
+<p>Vortex data loader module will normalize and resize the input image following <code>preprocess_args</code> configuration in <a href="../../user-guides/experiment_file_config/#model"><code>model</code></a> section. The resize function, will resize the image by the value provided in <code>input_size</code> configuration and pad the image to square by adding black pixel (0,0,0). However the padding implementation will be different depends on the dataloader module (this is subject to change in the future)</p>
+<hr />
+<h2 id="pytorch-data-loader">Pytorch Data Loader<a class="headerlink" href="#pytorch-data-loader" title="Permanent link">&para;</a></h2>
+<p>A standard Pytorch data loader. If the provided image data is image path, it will decode the image using OpenCV in the BGR format </p>
+<p>This data loader will pad the image in the shortest side by adding pad pixel in both edge. (E.g. if the shortest side is image's width, it will pad pixel in the left and right side of the image). The implementation is provided by <code>albumentations</code> augmentation <a href="https://albumentations.readthedocs.io/en/latest/api/augmentations.html#albumentations.augmentations.transforms.PadIfNeeded"><code>PadIfNeeded</code></a></p>
+<p>Cannot be used with <code>nvidia_dali</code> augmentation module</p>
+<pre><code class="language-yaml">dataloader: {
+    module: PytorchDataLoader,
+    args: {
+        num_workers: 0,
+        batch_size: 16,
+        shuffle: True,
+    },
+}
+</code></pre>
+<p>It’s important to be noted that argument that expect function as its input is not supported, detailed arguments can be inspected in <a href="https://pytorch.org/docs/stable/data.html">this page</a></p>
+<p>Common used arguments :</p>
+<ul>
+<li><code>num_workers</code> (int) : how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process</li>
+<li><code>batch_size</code> (int) : how many samples per batch to load (default: 1)</li>
+<li><code>shuffle</code> (bool) : set to True to have the data reshuffled at every epoch (default: False).</li>
+</ul>
+<hr />
+<h2 id="nvidia-dali-data-loader">Nvidia DALI Data Loader<a class="headerlink" href="#nvidia-dali-data-loader" title="Permanent link">&para;</a></h2>
+<p>A data loader used together with <a href="https://docs.nvidia.com/deeplearning/dali/user-guide/docs/">Nvidia DALI</a> pipeline and must utilize a GPU. The input data provided must be the path to the image (cannot accept numpy array), and it will decode the image on the GPU using <a href="https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops.html#nvidia.dali.ops.ImageDecoder">ops.ImageDecoder</a> into BGR format.</p>
+<p>This data loader will pad the image in the right-bottom style. The implementation is provided by <a href="https://docs.nvidia.com/deeplearning/dali/user-guide/docs/supported_ops.html#nvidia.dali.ops.Paste">ops.Paste</a></p>
+<p>Can be used with <code>nvidia_dali</code> augmentation module by specifying the module in the first order of <a href="../user-guides/experiment_file_config/#dataset"><code>augmentations</code></a> configuration list</p>
+<pre><code class="language-yaml">dataloader: {
+    module: DALIDataLoader,
+    args: {
+        num_thread: 1,
+        device_id: 0,
+        batch_size: 16,
+        shuffle: True,
+    },
+}
+</code></pre>
+<p>Arguments :</p>
+<ul>
+<li><code>num_thread</code>(int) : Number of CPU threads used by the Nvidia DALI pipeline. (default: 1)</li>
+<li><code>device_id</code> (int) : Id of GPU used by the pipeline. (default: 0)</li>
+<li><code>batch_size</code> (int) : how many samples per batch to load (default: 1)</li>
+<li><code>shuffle</code> (bool) : set to True to have the data reshuffled at every epoch (default: False).</li>
+</ul></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="None">
+        
+        
+        <link rel="shortcut icon" href="img/favicon.ico">
+        <title>Vortex</title>
+        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="css/font-awesome.min.css" rel="stylesheet">
+        <link href="css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="js/jquery-1.10.2.min.js" defer></script>
+        <script src="js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body class="homepage">
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href=".">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem active">
+                                <a href="." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="developer-guides/custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="developer-guides/custom_model_integration_classification/" class="dropdown-item">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="developer-guides/custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="modules/builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="modules/logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="modules/augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="modules/data_loader/" class="dropdown-item">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="modules/scheduler/" class="dropdown-item">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="modules/train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="modules/models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="modules/backbones/" class="dropdown-item">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="modules/exporter/" class="dropdown-item">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" class="nav-link disabled">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="user-guides/dataset_integration/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#vortex-documentation" class="nav-link">Vortex Documentation</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#overview" class="nav-link">Overview</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#highlights" class="nav-link">Highlights</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#installation" class="nav-link">Installation</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#vortex-development" class="nav-link">Vortex Development</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="3"><a href="#with-docker" class="nav-link">With Docker</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#from-source" class="nav-link">From Source</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#vortex-runtime" class="nav-link">Vortex Runtime</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="3"><a href="#with-docker_1" class="nav-link">With Docker</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="3"><a href="#from-source_1" class="nav-link">From Source</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+              </ul>
+            </li>
+            
+            <li class="nav-item" data-level="1"><a href="#getting-started" class="nav-link">Getting Started</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#developing-vortex-model" class="nav-link">Developing Vortex Model</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#hyperparameter-optimization" class="nav-link">Hyperparameter Optimization</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<p align='center'><img width="250" height="250" src="images/vortex_icon.png"></p>
+
+<h1 id="vortex-documentation">Vortex Documentation<a class="headerlink" href="#vortex-documentation" title="Permanent link">&para;</a></h1>
+<p>A Deep Learning Model Development Framework for Computer Vision</p>
+<p><strong>Version : 0.2.1</strong></p>
+<hr />
+<h1 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h1>
+<p>Vortex (a.k.a Visual Cortex) is a computer deep learning framework based on Pytorch that provides end-to-end model development. It utilizes <strong>a single experiment file</strong> in YAML format (and an optional YAML file for hyperparameter optimization) to navigate all of the pipelines and provides complete development environment which consists of the following pipelines :</p>
+<ul>
+<li><a href="user-guides/pipelines/#training-pipeline">Training</a></li>
+<li><a href="user-guides/pipelines/#validation-pipeline">Validation</a></li>
+<li><a href="user-guides/pipelines/#prediction-pipeline">Prediction</a></li>
+<li><a href="user-guides/pipelines/#hyperparameters-optimization-pipeline">Hyperparameters Optimization</a></li>
+</ul>
+<p><img alt="Vortex flow diagram" src="images/vortex_development_pipeline.jpg" /></p>
+<p>Additionally, it also support exporting Pytorch model into graph Intermediate Representation (IR) and utilize it on specific runtime by the following process :</p>
+<ul>
+<li><a href="user-guides/pipelines/#graph-export-pipeline">Graph Export</a></li>
+<li><a href="user-guides/pipelines/#ir-validation-pipeline">IR Validation</a></li>
+<li><a href="user-guides/pipelines/#ir-prediction-pipeline">IR Prediction</a></li>
+</ul>
+<p>Currently we support deep learning model development on computer vision of the following task:</p>
+<ul>
+<li>Image Classification</li>
+<li>Object Detection ( <strong>UNVERIFIED YET, MAY PRODUCE BAD RESULTS</strong> )<ul>
+<li>Multiple Object Detection</li>
+<li>Single Object Detection with Landmarks</li>
+</ul>
+</li>
+</ul>
+<hr />
+<h1 id="highlights">Highlights<a class="headerlink" href="#highlights" title="Permanent link">&para;</a></h1>
+<ul>
+<li>Easy CLI usage</li>
+<li>Modular design, reusable components</li>
+<li>Various architecture support<ul>
+<li>50 + infamous backbone networks</li>
+<li>Classification and Detection architecture support</li>
+</ul>
+</li>
+<li>Integration with image augmentation library ( <a href="https://albumentations.readthedocs.io/en/latest/">Albumentations</a> )</li>
+<li>Integration with hyperparameter optimization library ( <a href="https://optuna.org/">Optuna</a> )</li>
+<li>Integration with 3rd party experiment logger ( <a href="https://www.comet.ml/site/">Comet.ml</a> )</li>
+<li>Graph export to <a href="https://pytorch.org/docs/stable/jit.html">Torchscript</a> and <a href="https://onnx.ai/">ONNX</a></li>
+<li>Visual report of model's performance and resource usage, see <a href="https://github.com/nodefluxio/vortex/blob/master/experiments/outputs/resnet18_softmax_cifar10/reports/resnet18_softmax_cifar10_validation_cuda:0.md">this example</a></li>
+</ul>
+<hr />
+<h1 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h1>
+<hr />
+<p>Vortex consists of 2 packages:</p>
+<ul>
+<li>
+<p>Vortex development package (<code>vortex.development</code>)</p>
+<p>This package contain full vortex pipelines and main development features with all of it's dependencies</p>
+</li>
+<li>
+<p>Vortex runtime package (<code>vortex.runtime</code>)</p>
+<p>This package only contain minimal dependencies to run the exported vortex model (IR graph).
+There are two IR graph format supported by vortex, torchscript or onnx.</p>
+<p>You could choose to install only minimal dependencies packages if you want to support only one of them, or you could also install all of them with extra dependency option:
+- all
+- torchscript<br />
+- onnxruntime  </p>
+</li>
+</ul>
+<p>Vortex is tested and developed using Python3.6</p>
+<hr />
+<h2 id="vortex-development">Vortex Development<a class="headerlink" href="#vortex-development" title="Permanent link">&para;</a></h2>
+<hr />
+<h3 id="with-docker">With Docker<a class="headerlink" href="#with-docker" title="Permanent link">&para;</a></h3>
+<p>Make sure you have installed <code>nvidia-docker2</code> if you want to use your nvidia gpus, if you haven't follow <a href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker">this guide</a>.</p>
+<p>You pull the official image from our docker hub:</p>
+<pre><code class="language-bash">docker pull nodefluxio/vortex:latest
+</code></pre>
+<p>Or if you want to build your self:</p>
+<pre><code class="language-bash">docker build --target=development -t vortex:dev -f dockerfiles/vortex.dockerfile .
+</code></pre>
+<hr />
+<h3 id="from-source">From Source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h3>
+<p>Install package dependencies:</p>
+<pre><code class="language-bash">apt update
+apt install -y libsm6 libxext6 libxrender-dev ffmpeg \
+               x264 libx264-dev libsm6 git sqlite3 \
+               libsqlite3-dev graphviz pciutils
+</code></pre>
+<p>Make sure you have Python3.6 installed, or if you use Ubuntu 18.04 you can install them by:</p>
+<pre><code class="language-bash">apt install -y python3.6
+</code></pre>
+<p>or, you can download the Python 3.6 release <a href="https://www.python.org/downloads/release/python-369/">here</a>.<br />
+Then clone vortex repo to your local directory:</p>
+<pre><code class="language-bash">git clone https://github.com/nodefluxio/vortex.git
+cd vortex
+git checkout v0.2.0
+</code></pre>
+<p>You could choose either one of the following environment to install vortex:</p>
+<h4 id="using-pip">Using <code>pip</code><a class="headerlink" href="#using-pip" title="Permanent link">&para;</a></h4>
+<p>Make sure you have pip installed for your python executable, if not follow <a href="https://pip.pypa.io/en/stable/installing/">this guide</a>.<br />
+It's important to be noted that <code>vortex.development</code> package also depends on <code>vortex.runtime</code> package, so you need to install both packages:</p>
+<pre><code class="language-bash">pip install ./src/runtime[all] 
+pip install ./src/development
+</code></pre>
+<p>Or if you want to install vortex with additional optuna visualization support:</p>
+<pre><code class="language-bash">pip install 'src/development[optuna_vis]'
+</code></pre>
+<p>To check whether the installation is succesful, you can run:</p>
+<pre><code class="language-bash">python3.6 -c 'import vortex.development'
+python3.6 -c 'import vortex.runtime'
+</code></pre>
+<h4 id="using-conda">Using <code>conda</code><a class="headerlink" href="#using-conda" title="Permanent link">&para;</a></h4>
+<p>Make sure you have <code>conda</code> installed, if not follow <a href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html">this guide</a>.<br />
+Create new environment and activate it:</p>
+<pre><code>conda create --name vortex python=3.6
+conda activate vortex
+</code></pre>
+<p>Install pytorch and the supporting package:</p>
+<pre><code class="language-bash">conda install -c pytorch -y pytorch=1.6 torchvision=0.7 cudatoolkit=10.2
+</code></pre>
+<p>Then you could install vortex with:</p>
+<pre><code class="language-bash">pip install ./src/runtime[all] ./src/development
+</code></pre>
+<p>Check the installation with:</p>
+<pre><code class="language-bash">python -c 'import vortex.development'
+python -c 'import vortex.runtime'
+</code></pre>
+<hr />
+<h2 id="vortex-runtime">Vortex Runtime<a class="headerlink" href="#vortex-runtime" title="Permanent link">&para;</a></h2>
+<p>There three option for the runtime package installation to support either one of the IR graph runtime or to support both of them. The options are:
+- <code>onnxruntime</code>
+- <code>torchscript</code>
+- <code>all</code></p>
+<hr />
+<h3 id="with-docker_1">With Docker<a class="headerlink" href="#with-docker_1" title="Permanent link">&para;</a></h3>
+<p>Make sure you have installed <code>nvidia-docker2</code> if you want to use your nvidia gpus, if you haven't follow <a href="https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker">this guide</a>.</p>
+<p>You pull the official image from our docker hub for runtime:</p>
+<pre><code class="language-bash">docker pull nodefluxio/vortex:runtime-all-0.2.1
+</code></pre>
+<p>There are runtime image tags you can choose from the repository, all the tags that starts with <code>runtime-</code> is the image for vortex runtime. For example if you choose to get the image with <code>onnxruntime</code> support:</p>
+<pre><code class="language-bash">docker pull nodefluxio/vortex:runtime-onnxruntime-0.2.1
+</code></pre>
+<p>Or if you want to build your self:</p>
+<pre><code class="language-bash">docker build --target=runtime -t vortex:runtime -f dockerfiles/vortex.dockerfile .
+</code></pre>
+<p>You could also specify the extra dependency to support specific IR graph using the build argument <code>RUNTIME_TYPE</code>, for example with <code>onnxruntime</code>:</p>
+<pre><code class="language-bash">docker build --target=runtime --build-arg RUNTIME_TYPE=onnxruntime -t vortex:runtime-onnx -f dockerfiles/vortex.dockerfile .
+</code></pre>
+<hr />
+<h3 id="from-source_1">From Source<a class="headerlink" href="#from-source_1" title="Permanent link">&para;</a></h3>
+<p>Install package dependencies:</p>
+<pre><code class="language-bash">apt update
+apt install -y libsm6 libxext6 libxrender-dev ffmpeg \
+               x264 libx264-dev libsm6 git sqlite3 \
+               libsqlite3-dev graphviz pciutils
+</code></pre>
+<p>Make sure you have Python3.6 installed, or if you use Ubuntu 18.04 you can install them by:</p>
+<pre><code class="language-bash">apt install -y python3.6
+</code></pre>
+<p>or, you can download the Python 3.6 release <a href="https://www.python.org/downloads/release/python-369/">here</a>.<br />
+Then clone vortex repo to your local directory:</p>
+<pre><code class="language-bash">git clone https://github.com/nodefluxio/vortex.git &amp;&amp; cd vortex
+git checkout v0.2.0
+</code></pre>
+<p>You could choose either one of the following environment to install vortex:</p>
+<h4 id="using-pip_1">Using <code>pip</code><a class="headerlink" href="#using-pip_1" title="Permanent link">&para;</a></h4>
+<p>Choose one dependency options that suits your need, for example if you want to install specific dependencies for <code>onnxruntime</code>:</p>
+<pre><code class="language-console">pip install ./src/runtime[onnxruntime]
+</code></pre>
+<p>Or, if you want have support for all available runtime:</p>
+<pre><code class="language-console">pip install ./src/runtime[all]
+</code></pre>
+<p>To check the installation, you can run:</p>
+<pre><code class="language-console">python3.6 -c 'import vortex.runtime'
+</code></pre>
+<h4 id="using-conda_1">Using <code>conda</code><a class="headerlink" href="#using-conda_1" title="Permanent link">&para;</a></h4>
+<p>Make sure you have <code>conda</code> installed, if not follow <a href="https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html">this guide</a>.<br />
+Create new environment and activate it:</p>
+<pre><code>conda create --name vortex-rt python=3.6
+conda activate vortex-rt
+</code></pre>
+<p>Install cudatoolkit package:</p>
+<pre><code class="language-bash">conda install -c pytorch -y cudatoolkit=10.2
+</code></pre>
+<p>Choose one of the dependency that suits your need, for example if you only want to support <code>onnxruntime</code>:</p>
+<pre><code class="language-bash">pip install ./src/runtime[onnxruntime]
+</code></pre>
+<p>Or, if you want to support all available runtime:</p>
+<pre><code class="language-bash">pip install ./src/runtime[all]
+</code></pre>
+<p>Check the installation with:</p>
+<pre><code class="language-bash">python -c 'import vortex.runtime'
+</code></pre>
+<hr />
+<h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
+<p>Vortex utilizes a certain standard to allow seamless integration between pipelines. In this guide, we will show you how to <strong>integrate your dataset/use the built-in ones</strong>, how to build the <strong>experiment file</strong>, and how to utilize and propagate both items to all of Vortex pipelines.</p>
+<hr />
+<h2 id="developing-vortex-model">Developing Vortex Model<a class="headerlink" href="#developing-vortex-model" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p>The first step is dataset integration, it is recommended for you to check the <a href="modules/builtin_dataset/">built-in datasets section</a> in order to find suitable setting for your dataset. For example, you can use <a href="modules/builtin_dataset/#torchvision-dataset">torchvision's ImageFolder</a> to integrate a classification dataset. However, if you didn't find any suitable internal integration, you can follow <a href="user-guides/dataset_integration/">dataset integration section</a> to make your own integration point</p>
+</li>
+<li>
+<p>Next, we need to build the <strong>experiment file</strong>, please follow the <a href="user-guides/experiment_file_config/">experiment file configuration section</a></p>
+</li>
+<li>
+<p>At this point, you should've already prepared your <strong>experiment file</strong> and your <strong>dataset</strong>. You can now run the training pipeline. See <a href="user-guides/pipelines/#training-pipeline">training pipeline section</a> for further instructions.</p>
+</li>
+<li>
+<p>After receiving Vortex model from training pipeline, you can either do :</p>
+<ul>
+<li>measure your model's performance using <a href="user-guides/pipelines/#validation-pipeline">validation pipeline</a>, or</li>
+<li>directly use the model in your script using <a href="api/vortex.development.core.pipelines/#pytorchpredictionpipeline">prediction pipeline API</a>, or</li>
+<li>further optimize your model by converting it into Intermediate Representation using <a href="user-guides/pipelines/#graph-export-pipeline">graph export pipeline</a></li>
+</ul>
+</li>
+<li>
+<p>If you choose to export your model, once you have the Vortex IR model, you can either do :</p>
+<ul>
+<li>measure your IR model's performance using <a href="user-guides/pipelines/#ir-validation-pipeline">IR validation pipeline</a>, or</li>
+<li>directly use the IR model in your script using <a href="api/vortex.development.core.pipelines/#irpredictionpipeline">IR prediction pipeline API</a></li>
+<li>develop the production-level inferencing code by <a href="#vortex-runtime-package-installation">installing only the Vortex runtime package</a> and using <a href="api/vortex.runtime/#create_runtime_model">runtime API</a> to make prediction.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="hyperparameter-optimization">Hyperparameter Optimization<a class="headerlink" href="#hyperparameter-optimization" title="Permanent link">&para;</a></h2>
+<p>Now, once you've accustomed with Vortex pipelines, you can explore the use of hypopt pipeline to find the best hyperparameter setting for your model. Basically To do that, you can follow the guide below :</p>
+<ol>
+<li>Prepare hyperparameter configuration file. You can check <a href="user-guides/hypopt_file_config/">hypopt config file section</a> to create it</li>
+<li>
+<p>Make sure all requirement related to <a href="user-guides/hypopt_file_config/#objective"><code>objective</code></a> is already met. </p>
+<p>For example, if you want to use <code>ValidationObjective</code> , you need to check whether you've already prepared the requirements of <a href="user-guides/pipelines/#validation-pipeline">validation pipeline</a></p>
+</li>
+<li>
+<p>Run the hypopt pipeline, see <a href="user-guides/pipelines/#hyperrparameters-optimization-pipeline">hypopt pipeline section</a></p>
+</li>
+<li>Once you get the optimal hyperparameters value, you can use it with the corresponding pipeline</li>
+</ol></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = ".",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="js/base.js" defer></script>
+        <script src="search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
+
+<!--
+MkDocs version : 1.1.2
+Build Date UTC : 2021-01-02 01:20:17.300238+00:00
+-->

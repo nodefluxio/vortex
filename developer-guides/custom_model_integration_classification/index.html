@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../../img/favicon.ico">
+        <title>Custom Model Integration : Classification - Vortex</title>
+        <link href="../../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../../css/font-awesome.min.css" rel="stylesheet">
+        <link href="../../css/base.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/ir-black.min.css">
+
+        <script src="../../js/jquery-1.10.2.min.js" defer></script>
+        <script src="../../js/bootstrap.min.js" defer></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/python.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/console.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/languages/yaml.min.js"></script>
+        <script>hljs.initHighlightingOnLoad();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="../..">Vortex</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-toggle="collapse" data-target="#navbar-collapse">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="navitem">
+                                <a href="../.." class="nav-link">Home</a>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">User Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../user-guides/dataset_integration/" class="dropdown-item">Dataset Integration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/experiment_file_config/" class="dropdown-item">Experiment File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/hypopt_file_config/" class="dropdown-item">HypOpt File Configuration</a>
+</li>
+                                    
+<li>
+    <a href="../../user-guides/pipelines/" class="dropdown-item">Pipelines</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown active">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Developer Guides <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../custom_backbone_integration/" class="dropdown-item">Custom Backbone Integration</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active">Custom Model Integration : Classification</a>
+</li>
+                                    
+<li>
+    <a href="../custom_model_integration_detection/" class="dropdown-item">Custom Model Integration : Detection</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">Modules <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../modules/builtin_dataset/" class="dropdown-item">Built-in Dataset</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/logging_provider/" class="dropdown-item">Logging Provider</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/augmentation/" class="dropdown-item">Augmentations</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/data_loader/" class="dropdown-item">Data Loader</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/scheduler/" class="dropdown-item">Learning Rates Scheduler</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/train_driver/" class="dropdown-item">Training Driver</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/models_zoo/" class="dropdown-item">Models Zoo</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/backbones/" class="dropdown-item">Backbones Network</a>
+</li>
+                                    
+<li>
+    <a href="../../modules/exporter/" class="dropdown-item">Graph Exporter</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" data-toggle="dropdown">API <b class="caret"></b></a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../../api/vortex.development.core.pipelines/" class="dropdown-item">vortex.development.core.pipelines</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.development.core.factory/" class="dropdown-item">vortex.development.core.factory</a>
+</li>
+                                    
+<li>
+    <a href="../../api/vortex.runtime/" class="dropdown-item">vortex.runtime</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="navitem">
+                                <a href="https://github.com/nodefluxio/vortex" class="nav-link">Repository</a>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ml-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-toggle="modal" data-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../custom_backbone_integration/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../custom_model_integration_detection/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-secondary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-level="1"><a href="#integrating-custom-classification-model-to-vortex" class="nav-link">Integrating Custom Classification Model to Vortex</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-level="2"><a href="#1-model-architecture" class="nav-link">1. Model Architecture</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#2-create-postprocess-module" class="nav-link">2. Create PostProcess module</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#3-defining-loss-function" class="nav-link">3. Defining Loss Function</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#4-registering-our-model-to-vortex" class="nav-link">4. Registering our model to vortex</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-level="2"><a href="#5-integration-with-vortex-cli" class="nav-link">5. Integration with vortex CLI</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="integrating-custom-classification-model-to-vortex">Integrating Custom Classification Model to Vortex<a class="headerlink" href="#integrating-custom-classification-model-to-vortex" title="Permanent link">&para;</a></h1>
+<p>This tutorial shows how to develop your own model and integrate it to <code>vortex</code>.
+The tutorial consists of 5 steps:</p>
+<ol>
+<li>Define model architecture</li>
+<li>Create post-process module</li>
+<li>Define loss function</li>
+<li>Register model's <em>builder function</em></li>
+<li>Integration with <code>vortex</code> CLI</li>
+</ol>
+<pre><code class="language-python">import torch
+import torch.nn as nn
+import torchvision as vision
+
+import vortex.development
+import vortex.development.networks as networks
+import vortex.development.networks.modules as vortex_modules
+</code></pre>
+<hr />
+<h2 id="1-model-architecture">1. Model Architecture<a class="headerlink" href="#1-model-architecture" title="Permanent link">&para;</a></h2>
+<p>We first define our model, in this case we will define AlexNet model
+that can be integrated to <code>vortex</code>. In order to do that, our model needs
+only to have <code>task</code> and <code>output_format</code> member variables.</p>
+<p>For the sake of simplicity, we will reuse <code>AlexNet</code> from <code>torchvision</code> by
+instantiate <code>torchvision</code>'s <code>AlexNet</code> and add the required member variable
+<code>task</code> and <code>output_format</code>. <code>output_format</code> will be used to slice tensor
+output from post-process module. </p>
+<p><code>output_format</code> is a nested <code>dict</code>, with signature of <code>Dict[str,dict]</code>,
+with inner <code>dict</code> with signature of <code>Dict[str,Union[list,int]]</code>.  The inner
+dictionary is a mapping from output name to arguments that will be used for tensor slicing.
+The tensor slicing operation will be performed using <code>np.take</code>, <code>Onnx.Gather</code>, or
+<code>torch.index_select</code>; the arguments' naming use numpy's take, that is <code>indices</code> and <code>axis</code>;
+check numpy, onnx, or torch docs for more details.</p>
+<p>For classification models, we need <code>class_label</code> and <code>class_confidence</code>.
+Note that this <code>output_format</code> will be used for single sample.</p>
+<p>The code will looks like:</p>
+<pre><code>       alexnet = vision.models.alexnet(...)
+       alexnet.task = &quot;classification&quot;
+       alexnet.output_format = dict(
+           class_label=dict(
+               indices=[0], axis=0
+           ),
+           class_confidence=dict(
+               indices=[1], axis=0
+           )
+       )
+</code></pre>
+<hr />
+<h2 id="2-create-postprocess-module">2. Create PostProcess module<a class="headerlink" href="#2-create-postprocess-module" title="Permanent link">&para;</a></h2>
+<p>Next, let's define our post-process module. This module will be responsible
+for slicing tensor output from model's output tensor, as well as some additional postprocess
+if necessary. For example, non-max suppression for detection model, or apply
+softmax for clasification model if necessary.</p>
+<p>Note that this module is used for evaluation only, skipped when training.
+Additional arguments may be supplied as attributes via initializer.</p>
+<pre><code class="language-python">class AlexNetPostProcess(nn.Module):
+    def __init__(self):
+        super(AlexNetPostProcess, self).__init__()
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, input: torch.Tensor) -&gt; torch.Tensor:
+        input = self.softmax(input)
+        conf_label, cls_label = input.max(dim=1, keepdim=False)
+        return torch.stack((cls_label.float(), conf_label), dim=1)
+</code></pre>
+<hr />
+<h2 id="3-defining-loss-function">3. Defining Loss Function<a class="headerlink" href="#3-defining-loss-function" title="Permanent link">&para;</a></h2>
+<p>Since we do not include softmax to our model (performed in post-process instead), 
+we will use cross entropy loss.</p>
+<p>Note that the function signature for loss function is <code>forward(input,target) -&gt; Tensor</code>.
+Additional arguments may be supplied as attributes via initializer.</p>
+<pre><code class="language-python">class ClassificationLoss(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(ClassificationLoss,self).__init__()
+        self.loss_fn = nn.CrossEntropyLoss(*args,**kwargs)
+
+    def forward(self, input, target):
+        target = target.squeeze()
+        if target.size() == torch.Size([]):
+            target = target.unsqueeze(0)
+        return self.loss_fn(input, target)
+</code></pre>
+<hr />
+<h2 id="4-registering-our-model-to-vortex">4. Registering our model to vortex<a class="headerlink" href="#4-registering-our-model-to-vortex" title="Permanent link">&para;</a></h2>
+<p>After defining necessary components, we need to define <em>builder</em> function
+that will create instances of necessary components, then we register it to vortex
+by decorating the function and providing the model name.</p>
+<p>This function serves as entry point and customization point for our loss, model,
+and post-process, and optionally preprocess and dataset collater. For example, you
+need to reuse parameter from networks to postprocess, you can do it here.</p>
+<p>The required components are <code>preprocess</code>, <code>network</code>, and <code>postprocess</code>.
+For training, we need additional components, <code>loss</code> and optional <code>collate_fn</code>.
+For preprocess, it is recommended to use modules from <code>vortex_modules.preprocess</code> to 
+make sure it is exportable.</p>
+<p>note that the function signature is </p>
+<pre><code>create_model_components(model_name, preprocess_args, network_args, loss_args, postprocess_args, stage) -&gt; dict
+</code></pre>
+<p>where model_name is a <code>str</code> holds the model name (<code>'alexnet'</code> in this case), <code>preprocess_args</code>,
+<code>network_args</code>, <code>loss_args</code>, <code>postprocess_args</code> are mapping (<code>dict</code>) containing parameters from
+configuration file, while <code>stage</code> is a string containing experiment stage (either <code>'train'</code> or <code>'validate'</code>)
+given by vortex driver. Note that we simply <em>unpack argument mapping</em>  using <code>**</code> operator.</p>
+<p>There are two ways of registering <em>builder</em> function, using decorator <code>register_model</code></p>
+<pre><code>@vortex.development.networks.models.register_model(model_name='my_model_name')
+def create_model_components(...):
+</code></pre>
+<p>or by directly calling <code>register_model_</code></p>
+<pre><code>vortex.development.networks.models.register_model_('my_model_name',create_model_components)
+</code></pre>
+<pre><code class="language-python">@networks.models.register_model(model_name='alexnet')
+def create_model_components(
+    model_name, preprocess_args,
+    network_args, loss_args,
+    postprocess_args, stage) -&gt; dict:
+
+    ## let's get model from torchvision
+    ## then add 'task' and 'output_format' to our AlexNet class,
+    ## adding attributes is not necessary 
+    ## if your model already have 'task' and 'output_format'
+    alexnet = vision.models.alexnet(**network_args)
+    ## necessary attributes
+    alexnet.task = &quot;classification&quot;
+    alexnet.output_format = dict(
+        class_label=dict(
+            indices=[0], axis=0
+        ),
+        class_confidence=dict(
+            indices=[1], axis=0
+        )
+    )
+
+    postprocess = AlexNetPostProcess(**postprocess_args)
+    loss_fn = ClassificationLoss(**loss_args)
+
+    # using vortex' preprocess module
+    preprocess = vortex_modules.preprocess.get_preprocess(
+        'normalizer', **preprocess_args
+    )
+
+    ## wrap-up core components
+    components = dict(
+        preprocess=preprocess,
+        network=alexnet,
+        postprocess=postprocess,
+    )
+    if stage == 'train':
+        ## if we are training then append loss function
+        components.update(dict(
+            loss=loss_fn
+        ))
+    elif stage == 'validate':
+        ## do nothing for now
+        pass
+
+    return components
+</code></pre>
+<hr />
+<h2 id="5-integration-with-vortex-cli">5. Integration with vortex CLI<a class="headerlink" href="#5-integration-with-vortex-cli" title="Permanent link">&para;</a></h2>
+<p>Finally, we make this module as entry-point for our next experiments
+to get more vortex' features in a <em>configurable</em> way:  </p>
+<ul>
+<li>hyperparameter optimization  </li>
+<li>training  </li>
+<li>validation  </li>
+<li>TorchScript &amp; ONNX export (with batch inference support)   </li>
+<li>TensorRT inference (using ONNX model)  </li>
+</ul>
+<pre><code class="language-python">if __name__=='__main__':
+    ## let's use vortex_cli to demonstrate vortex features
+    ## this will be our entrypoint to supported experiments
+    vortex.development.vortex_cli.main()
+</code></pre>
+<p>Note that since our custom model is added outside the vortex distribution,
+it is unavailable from <code>vortex</code> command-line, to properly run experiments
+with our custom model registered we need to invoke python, for example</p>
+<pre><code class="language-Shell"># run hyperparam optimization experiment
+python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
+</code></pre>
+<pre><code class="language-Shell"># run training experiment
+python3 alexnet.py train --config cifar10.yml
+</code></pre></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script>
+            var base_url = "../..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../../js/base.js" defer></script>
+        <script src="../../search/main.js" defer></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
