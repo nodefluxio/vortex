@@ -119,8 +119,7 @@ class ClassificationModel(ModelBase):
 
     @property
     def available_metrics(self):
-        # return self._avail_metrics
-        return list(self._avail_metrics.keys())
+        return self._avail_metrics
 
     def training_step_end(self, outputs):
         self.log('train_loss', outputs['loss'], on_epoch=True, on_step=False, logger=True)
