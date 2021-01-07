@@ -3,7 +3,7 @@ import pytorch_lightning as pl
 
 from easydict import EasyDict
 from abc import abstractmethod
-from typing import Union
+from typing import List, Union, Callable
 
 from vortex.development.core.trainer.utils import create_optimizer, create_scheduler
 
@@ -20,7 +20,7 @@ class ModelBase(pl.LightningModule):
 
     @torch.no_grad()
     @abstractmethod
-    def predict(self, *args, **kwargs):
+    def predict(self, *args, **kwargs) -> Union[List[torch.Tensor], torch.Tensor]:
         """Predict function, called in inference
         includes preprocess, and postprocess.
         Expected:
@@ -43,7 +43,7 @@ class ModelBase(pl.LightningModule):
             self._lr = optimizer.param_groups[0]['lr']
         return cfg
 
-    def get_lr(self):
+    def get_lr(self) -> Union[float, torch.Tensor]:
         assert self.trainer is not None, "trainer object is not yet defined, pass " \
             "this model to trainer first befor calling 'get_lr'"
 
@@ -68,7 +68,7 @@ class ModelBase(pl.LightningModule):
         return self.parameters()
 
     @property
-    def collate_fn(self):
+    def collate_fn(self) -> Union[Callable]:
         return None
 
     @property
@@ -82,7 +82,7 @@ class ModelBase(pl.LightningModule):
 
     @property
     @abstractmethod
-    def available_metrics(self) -> Union[dict, list]:
+    def available_metrics(self) -> Union[dict, List[str]]:
         """explain all available metrics and the strategy for 
         getting the best value of it ('max' or 'min') as dict.
         or just return all available metrics as list but the

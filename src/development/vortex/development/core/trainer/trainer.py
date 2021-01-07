@@ -1,3 +1,4 @@
+import warnings
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
 import pytorch_lightning.callbacks as pl_callbacks
@@ -9,7 +10,6 @@ from easydict import EasyDict
 from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
-from pytorch_lightning.loggers import LoggerCollection, TensorBoardLogger
 
 
 from .checkpoint import CheckpointConnector
@@ -20,6 +20,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
+from vortex.development.networks.models import ModelBase
 
 
 class TrainingPipeline:
@@ -42,7 +43,7 @@ class TrainingPipeline:
     def run(self):
         pass
 
-    def create_model(self, config=None):
+    def create_model(self, config=None) -> ModelBase:
         ## TODO: FINISH THIS!!
         pass
 
@@ -70,6 +71,10 @@ class TrainingPipeline:
 
         available_metrics = self.model.available_metrics
         if isinstance(available_metrics, list):
+            warnings.warn("'model.available_metrics()' returns list, so it doesn't describe optimization "
+                "strategy to use ('min' or 'max').\nWill infer from metrics name with metrics that contains "
+                "'loss' in the name will use 'min' strategy otherwise use 'max'.\nMake sure it is correctly "
+                "configured.")
             available_metrics = {m: "min" if "loss" in m else "max" for m in available_metrics}
 
         save_best_metrics = self.config['trainer']['save_best_metrics']
