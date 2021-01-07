@@ -1,5 +1,7 @@
 from easydict import EasyDict
-import torch
+
+from .model import ModelBase
+
 
 supported_models = {}
 all_models = []
