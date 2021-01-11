@@ -147,17 +147,15 @@ class TrainingPipeline:
             raise RuntimeError("logger config is incomplete, 'config.logging' is expected to have "
                 "'module' and 'args' attribute, got {}".format(list(logger_cfg)))
 
-        loggers = None
         logger_module = None
         if logger_cfg["module"] in logger_map:
             logger_module = logger_map[logger_cfg["module"]]
-        if hasattr(logger_cfg["module"]):
-            logger_module = logger_cfg["module"]
-            loggers = logger_module(**logger_cfg["args"])
+        if hasattr(pl_loggers, logger_cfg["module"]):
+            logger_module = getattr(pl_loggers, logger_cfg["module"])
         else:
             raise RuntimeError("Unknown logger module name of '{}', available logger: {}"
                 .format(logger_cfg["module"], list(logger_map)))
-        return loggers
+        return logger_module(save_dir=experiment_dir, **logger_cfg["args"])
 
     def create_trainer(self, experiment_dir, config=None, model=None) -> pl.Trainer:
         if config:
