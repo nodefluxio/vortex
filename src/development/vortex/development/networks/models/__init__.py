@@ -1,51 +1,13 @@
-from easydict import EasyDict
+import inspect
+from functools import partial
 
 from .model import ModelBase
 
 
 supported_models = {}
-all_models = []
-
-_REQUIRED_ATTRIBUTES = [
-    'supported_models',
-    'create_model_components'
-]
 
 
-def _register_task(task: str):
-    global supported_models, all_models
-    exec('from . import %s' % task)
-
-    module = eval('%s' % task)
-    module_attributes = module.__dict__.keys()
-    for attribute in _REQUIRED_ATTRIBUTES:
-        if not attribute in module_attributes:
-            raise RuntimeError("dear maintainer, your module(s) is supposed to have the following "\
-                "attribute(s): %s; got %s, please check!" % (_REQUIRED_ATTRIBUTES, module_attributes))
-
-    supported_models[module] = module.all_models
-    all_models.extend(module.all_models)
-
-
-def create_model_components(model_name: str, preprocess_args: EasyDict, network_args: EasyDict, 
-        loss_args: EasyDict, postprocess_args: EasyDict, stage: str='train') -> EasyDict:
-
-    if not model_name in all_models:
-        raise KeyError("model '%s' not supported, available: %s" %(model_name, all_models))
-
-    for module, m in supported_models.items():
-        if model_name in m:
-            return module.create_model_components(model_name, preprocess_args, network_args, loss_args, postprocess_args, stage)
-    raise RuntimeError("unexpected error! please report this as bug")
-
-
-_register_task('detection')
-_register_task('classification')
-
-import inspect
-from functools import partial
-
-def register_model_(model_name, m):
+def _register_model(module, name=None, force=False):
     """
     Register model with model_name.
     Args:
@@ -53,35 +15,41 @@ def register_model_(model_name, m):
         m: module or function, should have `create_model_components`
             function, or is named `create_model_components`
     """
-    assert isinstance(model_name, str)
-    is_function = inspect.isfunction(m)
-    is_module = inspect.ismodule(m)
-    assert is_function or is_module
-    if is_function:
-        module = inspect.getmodule(m)
-        assert m.__name__ == 'create_model_components'
-    else:
-        assert 'create_model_components' in dir(m)
-        module = m
-    ## TODO: check fn args
-    supported_models[module] = model_name
-    all_models.append(model_name)
-    return m
+    if not (inspect.isfunction(module) or inspect.isclass(module)):
+        raise RuntimeError("module ({}) must be a function or a class".format(module))
+    if name is None:
+        name = module.__name__
 
-def register_model(model_name):
-    """
-    Decorator factory for register model,
-    binds model_name to returnded function.
-    """
-    return partial(register_model_, model_name)
+    ## check if exists
+    if not force and name in supported_models:
+        raise RuntimeError("Model name '{}' is already registered. Check that you register "
+            "the correct module, or use other name, or use argument 'force=True'.".format(name))
+    supported_models[name] = module
+    return module
+
+def register_model(name=None, module=None, force=False):
+    if not isinstance(force, bool):
+        raise TypeError(f"'force' argument must be boolean. got {type(force)}")
+
+    ## use it as regular function -> register_model('name', module)
+    if module is not None:
+        return _register_model(module, name, force)
+
+    ## use as decorator but not calling the function -> @register_model
+    if inspect.isclass(name) or inspect.isfunction(name):
+        module, name = name, None
+        return _register_model(module, name, force)
+
+    if not (name is None or isinstance(name, str)):
+        raise TypeError("'name' argument must be an 'str', got {}".format(type(name)))
+
+    ## use it as a decorator -> @register_model()
+    return partial(_register_model, name=name, force=force)
 
 def remove_model(model_name):
-    global all_models, supported_models
-    if not model_name in all_models:
+    global supported_models
+    if not model_name in supported_models:
         return False
-    all_models.remove(model_name)
-    supported_models = {
-        module: model_list for module, model_list in supported_models.items() \
-            if model_name not in model_list
-    }
+
+    supported_models.pop(model_name)
     return True
