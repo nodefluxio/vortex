@@ -2,7 +2,6 @@ import warnings
 import torch.nn as nn
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
-import pytorch_lightning.callbacks as pl_callbacks
 
 from pathlib import Path
 from copy import deepcopy
@@ -31,70 +30,61 @@ class TrainingPipeline:
         ## TODO: validate config
         self.config = config
 
+        ## TODO: build model
+        self.model = self.create_model(self.config)
+        self.model.config = self.config
+
         experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
         self.trainer = self.create_trainer(experiment_dir)
 
-        ## TODO: build model
-        self.model = self.create_model()
-
-
     def run(self):
-        train_loader, val_loader = self.create_dataloaders()
+        train_loader, val_loader = self.create_dataloaders(self.config, self.model)
 
         self.trainer.fit(self.model, train_loader, val_loader)
 
 
-    def create_model(self, config=None) -> ModelBase:
-        ## TODO: FINISH THIS!!
-        if config:
-            self.config = config
-
-        model = create_model(self.config.model)
+    @staticmethod
+    def create_model(config) -> ModelBase:
+        model = create_model(config.model)
         if isinstance(model, pl.LightningModule):
             raise RuntimeError("model '{}' is not a 'LightningModule' subclass. "
                 "Please update it to inherit 'LightningModule', see more in "
                 "https://pytorch-lightning.readthedocs.io/en/latest/lightning_module.html"
-                .format(self.config.model.name))
-
+                .format(config.model.name))
         return model
 
-    def create_dataloaders(self, config=None, model=None):
-        ## TODO: FINISH THIS!!
-        if config:
-            self.config = config
-        if model:
-            self.model = model
-        assert self.model is not None, "Model is not initiated"
+    @staticmethod
+    def create_dataloaders(config, model):
+        assert model is not None, "Model is not initiated"
 
         train_dataloader, val_dataloader = None, None
-        if 'train' in self.config.dataset:
+        if 'train' in config.dataset:
             train_dataloader = create_dataloader(
-                self.config.dataloader, self.config.dataset,
-                preprocess_config=self.config.model.preprocess_config,
-                collate_fn=self.model.collate_fn,
+                config.dataloader, config.dataset,
+                preprocess_config=config.model.preprocess_config,
+                collate_fn=model.collate_fn,
                 stage='train'
             )
         else:
             raise RuntimeError("Train dataset config (config.dataset.train) is not found, "
                 "Please specify it properly")
 
-        if 'val' in self.config.dataset:
-            self.config.dataset.eval = self.config.dataset.val
-        if 'eval' in self.config.dataset:
+        if 'val' in config.dataset:
+            config.dataset.eval = config.dataset.val
+        if 'eval' in config.dataset:
             val_dataloader = create_dataloader(
-                self.config.dataloader, self.config.dataset,
-                preprocess_config=self.config.model.preprocess_config,
-                collate_fn=self.model.collate_fn,
+                config.dataloader, config.dataset,
+                preprocess_config=config.model.preprocess_config,
+                collate_fn=model.collate_fn,
                 stage='validate'
             )
 
         return train_dataloader, val_dataloader
 
 
-    def create_model_checkpoints(self, experiment_dir, config=None):
-        if config:
-            self.config = config
-        fname_prefix = self.config['experiment_name']
+    @staticmethod
+    def create_model_checkpoints(experiment_dir, config, model):
+        fname_prefix = config['experiment_name']
 
         ## patches for model checkpoint
         ModelCheckpoint.FILE_EXTENSION = ".pth"
@@ -106,10 +96,11 @@ class TrainingPipeline:
             ModelCheckpoint(
                 filename=fname_prefix+"-last", monitor=None,
                 save_top_k=None, mode="min",
+                dirpath=experiment_dir
             )
         ]
 
-        available_metrics = self.model.available_metrics
+        available_metrics = model.available_metrics
         if isinstance(available_metrics, list):
             warnings.warn("'model.available_metrics()' returns list, so it doesn't describe optimization "
                 "strategy to use ('min' or 'max').\nWill infer from metrics name with metrics that contains "
@@ -117,7 +108,7 @@ class TrainingPipeline:
                 "configured.")
             available_metrics = {m: "min" if "loss" in m else "max" for m in available_metrics}
 
-        save_best_metrics = self.config['trainer']['save_best_metrics']
+        save_best_metrics = config['trainer']['save_best_metrics']
         if isinstance(save_best_metrics, str):
             save_best_metrics = [save_best_metrics]
 
@@ -125,14 +116,16 @@ class TrainingPipeline:
             if not m in available_metrics:
                 raise RuntimeError("metric '{}' is not available to track for 'save_best_metrics' "
                     "argument, available metrics: {}".format(m, list(available_metrics.keys())))
-            callbacks.append(pl_callbacks.ModelCheckpoint(
+            callbacks.append(ModelCheckpoint(
                 filename=fname_prefix + "-best_" + m,
                 monitor=m,
-                mode=available_metrics[m]
+                mode=available_metrics[m],
+                dirpath=experiment_dir
             ))
 
 
-    def create_loggers(self, experiment_dir, config=None, no_log=False):
+    @staticmethod
+    def create_loggers(experiment_dir, config, no_log=False):
         logger_map = {
             'comet_ml': pl_loggers.CometLogger,
             'ml_flow': pl_loggers.MLFlowLogger,
@@ -143,10 +136,7 @@ class TrainingPipeline:
             'csv_logger': pl_loggers.CSVLogger
         }
 
-        if config:
-            self.config = config
-
-        logger_cfg = self.config["logging"]
+        logger_cfg = config["logging"]
         if logger_cfg is None or no_log:
             return False
 
@@ -169,9 +159,11 @@ class TrainingPipeline:
                 .format(logger_cfg["module"], list(logger_map)))
         return loggers
 
-    def create_trainer(self, experiment_dir, config=None) -> pl.Trainer:
+    def create_trainer(self, experiment_dir, config=None, model=None) -> pl.Trainer:
         if config:
             self.config = config
+        if model:
+            self.model = model
         self.experiment_dir = experiment_dir
 
         trainer_args = dict()
@@ -180,8 +172,8 @@ class TrainingPipeline:
         if 'args' in self.config.trainer and self.config.trainer.args is not None:
             trainer_args.update(self.config.trainer.args)
 
-        callbacks = self.create_model_checkpoints(experiment_dir)
-        loggers = self.create_loggers(experiment_dir)
+        callbacks = self.create_model_checkpoints(self.experiment_dir, self.config, self.model)
+        loggers = self.create_loggers(self.experiment_dir, self.config)
 
         ## patch for logger path (exclude 'lightning_logs' when logger not set)
         LoggerConnector.configure_logger = patch_configure_logger
