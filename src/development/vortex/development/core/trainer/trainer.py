@@ -12,7 +12,6 @@ from pytorch_lightning.trainer.connectors.checkpoint_connector import Checkpoint
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
-
 from .checkpoint import CheckpointConnector
 from .patches import (
     patch_checkpoint_filepath_name,
@@ -21,7 +20,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
-from vortex.development.core import create_model
+from vortex.development.core import create_model, create_dataloader
 from vortex.development.networks.models import ModelBase
 
 
@@ -38,12 +37,12 @@ class TrainingPipeline:
         ## TODO: build model
         self.model = self.create_model()
 
-        ## TODO: create dataset
-        self.datamodule = self.create_datamodule()
-
 
     def run(self):
-        pass
+        train_loader, val_loader = self.create_dataloaders()
+
+        self.trainer.fit(self.model, train_loader, val_loader)
+
 
     def create_model(self, config=None) -> ModelBase:
         ## TODO: FINISH THIS!!
@@ -59,9 +58,38 @@ class TrainingPipeline:
 
         return model
 
-    def create_datamodule(self, config=None):
+    def create_dataloaders(self, config=None, model=None):
         ## TODO: FINISH THIS!!
-        pass
+        if config:
+            self.config = config
+        if model:
+            self.model = model
+        assert self.model is not None, "Model is not initiated"
+
+        train_dataloader, val_dataloader = None, None
+        if 'train' in self.config.dataset:
+            train_dataloader = create_dataloader(
+                self.config.dataloader, self.config.dataset,
+                preprocess_config=self.config.model.preprocess_config,
+                collate_fn=self.model.collate_fn,
+                stage='train'
+            )
+        else:
+            raise RuntimeError("Train dataset config (config.dataset.train) is not found, "
+                "Please specify it properly")
+
+        if 'val' in self.config.dataset:
+            self.config.dataset.eval = self.config.dataset.val
+        if 'eval' in self.config.dataset:
+            val_dataloader = create_dataloader(
+                self.config.dataloader, self.config.dataset,
+                preprocess_config=self.config.model.preprocess_config,
+                collate_fn=self.model.collate_fn,
+                stage='validate'
+            )
+
+        return train_dataloader, val_dataloader
+
 
     def create_model_checkpoints(self, experiment_dir, config=None):
         if config:
