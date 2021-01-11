@@ -1,4 +1,5 @@
 import warnings
+import torch.nn as nn
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
 import pytorch_lightning.callbacks as pl_callbacks
@@ -20,6 +21,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
+from vortex.development.core import create_model
 from vortex.development.networks.models import ModelBase
 
 
@@ -45,7 +47,17 @@ class TrainingPipeline:
 
     def create_model(self, config=None) -> ModelBase:
         ## TODO: FINISH THIS!!
-        pass
+        if config:
+            self.config = config
+
+        model = create_model(self.config.model)
+        if isinstance(model, pl.LightningModule):
+            raise RuntimeError("model '{}' is not a 'LightningModule' subclass. "
+                "Please update it to inherit 'LightningModule', see more in "
+                "https://pytorch-lightning.readthedocs.io/en/latest/lightning_module.html"
+                .format(self.config.model.name))
+
+        return model
 
     def create_datamodule(self, config=None):
         ## TODO: FINISH THIS!!
@@ -134,8 +146,13 @@ class TrainingPipeline:
             self.config = config
         self.experiment_dir = experiment_dir
 
-        callbacks = self.create_model_checkpoints(experiment_dir)
+        trainer_args = dict()
+        trainer_args.update(self._decide_device_to_use())
 
+        if 'args' in self.config.trainer and self.config.trainer.args is not None:
+            trainer_args.update(self.config.trainer.args)
+
+        callbacks = self.create_model_checkpoints(experiment_dir)
         loggers = self.create_loggers(experiment_dir)
 
         ## patch for logger path (exclude 'lightning_logs' when logger not set)
@@ -144,7 +161,6 @@ class TrainingPipeline:
         pl.Trainer.on_load_checkpoint = patch_trainer_on_load_checkpoint
 
         trainer = pl.Trainer(
-            gpus=1,
             max_epochs=self.config['trainer']['epoch'],
             logger=loggers,
             default_root_dir=self.experiment_dir,
@@ -153,12 +169,33 @@ class TrainingPipeline:
             weights_summary=None,
             move_metrics_to_cpu=True,
             callbacks=callbacks,
-            logger=loggers
+            logger=loggers,
+            **trainer_args
         )
         ## patch for additional checkpoint data
         trainer.checkpoint_connector = CheckpointConnector(trainer)
 
         return trainer
+
+    def _decide_device_to_use(self, device=None):
+        gpus, auto_select_gpus = None, False
+        if device is None and 'device' in self.config:
+            device = self.config.device
+
+        if device is not None and ('cuda' in device or 'gpu' in device):
+            len_device = len(device.split(':'))
+            if len_device == 1:
+                gpus, auto_select_gpus = 1, True
+            elif len_device == 2:
+                gpus = device.split(':')[-1]
+            else:
+                raise RuntimeError("Unknown 'device' argument of {}".format(device))
+        kwargs = {
+            'gpus': gpus,
+            'auto_select_gpus': auto_select_gpus
+        }
+        return kwargs
+
 
     def run_sanity_check(self, **trainer_kwargs):
         trainer_sanity = pl.Trainer(
