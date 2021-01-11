@@ -1,7 +1,7 @@
-import os
-import sys
 import logging
+import warnings
 import torch
+import torch.nn as nn
 
 from copy import deepcopy
 from pathlib import Path
@@ -9,7 +9,7 @@ from easydict import EasyDict
 from typing import Union, Callable, Type, Iterable
 from collections import OrderedDict
 
-from vortex.development.networks.models import create_model_components
+from vortex.development.networks.models import supported_models
 from vortex.development.utils.data.collater import create_collater
 from vortex.development.utils.logger import create_logger
 from vortex.runtime.factory import create_runtime_model
@@ -22,9 +22,7 @@ __all__ = ['create_model',
         #    'create_exporter'
 ]
 
-def create_model(model_config : EasyDict,
-                 state_dict : Union[str, dict, Path] = None,
-                 stage : str = 'train') -> EasyDict:
+def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = None, stage=None) -> nn.Module:
     """Function to create model and it's signature components. E.g. loss function, collate function, etc
 
     Args:
@@ -78,8 +76,8 @@ def create_model(model_config : EasyDict,
         ```
     """
 
-    if stage not in ['train','validate']:
-        raise TypeError('Unknown model "stage" argument, got {}, expected "train" or "validate"'%stage)
+    if stage is not None:
+        warnings.warn("Deprecated argument 'stage' is used, you can remove this safely.", DeprecationWarning)
 
     logging.info('Creating Pytorch model from experiment file')
 
@@ -100,22 +98,18 @@ def create_model(model_config : EasyDict,
         postprocess_args = model_config.postprocess_args
     except:
         postprocess_args = {}
-    model_components = create_model_components(
-        model_name,
+
+    model = supported_models[model_name](
         preprocess_args=preprocess_args,
         network_args=network_args,
         loss_args=loss_args,
         postprocess_args=postprocess_args,
-        stage=stage)
-
-    if not isinstance(model_components, EasyDict):
-        model_components = EasyDict(model_components)
+    )
 
     if 'init_state_dict' in model_config or state_dict is not None:
         if isinstance(state_dict, Path):
             state_dict = str(state_dict)
 
-        model_path = None
         # Load state_dict from config if specified in experiment file
         if 'init_state_dict' in model_config and state_dict is None:
             logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
@@ -124,15 +118,19 @@ def create_model(model_config : EasyDict,
         elif isinstance(state_dict, str):
             logging.info("Loading state_dict : {}".format(state_dict))
             model_path = state_dict
+        else:
+            ## don't know why you would come to this stage
+            raise RuntimeError("'config.model.init_state_dict' or 'state_dict' argument must be set.")
 
         if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
-            assert model_path
             ckpt = torch.load(model_path)
             state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-        assert isinstance(state_dict, (OrderedDict, dict))
-        model_components.network.load_state_dict(state_dict, strict=True) 
 
-    return model_components
+        assert isinstance(state_dict, (OrderedDict, dict))
+        model.load_state_dict(state_dict, strict=True) 
+
+    return model
+
 
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
