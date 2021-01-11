@@ -2,6 +2,7 @@ import torch
 import warnings
 import pytorch_lightning as pl
 
+from . import register_model
 from .model import ModelBase
 from .base_connector import BackbonePoolConnector
 from ..modules.losses.classification import ClassificationLoss
@@ -151,6 +152,7 @@ class ClassificationModel(ModelBase):
         self.validation_step_end(outputs, test=True)
 
 
+@register_model()
 class Softmax(ClassificationModel):
     def __init__(self, network_args: dict, preprocess_args: dict, postprocess_args: dict, loss_args: dict):
         num_classes = network_args['n_classes']
@@ -208,3 +210,6 @@ class Softmax(ClassificationModel):
             'target': target
         }
 
+
+## backward compatibility for name 'softmax'
+register_model('softmax', Softmax)
