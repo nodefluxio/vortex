@@ -5,7 +5,7 @@ from easydict import EasyDict
 from abc import abstractmethod
 from typing import List, Union, Callable
 
-from vortex.development.core.trainer.utils import create_optimizer, create_scheduler
+from vortex.development.utils import create_optimizer, create_scheduler
 
 
 class ModelBase(pl.LightningModule):
