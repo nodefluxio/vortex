@@ -1,251 +1,189 @@
-"""
-test case for core trainer
-"""
 import pytest
 import torch
 import torch.nn as nn
+import pytorch_lightning as pl
 
-import vortex.development.core.engine as engine
-from vortex.development.core.engine import create_trainer
-from vortex.development.core.engine.trainer.default_trainer import DefaultTrainer
-from vortex.development.core.engine.trainer.base_trainer import ExperimentLogger, BaseTrainer
+from pathlib import Path
+from copy import deepcopy
+from easydict import EasyDict
+from torch.utils.data import Dataset, DataLoader
 
-experiment_logger = ExperimentLogger()
+from vortex.development.networks.models import ModelBase
+from vortex.development.core.trainer import TrainingPipeline
+from vortex.development import __version__ as vortex_version
 
-class BrokenDummyLossFN(nn.Module) :
-    def __init__(self, *args, **kwargs) :
-        super(BrokenDummyLossFN, self).__init__(*args, **kwargs)
-    def forward(self, some_input, some_targets, another_args) :
-        return 10
 
-class DummyLossFN(nn.Module) :
-    def __init__(self, *args, **kwargs) :
-        super(DummyLossFN, self).__init__(*args, **kwargs)
-    def forward(self, input : torch.Tensor, target : torch.Tensor) :
-        return 10
+_REQUIRED_TRAINER_CFG = {
+    'experiment_name': 'dummy_experiment',
+    'device': 'cuda:0',
+    'trainer': {
+        'optimizer': {
+            'method': 'SGD',
+            'args': {'lr': 0.001}
+        },
+        'epoch': 2
+    }
+}
 
-class DummyModel(nn.Module) :
-    def __init__(self, *args, **kwargs) :
-        super(DummyModel, self).__init__(*args, **kwargs)
-        self.fc = nn.Linear(1,2)
-    def forward(self, input : torch.Tensor) -> torch.Tensor :
-        return self.fc(input)
+class DummyDataset(Dataset):
+    def __init__(self, num_classes=5, data_size=224, num_data=5):
+        super().__init__()
 
-class BrokenDummyModel(nn.Module) :
-    def __init__(self, *args, **kwargs) :
-        super(BrokenDummyModel, self).__init__(*args, **kwargs)
-        self.fc = nn.Linear(1,2)
-    def forward(self, input : torch.Tensor) :
-        return self.fc(input)
+        self.num_classes = num_classes
+        self.num_data = num_data
+        self.data_size = data_size
 
-class BrokenCustomTrainer(BaseTrainer):
-    def __init__(self, *args, **kwargs):
-        super(type(self), self).__init__(*args, **kwargs)
+    def __getitem__(self, index: int):
+        x = torch.randn(3, self.data_size, self.data_size)
+        y = torch.randint(0, self.num_classes, (1,))[0]
+        return x, y
 
-class CustomTrainer(BaseTrainer):
-    def __init__(self, *args, **kwargs):
-        super(type(self),self).__init__(*args, **kwargs)
-    
-    def train(self, dataset, epoch):
-        ## dummy train
-        return 0
+class DummyModel(ModelBase):
+    def __init__(self, num_classes=5):
+        super().__init__()
 
-class StrictCustomTrainer(DefaultTrainer):
-    def __init__(self, *args, **kwargs):
-        super(type(self),self).__init__(*args, **kwargs)
-    
-    def _check_model(self):
-        ## enable strict mode from base trainer
-        super(type(self),self)._check_model(strict=True)
+        self.num_classes = num_classes
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3)
+        self.fc = nn.Linear(16, self.num_classes)
 
-    def train(self, dataset, epoch):
-        ## dummy train
-        return 0
+        self.accuracy = pl.metrics.Accuracy()
+        self.criterion = nn.CrossEntropyLoss()
 
-class AnnotatedL1Loss(nn.L1Loss):
-    def __init__(self, *args, **kwargs):
-        super(type(self),self).__init__(*args, **kwargs)
-    def forward(self, input: torch.Tensor, target):
-        return super(type(self),self).forward(input=input,target=target)
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.fc(x)
+        return x
 
-optimizer = ( 'SGD', {
-    'lr' : 1e-3,
-    'momentum' : 0.9,
-})
-scheduler = ( 'StepLR', {
-    'step_size' : 10,
-})
+    def predict(self, x: torch.Tensor):
+        x = self(x)
+        conf, label = x.softmax(1).max(1)
+        return torch.stack((label.float(), conf), dim=1)
 
-def test_construct_from_tuple() :
-    model = DummyModel()
-    loss_fn = DummyLossFN()
-    trainer = DefaultTrainer(
-        optimizer=optimizer, 
-        scheduler=scheduler, 
-        model=model, 
-        criterion=loss_fn, 
-        experiment_logger=experiment_logger
-    )
+    @property
+    def output_format(self):
+        return {
+            "class_label": {"indices": [0], "axis": 0},
+            "class_confidence": {"indices": [1], "axis": 0}
+        }
 
-def test_custom_trainer():
-    loss_fn = nn.L1Loss()
-    model = DummyModel()
-    cfg = dict(
-        driver=dict(
-            module='UnregisteredTrainer',
-            args={},
-        )
-    )
-    with pytest.raises(RuntimeError) as e:
-        trainer = create_trainer(cfg, 
-            model=model,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            criterion=loss_fn,
-        )
-    
-    cfg = dict(
-        driver=dict(
-            module='CustomTrainer',
-            args={},
-        )
-    )
-    engine.register_trainer(CustomTrainer)
-    trainer = create_trainer(cfg, 
-        model=model,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        criterion=loss_fn,
-    )
-    engine.remove_trainer('CustomTrainer')
-    with pytest.raises(RuntimeError) as e:
-        trainer = create_trainer(cfg, 
-            model=model,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            criterion=loss_fn,
-        )
+    @property
+    def available_metrics(self):
+        return {
+            'accuracy': 'max',
+            'train_loss': 'min'
+        }
 
-def test_strict_custom_trainer():
-    loss_fn = AnnotatedL1Loss()
-    model = DummyModel()
-    
-    engine.register_trainer(StrictCustomTrainer)
-    cfg = dict(
-        driver=dict(
-            module='StrictCustomTrainer',
-            args={},
-        )
-    )
-    trainer = create_trainer(cfg, 
-        model=model,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        criterion=loss_fn,
-    )
-    with pytest.raises(TypeError) as e:
-        model = BrokenDummyModel()
-        trainer = create_trainer(cfg, 
-            model=model,
-            optimizer=optimizer,
-            scheduler=scheduler,
-            criterion=loss_fn,
-        )
-    engine.remove_trainer('StrictCustomTrainer')
+    def training_step(self, batch, batch_idx):
+        data, target = batch
+        pred = self(data)
+        loss = self.criterion(pred, target)
+        self.log('train_loss', loss, on_epoch=True, on_step=False, logger=True)
+        return loss
 
-def test_broken_construct_from_tuple() :
-    with pytest.warns(UserWarning) as e:
-        ## default trainer only warns
-        model = BrokenDummyModel()
-        loss_fn = DummyLossFN()
-        trainer = DefaultTrainer(
-            optimizer=optimizer, 
-            scheduler=scheduler, 
-            model=model, 
-            criterion=loss_fn, 
-            experiment_logger=experiment_logger
-        )
-    with pytest.raises(TypeError) as e:
-        model = BrokenDummyModel()
-        loss_fn = DummyLossFN()
-        trainer = StrictCustomTrainer(
-            optimizer=optimizer, 
-            scheduler=scheduler, 
-            model=model, 
-            criterion=loss_fn, 
-            experiment_logger=experiment_logger
-        )
+    def validation_step(self, batch, batch_idx):
+        data, target = batch
+        pred = self(data)
+        acc = self.accuracy(pred.detach().cpu(), target.detach().cpu())
+        self.log('accuracy', acc, on_epoch=True)
 
-loss_fn = nn.L1Loss()
-model = DummyModel()
 
-def test_broken_construct_from_tuple_2() :
-    with pytest.warns(UserWarning) as e:
-        ## default trainer only warns
-        loss_fn = BrokenDummyLossFN()
-        trainer = DefaultTrainer(
-            optimizer=optimizer, 
-            scheduler=scheduler, 
-            model=model, 
-            criterion=loss_fn, 
-            experiment_logger=experiment_logger
-        )
-    
-    with pytest.raises(TypeError) as e:
-        ## using strict trainer raises type error
-        loss_fn = BrokenDummyLossFN()
-        trainer = StrictCustomTrainer(
-            optimizer=optimizer, 
-            scheduler=scheduler, 
-            model=model, 
-            criterion=loss_fn, 
-            experiment_logger=experiment_logger
-        )
+def patched_pl_trainer(experiment_dir, model):
+    TrainingPipeline._patch_trainer_components()
+    trainer = pl.Trainer(default_root_dir=experiment_dir)
+    TrainingPipeline._patch_trainer_object(trainer)
 
-def test_torch_nn_loss() :
-    trainer = DefaultTrainer(
-        optimizer=optimizer, 
-        scheduler=scheduler, 
-        model=model, 
-        criterion=loss_fn, 
-        experiment_logger=experiment_logger
-    )
+    trainer.accelerator_backend = trainer.accelerator_connector.select_accelerator()
+    trainer.accelerator_backend.setup(model)
+    trainer.accelerator_backend.train_loop = trainer.train
+    trainer.accelerator_backend.validation_loop = trainer.run_evaluation
+    trainer.accelerator_backend.test_loop = trainer.run_evaluation
+    return trainer
 
-optimizer = dict(
-    module='SGD',
-    args=dict(
-        lr=1e-3,
-        momentum=0.9,
-    )
+## TODO: test logger
+
+
+@pytest.mark.parametrize(
+    ('device', 'expected_gpu', 'expected_auto_select'),
+    [
+        pytest.param(None, None, False, id="on cpu"),
+        pytest.param("cuda", 1, True, id="on gpu autoselect"),
+        pytest.param("cuda:1", "1", False, id="on gpu 1")
+    ]
 )
-scheduler = dict(
-    module='StepLR',
-    args=dict(
-        step_size=10,
-    )
-)
+def test_decide_device(device, expected_gpu, expected_auto_select):
+    config = dict(device=device)
+    expected = dict(gpus=expected_gpu, auto_select_gpus=expected_auto_select)
 
-def test_construct_from_dict():
-    trainer = DefaultTrainer(
-        optimizer=optimizer, 
-        scheduler=scheduler, 
-        model=model, 
-        criterion=loss_fn, 
-        experiment_logger=experiment_logger
-    )
+    kwargs = TrainingPipeline._decide_device_to_use(config)
+    assert kwargs == expected
 
-def test_create_trainer():
-    cfg = dict(
-        driver=dict(
-            module='DefaultTrainer',
-            args={},
-        )
-    )
-    trainer = create_trainer(cfg, 
-        model=model,
-        optimizer=optimizer,
-        scheduler=scheduler,
-        criterion=loss_fn,
-    )
 
-## TODO : test case with trainer __call__, dummy dataset
+def test_handle_validation_interval():
+    val_epoch = 1
+
+    config = dict(validator=dict(val_epoch=val_epoch))
+    expected = dict(check_val_every_n_epoch=val_epoch)
+    kwargs = TrainingPipeline._handle_validation_interval(config)
+    assert kwargs == expected
+
+    config = dict(trainer=dict(validate_interval=val_epoch))
+    kwargs = TrainingPipeline._handle_validation_interval(config)
+    assert kwargs == expected
+
+    with pytest.raises(RuntimeError):
+        config = dict(validator=dict(val_epoch="1,2"))
+        TrainingPipeline._handle_validation_interval(config)
+
+    with pytest.raises(RuntimeError):
+        config = dict(trainer=dict(validate_interval="1,2"))
+        TrainingPipeline._handle_validation_interval(config)
+
+
+## TODO; test checkpoint
+def test_checkpoint_default_last(tmp_path: Path):
+    config = deepcopy(_REQUIRED_TRAINER_CFG)
+    config = EasyDict(config)
+
+    num_classes = 5
+    model = DummyModel(num_classes=num_classes)
+    model.config = config
+    model.class_names = ["label_"+str(n) for n in range(num_classes)]
+    trainer = patched_pl_trainer(str(tmp_path), model)
+
+    ## dummy metrics data
+    metrics = {
+        'train_loss': 1.0891,
+        'accuracy': 0.9618
+    }
+    trainer.logger_connector.callback_metrics = metrics
+
+    ckpt_callbacks = TrainingPipeline.create_model_checkpoints(str(tmp_path), config, model)
+    ckpt_callbacks[0].on_pretrain_routine_start(trainer, model)
+    ckpt_callbacks[0].on_validation_end(trainer, model)
+
+    fname = config['experiment_name'] + "-last.pth"
+    fpath = tmp_path.joinpath("version_0", "checkpoints", fname)
+    assert fpath.exists()
+
+    ## check saved checkpoint
+    checkpoint = torch.load(fpath)
+    assert checkpoint['config'] == dict(config)
+    assert checkpoint['metrics'] == metrics
+    assert checkpoint['class_names'] == model.class_names
+    assert checkpoint['vortex_version'] == vortex_version
+    assert 'checkpoint_last' in checkpoint['callbacks']
+
+
+def test_checkpoint_save_best():
+    pass
+
+
+def test_checkpoint_save_epoch():
+    pass
+
+
+## TODO: test metrics
+
+## TODO: test created model
+
+## TODO: other vortex behavior
