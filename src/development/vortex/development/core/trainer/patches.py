@@ -4,26 +4,9 @@ import pytorch_lightning as pl
 from typing import Dict, Any, Iterable
 from copy import deepcopy
 
-from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 from pytorch_lightning.loggers import LoggerCollection, TensorBoardLogger
-
-class CkptConnector(CheckpointConnector):
-    """patch for additional data in checkpoint
-    """
-    def __init__(self, trainer):
-        super().__init__(trainer)
-
-    def dump_checkpoint(self, weights_only: bool) -> dict:
-        checkpoint = super().dump_checkpoint(weights_only=weights_only)
-        checkpoint['vortex_version'] = "0.3.0+dev-sdfas798"
-        checkpoint['metrics'] = self.trainer.logger_connector.callback_metrics
-
-        model = self.trainer.get_model()
-        checkpoint['class_names'] = model.class_names
-        checkpoint['config'] = model.config
-        return checkpoint
 
 
 def patch_configure_logger(self: LoggerConnector, logger):

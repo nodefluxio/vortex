@@ -4,6 +4,8 @@ from pathlib import Path
 from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector as PLCheckpointConnector
 from pytorch_lightning.callbacks import ModelCheckpoint as PLModelCheckpoint
 
+from vortex.development import __version__ as vortex_version
+
 
 class CheckpointConnector(PLCheckpointConnector):
     """patch for additional data in checkpoint
@@ -13,12 +15,12 @@ class CheckpointConnector(PLCheckpointConnector):
 
     def dump_checkpoint(self, weights_only: bool) -> dict:
         checkpoint = super().dump_checkpoint(weights_only=weights_only)
-        checkpoint['vortex_version'] = "0.3.0+dev-sdfas798"
+        checkpoint['vortex_version'] = vortex_version
         checkpoint['metrics'] = self.trainer.logger_connector.callback_metrics
 
         model = self.trainer.get_model()
         checkpoint['class_names'] = model.class_names
-        checkpoint['config'] = model.config
+        checkpoint['config'] = dict(model.config)
         return checkpoint
 
 
