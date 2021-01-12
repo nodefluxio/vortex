@@ -30,6 +30,9 @@ def create_optimizer(config, param_groups) -> Optimizer:
 def create_scheduler(config, optimizer) -> dict:
     """create scheduler and the PL config as dict from vortex config
     """
+    if not 'lr_scheduler' in config['trainer']:
+        return dict()
+
     scheduler_cfg = config['trainer']['lr_scheduler']
     if 'method' in scheduler_cfg:
         module = scheduler_cfg['method']
