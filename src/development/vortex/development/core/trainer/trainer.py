@@ -84,18 +84,13 @@ class TrainingPipeline:
 
 
     @staticmethod
-    def create_model_checkpoints(experiment_dir: str, config: dict, model: ModelBase):
+    def create_model_checkpoints(config: dict, model: ModelBase):
         fname_prefix = config['experiment_name']
 
         ## patches for model checkpoint
         ModelCheckpoint.FILE_EXTENSION = ".pth"
         ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
         ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
-
-        ## TODO: handle save_epoch checkpoint
-        save_epoch = 1
-        if 'save_epoch' in config['trainer']:
-            save_epoch = int(config['trainer']['save_epoch'])
 
         callbacks = [
             ## default checkpoint callback: save last epoch
@@ -105,6 +100,19 @@ class TrainingPipeline:
             )
         ]
 
+        if 'save_epoch' in config['trainer'] and config['trainer']['save_epoch'] is not None:
+            save_epoch = int(config['trainer']['save_epoch'])
+            if save_epoch < 1:
+                raise RuntimeError("Invalid value in 'config.trainer.save_epoch' of {}, "
+                    "expected value of integer higher than 0 (> 0).".format(save_epoch))
+            epoch_ckpt_callback = ModelCheckpoint(
+                filename=fname_prefix+"-{epoch}", monitor=None,
+                save_top_k=None, mode="min",
+                period=save_epoch
+            )
+            epoch_ckpt_callback.save_epoch = True   ## to differentiate with last epoch ckpt
+            callbacks.append(epoch_ckpt_callback)
+
         available_metrics = model.available_metrics
         if isinstance(available_metrics, list):
             warnings.warn("'model.available_metrics()' returns list, so it doesn't describe optimization "
@@ -113,7 +121,7 @@ class TrainingPipeline:
                 "configured.")
             available_metrics = {m: "min" if "loss" in m else "max" for m in available_metrics}
 
-        if 'save_best_metrics' in config['trainer'] and config['trainer']['save_best_metrics'] is not None:
+        if 'save_best_metrics' in config['trainer'] and config['trainer']['save_best_metrics']:
             save_best_metrics = config['trainer']['save_best_metrics']
             if isinstance(save_best_metrics, str):
                 save_best_metrics = [save_best_metrics]
@@ -174,7 +182,7 @@ class TrainingPipeline:
         if 'args' in config.trainer and config.trainer.args is not None:
             trainer_args.update(config.trainer.args)
 
-        callbacks = TrainingPipeline.create_model_checkpoints(experiment_dir, config, model)
+        callbacks = TrainingPipeline.create_model_checkpoints(config, model)
         loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()

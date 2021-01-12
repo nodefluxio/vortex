@@ -31,8 +31,13 @@ def patch_trainer_on_save_checkpoint(self: pl.Trainer):
     callback_states = {}
     for callback in self.callbacks:
         if isinstance(callback, ModelCheckpoint):
-            monitor = callback.monitor if callback.monitor else "last"
-            callback_class = "checkpoint_" + monitor
+            if callback.monitor:
+                postfix = callback.monitor
+            elif hasattr(callback, 'save_epoch'):
+                postfix = "epoch"
+            else:
+                postfix = "last"
+            callback_class = "checkpoint_" + postfix
         else:
             callback_class = type(callback)
         state = callback.on_save_checkpoint(self, self.get_model())
@@ -46,8 +51,13 @@ def patch_trainer_on_load_checkpoint(self: pl.Trainer, checkpoint: dict):
     callback_states = checkpoint.get('callbacks')
     for callback in self.callbacks:
         if isinstance(callback, ModelCheckpoint):
-            monitor = callback.monitor if callback.monitor else "last"
-            state = callback_states.get("checkpoint_" + monitor)
+            if callback.monitor:
+                postfix = callback.monitor
+            elif hasattr(callback, 'save_epoch'):
+                postfix = "epoch"
+            else:
+                postfix = "last"
+            state = callback_states.get("checkpoint_" + postfix)
         else:
             state = callback_states.get(type(callback))
         if state:
