@@ -30,7 +30,7 @@ def create_optimizer(config, param_groups) -> Optimizer:
 def create_scheduler(config, optimizer) -> dict:
     """create scheduler and the PL config as dict from vortex config
     """
-    if not 'lr_scheduler' in config['trainer']:
+    if not 'lr_scheduler' in config['trainer'] or config['trainer']['lr_scheduler'] is None:
         return dict()
 
     scheduler_cfg = config['trainer']['lr_scheduler']
@@ -43,9 +43,6 @@ def create_scheduler(config, optimizer) -> dict:
     interval = "epoch" if module in lr_scheduler.step_update_map['epoch_update'] \
                 else "step"
 
-    freq = 1
-    if 'frequency' in scheduler_cfg:
-        freq = scheduler_cfg['frequency']
     monitor = None
     if 'monitor' in scheduler_cfg:
         monitor = scheduler_cfg['monitor']
@@ -56,7 +53,6 @@ def create_scheduler(config, optimizer) -> dict:
     ret = {
         'lr_scheduler': scheduler,
         'interval': interval,
-        'frequency': freq,
         'strict': True,
     }
     if monitor:
