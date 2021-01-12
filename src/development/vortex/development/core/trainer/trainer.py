@@ -1,5 +1,4 @@
 import warnings
-import torch.nn as nn
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
 
@@ -7,7 +6,6 @@ from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
 
-from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
 
@@ -19,7 +17,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
-from vortex.development.core import create_model, create_dataloader
+from vortex.development.core.factory import create_model, create_dataloader
 from vortex.development.networks.models import ModelBase
 
 
@@ -30,15 +28,18 @@ class TrainingPipeline:
         ## TODO: validate config
         self.config = config
 
-        ## TODO: build model
         self.model = self.create_model(self.config)
-        self.model.config = self.config
+        self.model.config = deepcopy(self.config)
 
-        experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
-        self.trainer = self.create_trainer(experiment_dir)
+        ## TODO: fix progress bar
+
+        self.experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
+        self.trainer = self.create_trainer(self.experiment_dir, self.config, self.model)
+
 
     def run(self):
         train_loader, val_loader = self.create_dataloaders(self.config, self.model)
+        self._copy_class_names_to_model(train_loader, self.model)
 
         self.trainer.fit(self.model, train_loader, val_loader)
 
@@ -83,7 +84,7 @@ class TrainingPipeline:
 
 
     @staticmethod
-    def create_model_checkpoints(experiment_dir, config, model):
+    def create_model_checkpoints(experiment_dir: str, config: dict, model: ModelBase):
         fname_prefix = config['experiment_name']
 
         ## patches for model checkpoint
@@ -91,12 +92,16 @@ class TrainingPipeline:
         ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
         ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
 
+        ## TODO: handle save_epoch checkpoint
+        save_epoch = 1
+        if 'save_epoch' in config['trainer']:
+            save_epoch = int(config['trainer']['save_epoch'])
+
         callbacks = [
             ## default checkpoint callback: save last epoch
             ModelCheckpoint(
                 filename=fname_prefix+"-last", monitor=None,
-                save_top_k=None, mode="min",
-                dirpath=experiment_dir
+                save_top_k=None, mode="min"
             )
         ]
 
@@ -108,20 +113,21 @@ class TrainingPipeline:
                 "configured.")
             available_metrics = {m: "min" if "loss" in m else "max" for m in available_metrics}
 
-        save_best_metrics = config['trainer']['save_best_metrics']
-        if isinstance(save_best_metrics, str):
-            save_best_metrics = [save_best_metrics]
+        if 'save_best_metrics' in config['trainer'] and config['trainer']['save_best_metrics'] is not None:
+            save_best_metrics = config['trainer']['save_best_metrics']
+            if isinstance(save_best_metrics, str):
+                save_best_metrics = [save_best_metrics]
 
-        for m in save_best_metrics:
-            if not m in available_metrics:
-                raise RuntimeError("metric '{}' is not available to track for 'save_best_metrics' "
-                    "argument, available metrics: {}".format(m, list(available_metrics.keys())))
-            callbacks.append(ModelCheckpoint(
-                filename=fname_prefix + "-best_" + m,
-                monitor=m,
-                mode=available_metrics[m],
-                dirpath=experiment_dir
-            ))
+            for m in save_best_metrics:
+                if not m in available_metrics:
+                    raise RuntimeError("metric '{}' is not available to track for 'save_best_metrics' "
+                        "argument, available metrics: {}".format(m, list(available_metrics.keys())))
+                callbacks.append(ModelCheckpoint(
+                    filename=fname_prefix + "-best_" + m,
+                    monitor=m,
+                    mode=available_metrics[m]
+                ))
+        return callbacks
 
 
     @staticmethod
@@ -136,7 +142,9 @@ class TrainingPipeline:
             'csv_logger': pl_loggers.CSVLogger
         }
 
-        logger_cfg = config["logging"]
+        logger_cfg = None
+        if "logging" in config:
+            logger_cfg = config["logging"]
         if logger_cfg is None or no_log:
             return False
 
@@ -157,48 +165,68 @@ class TrainingPipeline:
                 .format(logger_cfg["module"], list(logger_map)))
         return logger_module(save_dir=experiment_dir, **logger_cfg["args"])
 
-    def create_trainer(self, experiment_dir, config=None, model=None) -> pl.Trainer:
-        if config:
-            self.config = config
-        if model:
-            self.model = model
-        self.experiment_dir = experiment_dir
-
+    @staticmethod
+    def create_trainer(experiment_dir, config, model, no_log=False) -> pl.Trainer:
         trainer_args = dict()
-        trainer_args.update(self._decide_device_to_use())
+        trainer_args.update(TrainingPipeline._decide_device_to_use(config))
+        trainer_args.update(TrainingPipeline._handle_validation_interval(config))
 
-        if 'args' in self.config.trainer and self.config.trainer.args is not None:
-            trainer_args.update(self.config.trainer.args)
+        if 'args' in config.trainer and config.trainer.args is not None:
+            trainer_args.update(config.trainer.args)
 
-        callbacks = self.create_model_checkpoints(self.experiment_dir, self.config, self.model)
-        loggers = self.create_loggers(self.experiment_dir, self.config)
+        callbacks = TrainingPipeline.create_model_checkpoints(experiment_dir, config, model)
+        loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
-        ## patch for logger path (exclude 'lightning_logs' when logger not set)
-        LoggerConnector.configure_logger = patch_configure_logger
-        pl.Trainer.on_save_checkpoint = patch_trainer_on_save_checkpoint
-        pl.Trainer.on_load_checkpoint = patch_trainer_on_load_checkpoint
+        TrainingPipeline._patch_trainer_components()
 
         trainer = pl.Trainer(
-            max_epochs=self.config['trainer']['epoch'],
-            logger=loggers,
-            default_root_dir=self.experiment_dir,
-            deterministic=True, 
-            benchmark=True,
+            max_epochs=config['trainer']['epoch'],
+            default_root_dir=experiment_dir,
+            deterministic=True, benchmark=True,
             weights_summary=None,
-            move_metrics_to_cpu=True,
             callbacks=callbacks,
             logger=loggers,
             **trainer_args
         )
-        ## patch for additional checkpoint data
-        trainer.checkpoint_connector = CheckpointConnector(trainer)
+
+        TrainingPipeline._patch_trainer_object(trainer)
 
         return trainer
 
-    def _decide_device_to_use(self, device=None):
+    @staticmethod
+    def _patch_trainer_components():
+        ## patch for logger path (exclude 'lightning_logs' when logger not set)
+        LoggerConnector.configure_logger = patch_configure_logger
+
+        ## patch for multiple model checkpoint support
+        pl.Trainer.on_save_checkpoint = patch_trainer_on_save_checkpoint
+        pl.Trainer.on_load_checkpoint = patch_trainer_on_load_checkpoint
+
+    @staticmethod
+    def _patch_trainer_object(trainer: pl.Trainer):
+        ## patch for additional checkpoint data
+        trainer.checkpoint_connector = CheckpointConnector(trainer)
+        return trainer
+
+    @staticmethod
+    def run_sanity_check(model, train_dataloader, val_dataloader=None, **trainer_kwargs):
+        trainer_sanity = pl.Trainer(
+            gpus=None,
+            logger=False, checkpoint_callback=False,
+            limit_train_batches=2, limit_val_batches=2,
+            progress_bar_refresh_rate=0, max_epochs=1,
+            num_sanity_val_steps=0, weights_summary=None,
+            **trainer_kwargs
+        )
+        trainer_sanity.fit(deepcopy(model), train_dataloader, val_dataloader)
+        return trainer_sanity
+
+    @staticmethod
+    def _decide_device_to_use(config):
         gpus, auto_select_gpus = None, False
-        if device is None and 'device' in self.config:
-            device = self.config.device
+        device = None
+        if 'device' in config:
+            device = config['device']
 
         if device is not None and ('cuda' in device or 'gpu' in device):
             len_device = len(device.split(':'))
@@ -208,21 +236,36 @@ class TrainingPipeline:
                 gpus = device.split(':')[-1]
             else:
                 raise RuntimeError("Unknown 'device' argument of {}".format(device))
-        kwargs = {
+
+        return {
             'gpus': gpus,
             'auto_select_gpus': auto_select_gpus
         }
-        return kwargs
 
+    @staticmethod
+    def _copy_class_names_to_model(dataloader, model):
+        class_names = None
+        if hasattr(dataloader.dataset, "class_names"):
+            class_names = dataloader.dataset.class_names
+        elif hasattr(dataloader.dataset, "classes"):
+            class_names = dataloader.dataset.classes
 
-    def run_sanity_check(self, **trainer_kwargs):
-        trainer_sanity = pl.Trainer(
-            gpus=1,
-            logger=False, checkpoint_callback=False,
-            limit_train_batches=2, limit_val_batches=2,
-            progress_bar_refresh_rate=0, max_epochs=1,
-            num_sanity_val_steps=0, weights_summary=None,
-            **trainer_kwargs
-        )
-        trainer_sanity.fit(deepcopy(self.model), self.datamodule)
-        return trainer_sanity
+        model.class_names = class_names
+
+    @staticmethod
+    def _handle_validation_interval(config):
+        val_epoch = 1
+        if 'validator' in config and 'val_epoch' in config['validator']:
+            try:
+                val_epoch = int(config['validator']['val_epoch'])
+            except ValueError:
+                raise RuntimeError("Unknown value in 'config.validator.val_epoch' of {}"
+                    .format(config['validator']['val_epoch']))
+        elif 'trainer' in config and 'validate_interval' in config['trainer']:
+            try:
+                val_epoch = int(config['trainer']['validate_interval'])
+            except ValueError:
+                raise RuntimeError(f"Unknown value in 'config.trainer.validate_interval' "
+                    "of {}".format(config['trainer']['validate_interval']))
+
+        return dict(check_val_every_n_epoch=val_epoch)
