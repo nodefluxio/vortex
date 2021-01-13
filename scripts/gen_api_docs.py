@@ -8,10 +8,10 @@ from docstring_parser import parse
 
 
 PUBLIC_API_PACKAGE_LIST = [
-    'vortex.development.core.pipelines',
-    'vortex.development.core.factory',
+    'vortex.development.pipelines',
+    'vortex.development.utils.factory',
     'vortex.runtime',
-    ]
+]
 
 DOCS_TEMPLATE = '''# {}
 

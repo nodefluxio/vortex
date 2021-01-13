@@ -256,7 +256,7 @@ class PytorchValidationPipeline(BaseValidationPipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import PytorchValidationPipeline
+            from vortex.development.pipelines import PytorchValidationPipeline
             
             # Parse config
             config_path = 'experiments/config/example.yml'
@@ -305,7 +305,7 @@ class IRValidationPipeline(BaseValidationPipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import IRValidationPipeline
+            from vortex.development.pipelines import IRValidationPipeline
             
             # Parse config
             config_path = 'experiments/config/example.yml'

@@ -274,7 +274,7 @@ class PytorchPredictionPipeline(BasePredictionPipeline):
 
         Example:
             ```python
-            from vortex.development.core.pipelines import PytorchPredictionPipeline
+            from vortex.development.pipelines import PytorchPredictionPipeline
             from vortex.development.utils.parser import load_config
 
             # Parse config
@@ -449,7 +449,7 @@ class IRPredictionPipeline(BasePredictionPipeline):
         
         Example:
             ```python
-            from vortex.development.core.pipelines import IRPredictionPipeline
+            from vortex.development.pipelines import IRPredictionPipeline
             from vortex.development.utils.parser import load_config
 
             # Parse config

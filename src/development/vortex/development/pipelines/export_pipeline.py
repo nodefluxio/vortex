@@ -31,8 +31,8 @@ class GraphExportPipeline(BasePipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import GraphExportPipeline
-            
+            from vortex.development.pipelines import GraphExportPipeline
+
             # Parse config
             config = load_config('experiments/config/example.yml')
             graph_exporter = GraphExportPipeline(config=config,
