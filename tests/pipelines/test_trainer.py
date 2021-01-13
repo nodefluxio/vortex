@@ -4,11 +4,12 @@ import pytorch_lightning as pl
 
 from copy import deepcopy
 from easydict import EasyDict
+from torch.utils.data import DataLoader
 
 from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
 
-from ..common import DummyModel
+from ..common import DummyModel, DummyDataset
 
 
 _REQUIRED_TRAINER_CFG = {
@@ -55,9 +56,6 @@ def prepare_model(config, num_classes=5):
     return model
 
 
-## TODO: test logger
-
-
 @pytest.mark.parametrize(
     ('device', 'expected_gpu', 'expected_auto_select'),
     [
@@ -95,7 +93,19 @@ def test_handle_validation_interval():
         TrainingPipeline._handle_validation_interval(config)
 
 
-## TODO; test checkpoint
+def test_copy_data_to_model():
+    config = deepcopy(_REQUIRED_TRAINER_CFG)
+    model = DummyModel(num_classes=5)
+    dataloader = DataLoader(DummyDataset(), batch_size=4)
+
+    assert model.config is None and model.class_names is None
+
+    TrainingPipeline._copy_data_to_model(dataloader, config, model)
+
+    assert model.config == config
+    assert model.class_names == dataloader.dataset.class_names
+
+
 def test_checkpoint_default_last(tmp_path):
     config = EasyDict(deepcopy(_REQUIRED_TRAINER_CFG))
 
@@ -243,6 +253,8 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
 
 
 ## TODO: test metrics
+
+## TODO: test logger
 
 ## TODO: test created model
 
