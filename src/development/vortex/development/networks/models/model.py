@@ -54,9 +54,6 @@ class ModelBase(pl.LightningModule):
         self._lr = lr
         return lr
 
-    def training_epoch_end(self, outputs):
-        self.log("lr", self.get_lr(), on_step=False, on_epoch=True, logger=True, prog_bar=True)
-
     def test_step_end(self, outputs):
         return self.validation_step_end(outputs)
 

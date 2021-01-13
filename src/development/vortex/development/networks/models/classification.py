@@ -144,7 +144,6 @@ class ClassificationModel(ModelBase):
 
     def validation_epoch_end(self, outputs):
         self.log("pr_curve", self.metrics["pr_curve"].compute(), logger=False)
-        self.log("lr", self.get_lr(), on_step=False, on_epoch=True, logger=True, prog_bar=True)
 
     def test_step_end(self, outputs):
         if 'loss' in outputs:
