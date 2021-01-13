@@ -7,9 +7,9 @@ import torch
 import warnings
 
 from vortex.development.utils.common import check_and_create_output_dir
-from vortex.development.core.factory import create_model,create_dataset,create_exporter
+from vortex.development.utils.factory import create_model,create_dataset,create_exporter
 from vortex.development.predictor import create_predictor
-from vortex.development.core.pipelines.base_pipeline import BasePipeline
+from vortex.development.pipelines.base_pipeline import BasePipeline
 
 __all__ = ['GraphExportPipeline']
 
