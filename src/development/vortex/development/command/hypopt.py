@@ -3,7 +3,7 @@ import warnings
 import argparse
 from easydict import EasyDict
 
-from vortex.development.core.pipelines import HypOptPipeline
+from vortex.development.pipelines import HypOptPipeline
 
 description = "Vortex hyperparameter optimization experiment"
 

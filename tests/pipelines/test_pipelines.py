@@ -11,7 +11,7 @@ from easydict import EasyDict
 from collections import OrderedDict
 from copy import deepcopy
 
-from vortex.development.core.pipelines import (
+from vortex.development.pipelines import (
     TrainingPipeline,
     PytorchValidationPipeline,
     PytorchPredictionPipeline,
@@ -21,7 +21,7 @@ from vortex.development.core.pipelines import (
     HypOptPipeline
 )
 
-from vortex.development.core.factory import create_model
+from vortex.development.utils.factory import create_model
 from vortex.development.utils.parser.parser import load_config
 from vortex.development.utils.parser.loader import Loader
 
