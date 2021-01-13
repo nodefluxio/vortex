@@ -1,4 +1,4 @@
-from vortex.development.core.factory import create_model
+from vortex.development.utils.factory import create_model
 from easydict import EasyDict
 
 
