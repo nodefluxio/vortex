@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 from copy import deepcopy
 from easydict import EasyDict
 
-from vortex.development.core.trainer import TrainingPipeline
+from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
 
 from ..common import DummyModel

@@ -19,7 +19,7 @@ from vortex.development.networks.modules.backbones import all_models as all_back
 from vortex.development.utils.profiler.resource import get_uname, get_cpu_info, get_gpu_info
 from vortex.runtime import model_runtime_map
 from vortex.development.predictor import create_predictor, get_prediction_results
-from vortex.development.core.factory import create_model,create_runtime_model,create_exporter
+from vortex.development.utils.factory import create_model, create_runtime_model, create_exporter
 from vortex.runtime.basic_runtime import BaseRuntime
 from vortex.development.predictor.base_module import BasePredictor
 warnings.resetwarnings()
