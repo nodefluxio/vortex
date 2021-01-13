@@ -1,20 +1,20 @@
 import os
 import sys
-from pathlib import Path
-
-from easydict import EasyDict
-from typing import Union
 import logging
 import optuna
 import operator
 import numpy as np
 import warnings
 
-from vortex.development.core.pipelines.training_pipeline import TrainingPipeline
-from vortex.development.core.pipelines.validation_pipeline import PytorchValidationPipeline
+from pathlib import Path
+from easydict import EasyDict
+from typing import Union
+
+from vortex.development.pipelines.training_pipeline import TrainingPipeline
+from vortex.development.pipelines.validation_pipeline import PytorchValidationPipeline
 from vortex.development.utils.parser.override import override_param
 from vortex.development.utils.common import check_and_create_output_dir
-from vortex.development.core.pipelines.base_pipeline import BasePipeline
+from vortex.development.pipelines.base_pipeline import BasePipeline
 
 logger = logging.getLogger(__name__)
 

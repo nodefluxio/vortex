@@ -13,7 +13,7 @@ import torch
 import numpy as np
 import enlighten
 
-from vortex.development.core.factory import (
+from vortex.development.utils.factory import (
     create_model,
     create_dataset,
     create_dataloader,
@@ -21,8 +21,7 @@ from vortex.development.core.factory import (
 )
 from vortex.development.utils.common import check_and_create_output_dir
 from vortex.development.utils.parser import check_config
-from vortex.development.core.pipelines.base_pipeline import BasePipeline
-from vortex.development.core import engine
+from vortex.development.pipelines.base_pipeline import BasePipeline
 
 __all__ = ['TrainingPipeline']
 
