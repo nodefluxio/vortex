@@ -33,6 +33,8 @@ class TrainingPipeline:
 
         ## TODO: fix progress bar
 
+        ## TODO: log lr with 'LearningRateMonitor'
+
         self.experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
         self.trainer = self.create_trainer(self.experiment_dir, self.config, self.model)
 
