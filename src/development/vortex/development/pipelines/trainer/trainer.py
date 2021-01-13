@@ -7,7 +7,7 @@ from copy import deepcopy
 from easydict import EasyDict
 
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
-from pytorch_lightning.callbacks.model_checkpoint import ModelCheckpoint
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 from .checkpoint import CheckpointConnector
 from .patches import (
@@ -17,7 +17,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
-from vortex.development.core.factory import create_model, create_dataloader
+from vortex.development.utils.factory import create_model, create_dataloader
 from vortex.development.networks.models import ModelBase
 
 
@@ -29,7 +29,6 @@ class TrainingPipeline:
         self.config = config
 
         self.model = self.create_model(self.config)
-        self.model.config = deepcopy(self.config)
 
         ## TODO: fix progress bar
 
@@ -38,12 +37,12 @@ class TrainingPipeline:
         self.experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
         self.trainer = self.create_trainer(self.experiment_dir, self.config, self.model)
 
+        self.train_dataloader, self.val_dataloader = self.create_dataloaders(self.config, self.model)
+        self._copy_data_to_model(self.train_dataloader, self.config, self.model)
+
 
     def run(self):
-        train_loader, val_loader = self.create_dataloaders(self.config, self.model)
-        self._copy_class_names_to_model(train_loader, self.model)
-
-        self.trainer.fit(self.model, train_loader, val_loader)
+        self.trainer.fit(self.model, self.train_dataloader, self.val_dataloader)
 
 
     @staticmethod
@@ -58,8 +57,6 @@ class TrainingPipeline:
 
     @staticmethod
     def create_dataloaders(config, model):
-        assert model is not None, "Model is not initiated"
-
         train_dataloader, val_dataloader = None, None
         if 'train' in config.dataset:
             train_dataloader = create_dataloader(
@@ -176,6 +173,10 @@ class TrainingPipeline:
         return logger_module(save_dir=experiment_dir, **logger_cfg["args"])
 
     @staticmethod
+    def create_lr_monitor(config):
+        return LearningRateMonitor()
+
+    @staticmethod
     def create_trainer(experiment_dir, config, model, no_log=False) -> pl.Trainer:
         trainer_args = dict()
         trainer_args.update(TrainingPipeline._decide_device_to_use(config))
@@ -185,6 +186,7 @@ class TrainingPipeline:
             trainer_args.update(config.trainer.args)
 
         callbacks = TrainingPipeline.create_model_checkpoints(config, model)
+        callbacks.append(TrainingPipeline.create_lr_monitor(config))
         loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
@@ -253,14 +255,15 @@ class TrainingPipeline:
         }
 
     @staticmethod
-    def _copy_class_names_to_model(dataloader, model):
+    def _copy_data_to_model(dataloader, config, model):
         class_names = None
         if hasattr(dataloader.dataset, "class_names"):
             class_names = dataloader.dataset.class_names
         elif hasattr(dataloader.dataset, "classes"):
             class_names = dataloader.dataset.classes
-
         model.class_names = class_names
+
+        model.config = deepcopy(config)
 
     @staticmethod
     def _handle_validation_interval(config):
