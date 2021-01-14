@@ -1,8 +1,14 @@
 import pytest
 import torch
 import torch.nn as nn
+import yaml
 
-from vortex.development.utils.common import create_optimizer, create_scheduler
+from easydict import EasyDict
+from copy import deepcopy
+
+from vortex.development.utils.common import (
+    create_optimizer, create_scheduler, easydict_to_dict
+)
 from vortex.development.utils import lr_scheduler
 
 
@@ -70,3 +76,13 @@ def test_create_scheduler(with_monitor):
     with pytest.raises(RuntimeError):
         config['trainer'].update(lr_scheduler=dict(method='Invalid', args=dict()))
         cfg = create_scheduler(config, optimizer)
+
+
+def test_edict_to_dict():
+    cfg_path = "tests/config/test_classification_pipelines.yml"
+    with open(cfg_path) as f:
+        cfg = yaml.load(f, yaml.Loader)
+
+    cfg_edict = EasyDict(deepcopy(cfg))
+    cfg_dict = easydict_to_dict(cfg_edict)
+    assert cfg == cfg_dict

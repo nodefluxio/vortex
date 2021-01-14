@@ -85,3 +85,17 @@ def check_and_create_output_dir(config : EasyDict,
             shutil.copy(config_path,str(run_directory/'config.yml'))
 
     return experiment_directory,run_directory
+
+def easydict_to_dict(edict):
+    base = {}
+    for key, value in edict.items():
+        if isinstance(value, EasyDict):
+            base[key] = easydict_to_dict(value)
+        elif isinstance(value, (list, tuple)):
+            base[key] = type(value)(
+                easydict_to_dict(item) if isinstance(item, EasyDict) else
+                    item for item in value
+            )
+        else:
+            base[key] = value
+    return base
