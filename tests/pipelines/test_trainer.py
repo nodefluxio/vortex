@@ -2,6 +2,7 @@ import pytest
 import torch
 import pytorch_lightning as pl
 
+from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
 from torch.utils.data import DataLoader
@@ -64,33 +65,127 @@ def prepare_model(config, num_classes=5):
         pytest.param("cuda:1", "1", False, id="on gpu 1")
     ]
 )
-def test_decide_device(device, expected_gpu, expected_auto_select):
+def test_args_device(device, expected_gpu, expected_auto_select):
     config = dict(device=device)
     expected = dict(gpus=expected_gpu, auto_select_gpus=expected_auto_select)
 
-    kwargs = TrainingPipeline._decide_device_to_use(config)
+    kwargs = TrainingPipeline._trainer_args_device(config)
     assert kwargs == expected
 
 
-def test_handle_validation_interval():
+def test_args_validation_interval():
     val_epoch = 1
-
     config = dict(validator=dict(val_epoch=val_epoch))
     expected = dict(check_val_every_n_epoch=val_epoch)
-    kwargs = TrainingPipeline._handle_validation_interval(config)
+    kwargs = TrainingPipeline._trainer_args_validation_interval(config)
     assert kwargs == expected
 
     config = dict(trainer=dict(validate_interval=val_epoch))
-    kwargs = TrainingPipeline._handle_validation_interval(config)
+    kwargs = TrainingPipeline._trainer_args_validation_interval(config)
     assert kwargs == expected
 
     with pytest.raises(RuntimeError):
         config = dict(validator=dict(val_epoch="1,2"))
-        TrainingPipeline._handle_validation_interval(config)
+        TrainingPipeline._trainer_args_validation_interval(config)
 
     with pytest.raises(RuntimeError):
         config = dict(trainer=dict(validate_interval="1,2"))
-        TrainingPipeline._handle_validation_interval(config)
+        TrainingPipeline._trainer_args_validation_interval(config)
+
+
+def test_args_set_seed(caplog, recwarn):
+    caplog.set_level(20)    ## set log level to INFO
+    deterministic, benchmark = True, True
+    expected_ret = dict(deterministic=deterministic, benchmark=benchmark)
+    seed = 1395
+    config = dict(
+        seed=dict(
+            cudnn=dict(deterministic=deterministic, benchmark=benchmark),
+            torch=seed,
+            numpy=seed
+        )
+    )
+
+    ## deprecated seed config
+    with pytest.warns(DeprecationWarning):
+        kwargs = TrainingPipeline._trainer_args_set_seed(deepcopy(config))
+        assert kwargs == expected_ret
+
+    ## deprecated 'seed.cudnn'
+    with pytest.warns(DeprecationWarning):
+        config['trainer'] = dict(seed=config.pop('seed'))
+        kwargs = TrainingPipeline._trainer_args_set_seed(deepcopy(config))
+        assert kwargs == expected_ret
+
+    ## normal run
+    recwarn.clear()
+    config['trainer']['seed'].update(config['trainer']['seed'].pop('cudnn'))
+    kwargs = TrainingPipeline._trainer_args_set_seed(deepcopy(config))
+    assert len(recwarn) == 0
+    assert kwargs == expected_ret
+
+    ## seed everything
+    recwarn.clear()
+    caplog.clear()
+    expected_ret = dict(deterministic=True, benchmark=False)
+    config = dict(trainer=dict(seed=seed))
+    kwargs = TrainingPipeline._trainer_args_set_seed(deepcopy(config))
+    assert kwargs == expected_ret
+    assert len(recwarn) == 0
+    assert len(caplog.records) == 1
+
+    ## unknown type 
+    with pytest.raises(RuntimeError):
+        config = dict(trainer=dict(seed="this is invalid"))
+        TrainingPipeline._trainer_args_set_seed(deepcopy(config))
+
+
+def test_get_config():
+    config_path = "tests/config/test_classification_pipelines.yml"
+
+    ## test on str
+    config = TrainingPipeline._get_config(config_path)
+    assert isinstance(config, EasyDict)
+
+    ## test on Path
+    config = TrainingPipeline._get_config(Path(config_path))
+    assert isinstance(config, EasyDict)
+
+    ## test on loaded config
+    config = TrainingPipeline._get_config(config)
+    assert isinstance(config, EasyDict)
+
+
+def test_check_config(caplog):
+    config_path = "tests/config/test_classification_pipelines.yml"
+    config = TrainingPipeline._get_config(config_path)
+
+    ## normal
+    TrainingPipeline._check_experiment_config(config)
+
+    ## invalid validation -> raising warning
+    cfg_val = deepcopy(config)
+    cfg_val['dataset'].pop('eval')
+    TrainingPipeline._check_experiment_config(cfg_val)
+    assert len(caplog.records) > 0 
+    assert caplog.records[0].levelname == "WARNING"
+
+    ## invalid train -> raise error
+    with pytest.raises(RuntimeError):
+        cfg_val = deepcopy(config)
+        cfg_val['dataset'].pop('train')
+        TrainingPipeline._check_experiment_config(cfg_val)
+
+
+def test_dump_config(tmp_path):
+    config_path = "tests/config/test_classification_pipelines.yml"
+    config = TrainingPipeline._get_config(config_path)
+
+    dumped_cfg_path = TrainingPipeline._dump_config(config, tmp_path)
+    assert dumped_cfg_path.exists()
+    assert str(dumped_cfg_path) == str(tmp_path.joinpath("config.yml"))
+    dumped_config = TrainingPipeline._get_config(dumped_cfg_path)
+    assert dumped_config == config
 
 
 def test_copy_data_to_model():
@@ -252,10 +347,9 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
             trainer.global_step += 2
 
 
-## TODO: test metrics
-
-## TODO: test logger
-
-## TODO: test created model
-
-## TODO: other vortex behavior
+## TODO: 
+# - test on resume
+# - test dataloader
+# - test create model
+# - test logger
+# - other vortex behavior
