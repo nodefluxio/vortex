@@ -1,7 +1,10 @@
 import warnings
+import logging
+import torch
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
 
+from typing import Union
 from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
@@ -17,37 +20,55 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
+from vortex.development.pipelines.base_pipeline import BasePipeline
+from vortex.development.utils.parser import load_config, check_config
 from vortex.development.utils.factory import create_model, create_dataloader
 from vortex.development.networks.models import ModelBase
 
+LOGGER = logging.getLogger(__name__)
 
-class TrainingPipeline:
-    def __init__(self, config):
+
+class TrainingPipeline(BasePipeline):
+    def __init__(self, config: Union[str, Path, dict], hypopt=False, resume=False, no_log=False):
         super().__init__()
 
-        ## TODO: validate config
-        self.config = config
+        self.config = self._get_config(config)
+        TrainingPipeline._check_experiment_config(self.config)
 
-        self.model = self.create_model(self.config)
+        checkpoint_path, state_dict = self._handle_resume_checkpoint(config, resume)
+        self.model = self.create_model(self.config, state_dict)
 
         ## TODO: fix progress bar
 
-        ## TODO: log lr with 'LearningRateMonitor'
-
-        self.experiment_dir = str(Path('.').joinpath("experiments", config['experiment_name']))
-        self.trainer = self.create_trainer(self.experiment_dir, self.config, self.model)
+        self.experiment_dir = Path('.').joinpath("experiments", config['experiment_name'])
+        self.trainer = self.create_trainer(
+            str(self.experiment_dir), self.config, self.model,
+            hypopt=hypopt, no_log=no_log,
+            resume_checkpoint_path=checkpoint_path
+        )
 
         self.train_dataloader, self.val_dataloader = self.create_dataloaders(self.config, self.model)
         self._copy_data_to_model(self.train_dataloader, self.config, self.model)
 
+        self.experiment_version = (
+            self.trainer.logger.version
+            if isinstance(self.trainer.logger.version, str)
+            else f"version_{self.trainer.logger.version}"
+        )
+        self.run_directory = self.experiment_dir.joinpath("version_" + self.experiment_version)
+
+        if not hypopt:
+            ## TODO: fix dumped yaml order
+            self._dump_config(config, self.run_directory)
+            print("\nExperiment directory:", self.run_directory)
 
     def run(self):
         self.trainer.fit(self.model, self.train_dataloader, self.val_dataloader)
 
 
     @staticmethod
-    def create_model(config) -> ModelBase:
-        model = create_model(config.model)
+    def create_model(config, state_dict=None) -> ModelBase:
+        model = create_model(config.model, state_dict=state_dict)
         if isinstance(model, pl.LightningModule):
             raise RuntimeError("model '{}' is not a 'LightningModule' subclass. "
                 "Please update it to inherit 'LightningModule', see more in "
@@ -114,7 +135,7 @@ class TrainingPipeline:
 
         available_metrics = model.available_metrics
         if isinstance(available_metrics, list):
-            warnings.warn("'model.available_metrics()' returns list, so it doesn't describe optimization "
+            LOGGER.warning("'model.available_metrics()' returns list, so it doesn't describe optimization "
                 "strategy to use ('min' or 'max').\nWill infer from metrics name with metrics that contains "
                 "'loss' in the name will use 'min' strategy otherwise use 'max'.\nMake sure it is correctly "
                 "configured.")
@@ -177,20 +198,27 @@ class TrainingPipeline:
         return LearningRateMonitor()
 
     @staticmethod
-    def create_trainer(experiment_dir, config, model, no_log=False) -> pl.Trainer:
+    def create_trainer(
+        experiment_dir, config, model, no_log=False,
+        hypopt=False, resume_checkpoint_path=False
+    ) -> pl.Trainer:
+
         trainer_args = dict()
-        trainer_args.update(TrainingPipeline._decide_device_to_use(config))
-        trainer_args.update(TrainingPipeline._handle_validation_interval(config))
+        trainer_args.update(TrainingPipeline._trainer_args_device(config))
+        trainer_args.update(TrainingPipeline._trainer_args_validation_interval(config))
+        trainer_args.update(TrainingPipeline._trainer_args_set_seed(config))
 
         if 'args' in config.trainer and config.trainer.args is not None:
             trainer_args.update(config.trainer.args)
 
-        callbacks = TrainingPipeline.create_model_checkpoints(config, model)
-        callbacks.append(TrainingPipeline.create_lr_monitor(config))
-        loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
+        loggers = False
+        callbacks = []
+        if not hypopt:
+            callbacks = TrainingPipeline.create_model_checkpoints(config, model)
+            callbacks.append(TrainingPipeline.create_lr_monitor(config))
+            loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
-
         trainer = pl.Trainer(
             max_epochs=config['trainer']['epoch'],
             default_root_dir=experiment_dir,
@@ -198,11 +226,10 @@ class TrainingPipeline:
             weights_summary=None,
             callbacks=callbacks,
             logger=loggers,
+            resume_from_checkpoint=resume_checkpoint_path
             **trainer_args
         )
-
         TrainingPipeline._patch_trainer_object(trainer)
-
         return trainer
 
     @staticmethod
@@ -234,7 +261,7 @@ class TrainingPipeline:
         return trainer_sanity
 
     @staticmethod
-    def _decide_device_to_use(config):
+    def _trainer_args_device(config):
         gpus, auto_select_gpus = None, False
         device = None
         if 'device' in config:
@@ -249,24 +276,10 @@ class TrainingPipeline:
             else:
                 raise RuntimeError("Unknown 'device' argument of {}".format(device))
 
-        return {
-            'gpus': gpus,
-            'auto_select_gpus': auto_select_gpus
-        }
+        return dict(gpus=gpus, auto_select_gpus=auto_select_gpus)
 
     @staticmethod
-    def _copy_data_to_model(dataloader, config, model):
-        class_names = None
-        if hasattr(dataloader.dataset, "class_names"):
-            class_names = dataloader.dataset.class_names
-        elif hasattr(dataloader.dataset, "classes"):
-            class_names = dataloader.dataset.classes
-        model.class_names = class_names
-
-        model.config = deepcopy(config)
-
-    @staticmethod
-    def _handle_validation_interval(config):
+    def _trainer_args_validation_interval(config):
         val_epoch = 1
         if 'validator' in config and 'val_epoch' in config['validator']:
             try:
@@ -282,3 +295,125 @@ class TrainingPipeline:
                     "of {}".format(config['trainer']['validate_interval']))
 
         return dict(check_val_every_n_epoch=val_epoch)
+
+    @staticmethod
+    def _trainer_args_set_seed(config):
+        seed_cfg = None
+        if 'seed' in config:
+            warnings.warn("'config.seed' field is deprecated, please put the arguments in "
+                "'config.trainer.seed'", DeprecationWarning)
+            seed_cfg = config['seed']
+        elif 'seed' in config['trainer']:
+            seed_cfg = config['trainer']['seed']
+
+        deterministic, benchmark = False, False
+        if seed_cfg is not None:
+            if isinstance(seed_cfg, int):   ## seed everything
+                deterministic = True
+                pl.seed_everything(seed_cfg)
+                LOGGER.info("setting seed everything to '{}'".format(seed_cfg))
+            elif isinstance(seed_cfg, dict):
+                if 'cudnn' in seed_cfg:
+                    warnings.warn("'seed.cudnn.*' argument in seed config is deprecated, move to "
+                        "'seed.*' instead", DeprecationWarning)
+                    seed_cfg.update(seed_cfg.pop('cudnn'))
+                if 'benchmark' in seed_cfg:
+                    benchmark = seed_cfg['benchmark']
+                    LOGGER.info("setting torch.cudnn.benchmark to '{}'".format(benchmark))
+                if 'deterministic' in seed_cfg:
+                    deterministic = seed_cfg['deterministic']
+                    LOGGER.info("setting cudnn.deterministic to '{}'".format(deterministic))
+                if 'torch' in seed_cfg:
+                    LOGGER.info("setting torch manual seed to '{}'".format(seed_cfg['torch']))
+                    torch.manual_seed(seed_cfg['torch'])
+                if 'numpy' in seed_cfg:
+                    import numpy as np
+                    np.random.seed(seed_cfg['numpy'])
+                    LOGGER.info("setting numpy manual seed to {}".format(seed_cfg['numpy']))
+            else:
+                raise RuntimeError("Unknown seed config type of {} with value of {}".format(
+                    type(seed_cfg), seed_cfg))
+        return dict(deterministic=deterministic, benchmark=benchmark)
+
+
+    @staticmethod
+    def _copy_data_to_model(dataloader, config, model):
+        class_names = None
+        if hasattr(dataloader.dataset, "class_names"):
+            class_names = dataloader.dataset.class_names
+        elif hasattr(dataloader.dataset, "classes"):
+            class_names = dataloader.dataset.classes
+        model.class_names = class_names
+        model.config = deepcopy(config)
+
+    @staticmethod
+    def _get_config(config):
+        if isinstance(config, (str, Path)):
+            config = load_config(config)
+        config = EasyDict(config)
+        return config
+
+    @staticmethod
+    def _check_experiment_config(config):
+        check_result = check_config(config, 'train')
+        if not check_result.valid:
+            raise RuntimeError("config file is not valid for training:\n{}".format(check_result))
+
+        val_check_result = check_config(config, 'validate')
+        if not val_check_result.valid:
+            LOGGER.warning("config file is not valid for validation, validation step will be "
+                "skipped:\n{}".format(val_check_result))
+
+    @staticmethod
+    def _dump_config(config, dir):
+        import yaml
+        from vortex.development.utils.common import easydict_to_dict
+
+        fpath = Path(dir).joinpath("config.yml")
+        config = easydict_to_dict(config)
+        with fpath.open('w') as f:
+            yaml.dump(config, f, yaml.Dumper)
+        return fpath
+
+    @staticmethod
+    def _handle_resume_checkpoint(config, resume):
+        checkpoint, state_dict = None, None
+        ckpt_path = None
+        if resume or ('checkpoint' in config and config['checkpoint'] is not None):
+            if 'checkpoint' not in config or config['checkpoint'] is None:
+                raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
+                    "in the config file. Please specify 'checkpoint' option in the top level "
+                    "of your config file pointing to model path used for resume.")
+
+            ckpt_path = Path(config.checkpoint)
+            if resume or ckpt_path.exists():
+                checkpoint = torch.load(config.checkpoint, map_location=torch.device('cpu'))
+                state_dict = checkpoint['state_dict']
+
+            if resume:
+                model_config = EasyDict(checkpoint['config'])
+                if config.model.name != model_config.model.name:
+                    raise RuntimeError("Model name configuration specified in config file ({}) is not "
+                        "the same as saved in model checkpoint ({}).".format(config.model.name,
+                        model_config.model.name))
+                if config.model.network_args != model_config.model.network_args:
+                    raise RuntimeError("'network_args' configuration specified in config file ({}) is "
+                        "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
+                        model_config.model.network_args))
+
+                if 'name' in config.dataset.train:
+                    cfg_dataset_name = config.dataset.train.name
+                elif 'dataset' in config.dataset.train:
+                    cfg_dataset_name = config.dataset.train.dataset
+                else:
+                    raise RuntimeError("dataset name is not found in config. Please specify in "
+                        "'config.dataset.train.name'.")
+                model_dataset_name = None
+                if 'name' in model_config.dataset.train:
+                    model_dataset_name = model_config.dataset.train.name
+                elif 'dataset' in model_config.dataset.train:
+                    model_dataset_name = model_config.dataset.train.dataset
+                if cfg_dataset_name != model_dataset_name:
+                    raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
+                        "in model checkpoint ({}).".format(cfg_dataset_name, model_dataset_name))
+        return ckpt_path, state_dict
