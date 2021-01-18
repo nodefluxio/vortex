@@ -10,51 +10,11 @@ from torch.utils.data import DataLoader
 from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
 
-from ..common import DummyModel, DummyDataset
-
-
-_REQUIRED_TRAINER_CFG = {
-    'experiment_name': 'dummy_experiment',
-    'device': 'cuda:0',
-    'trainer': {
-        'optimizer': {
-            'method': 'SGD',
-            'args': {'lr': 0.001}
-        },
-        'epoch': 2
-    }
-}
-
-
-def patched_pl_trainer(experiment_dir, model, callbacks):
-    TrainingPipeline._patch_trainer_components()
-    trainer = pl.Trainer(
-        gpus=1 if torch.cuda.is_available() else None,
-        default_root_dir=experiment_dir,
-        callbacks=callbacks
-    )
-    TrainingPipeline._patch_trainer_object(trainer)
-
-    ## setup accelerator
-    trainer.accelerator_backend = trainer.accelerator_connector.select_accelerator()
-    trainer.accelerator_backend.setup(model)
-    trainer.accelerator_backend.train_loop = trainer.train
-    trainer.accelerator_backend.validation_loop = trainer.run_evaluation
-    trainer.accelerator_backend.test_loop = trainer.run_evaluation
-
-    ## dummy metrics data
-    metrics = {
-        'train_loss': torch.tensor(1.0891),
-        'accuracy': torch.tensor(0.7618)
-    }
-    trainer.logger_connector.callback_metrics = metrics
-    return trainer
-
-def prepare_model(config, num_classes=5):
-    model = DummyModel(num_classes=num_classes)
-    model.config = config
-    model.class_names = ["label_"+str(n) for n in range(num_classes)]
-    return model
+from ..common import (
+    DummyModel, DummyDataset,
+    prepare_model, patched_pl_trainer,
+    MINIMAL_TRAINER_CFG
+)
 
 
 @pytest.mark.parametrize(
@@ -189,7 +149,7 @@ def test_dump_config(tmp_path):
 
 
 def test_copy_data_to_model():
-    config = deepcopy(_REQUIRED_TRAINER_CFG)
+    config = deepcopy(MINIMAL_TRAINER_CFG)
     model = DummyModel(num_classes=5)
     dataloader = DataLoader(DummyDataset(), batch_size=4)
 
@@ -202,11 +162,11 @@ def test_copy_data_to_model():
 
 
 def test_checkpoint_default_last(tmp_path):
-    config = EasyDict(deepcopy(_REQUIRED_TRAINER_CFG))
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
 
     model = prepare_model(config)
     ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
-    trainer = patched_pl_trainer(str(tmp_path), model, ckpt_callbacks)
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=ckpt_callbacks)
 
     ckpt_callbacks[0].on_pretrain_routine_start(trainer, model)
     ckpt_callbacks[0].on_validation_end(trainer, model)
@@ -234,13 +194,13 @@ def test_checkpoint_default_last(tmp_path):
     ]
 )
 def test_checkpoint_save_best(tmp_path, save_best):
-    config = deepcopy(_REQUIRED_TRAINER_CFG)
+    config = deepcopy(MINIMAL_TRAINER_CFG)
     config['trainer'].update(dict(save_best_metrics=deepcopy(save_best)))
     config = EasyDict(config)
 
     model = prepare_model(config)
     ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
-    trainer = patched_pl_trainer(str(tmp_path), model, ckpt_callbacks)
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=ckpt_callbacks)
 
     if isinstance(save_best, str):
         save_best = [save_best]
@@ -301,17 +261,17 @@ def test_checkpoint_save_best(tmp_path, save_best):
     "save_epoch",
     [
         1, 2,
-        pytest.param(0, marks=pytest.mark.xfail(reason="invalid value 0"))
+        pytest.param(0, id="invalid value 0", marks=pytest.mark.xfail)
     ]
 )
 def test_checkpoint_save_epoch(tmp_path, save_epoch):
-    config = deepcopy(_REQUIRED_TRAINER_CFG)
+    config = deepcopy(MINIMAL_TRAINER_CFG)
     config['trainer'].update(dict(save_epoch=save_epoch))
     config = EasyDict(config)
 
     model = prepare_model(config)
     ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
-    trainer = patched_pl_trainer(str(tmp_path), model, ckpt_callbacks)
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=ckpt_callbacks)
 
     ## init all first
     for callback in ckpt_callbacks:

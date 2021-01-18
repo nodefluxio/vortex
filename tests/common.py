@@ -111,7 +111,7 @@ class DummyModel(ModelBase):
         self.log('accuracy', acc, on_epoch=True)
 
 
-def patched_pl_trainer(experiment_dir, model, gpus=True, callbacks=[], trainer_args={}):
+def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args={}, gpus=True):
     TrainingPipeline._patch_trainer_components()
     if gpus:
         gpus = 1 if torch.cuda.is_available() else None
