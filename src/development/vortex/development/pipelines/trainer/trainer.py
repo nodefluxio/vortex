@@ -39,8 +39,9 @@ class TrainingPipeline(BasePipeline):
         self.model = self.create_model(self.config, state_dict)
 
         ## TODO: fix progress bar
+        ## TODO: change default vortex root with environment variable
 
-        self.experiment_dir = Path('.').joinpath("experiments", config['experiment_name'])
+        self.experiment_dir = Path('.').joinpath("experiments", "outputs", config['experiment_name'])
         self.trainer = self.create_trainer(
             str(self.experiment_dir), self.config, self.model,
             hypopt=hypopt, no_log=no_log,
