@@ -18,6 +18,9 @@ class ModelBase(pl.LightningModule):
 
         self._lr = 0.
 
+        ## TODO: add pretrained backbone properties (normalization)
+
+
     @torch.no_grad()
     @abstractmethod
     def predict(self, *args, **kwargs) -> Union[List[torch.Tensor], torch.Tensor]:
@@ -34,7 +37,7 @@ class ModelBase(pl.LightningModule):
         """Create optimizer and lr_scheduler
         """
         optimizer = create_optimizer(self.config, self.optimizer_param_groups)
-        if 'lr_scheduler' in self.config['trainer']:
+        if 'lr_scheduler' in self.config['trainer'] and self.config['trainer']['lr_scheduler'] is not None:
             cfg = create_scheduler(self.config, optimizer)
             cfg.update(dict(optimizer=optimizer))
             self._lr = cfg['lr_scheduler'].get_last_lr()[0]
@@ -53,6 +56,9 @@ class ModelBase(pl.LightningModule):
             lr = self.trainer.optimizers[0].param_groups[0]["lr"]
         self._lr = lr
         return lr
+
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
 
     def test_step_end(self, outputs):
         return self.validation_step_end(outputs)
