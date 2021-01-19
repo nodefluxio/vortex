@@ -123,7 +123,7 @@ def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = No
             raise RuntimeError("'config.model.init_state_dict' or 'state_dict' argument must be set.")
 
         if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
-            ckpt = torch.load(model_path)
+            ckpt = torch.load(model_path, map_location=torch.device('cpu'))
             state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
 
         assert isinstance(state_dict, (OrderedDict, dict))
@@ -259,17 +259,34 @@ def create_dataloader(dataloader_config : EasyDict,
     dataset_config = deepcopy(dataset_config)
     preprocess_config = deepcopy(preprocess_config)
 
-    dataloader_module = dataloader_config.module
-    # For backward compatibility purpose
+    if stage not in ('train', 'validate'):
+        raise RuntimeError("Unknown stage of {}, expected value: 'train' or 'validate'"
+            .format(stage))
+
+    cfg_field = 'eval' if stage == 'validate' else stage
+    if "module" in dataloader_config:
+        dataloader_module = dataloader_config.module
+        dataloader_args = dataloader_config.args
+    elif cfg_field in dataloader_config:
+        dataloader_module = dataloader_config[cfg_field]['module']
+        dataloader_args = dataloader_config[cfg_field]['args']
+    else:
+        raise RuntimeError("Dataloader module config for stage {} is not found, please "
+            "specify them in 'config.dataloader.module' or 'config.dataloader.{}.module'. "
+            "dataloader config: {}".format(stage, cfg_field, dataloader_config))
+
+    # for backward compatibility
     if dataloader_module == 'DataLoader':
         dataloader_module = 'PytorchDataLoader'
-    dataloader_args = dataloader_config.args
 
-    dataset = create_dataset(dataset_config=dataset_config, 
-                             stage=stage, 
-                             preprocess_config=preprocess_config,
-                             wrapper_format=wrapper_format[dataloader_module])
-    if isinstance(collate_fn,str):
+    dataset = create_dataset(
+        dataset_config=dataset_config, 
+        stage=stage, 
+        preprocess_config=preprocess_config,
+        wrapper_format=wrapper_format[dataloader_module]
+    )
+
+    if isinstance(collate_fn, str):
         collater_args = {}
         try:
             collater_args = dataloader_config.collater.args
@@ -277,25 +294,20 @@ def create_dataloader(dataloader_config : EasyDict,
             collater_args = {}
         collater_args['dataformat'] = dataset.data_format
         collate_fn = create_collater(collate_fn, **collater_args)
-
-        # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
-        # to disable auto pad augmentation
-        if collate_fn.disable_image_auto_pad:
-            dataset.disable_image_auto_pad()
-
     elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
         raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "
             "Callable, or None. Got {}".format(type(collate_fn)))
 
-    if 'module' in dataloader_config:
-        dataloader_module = dataloader_config.module
-    elif 'dataloader' in dataloader_config:
-        dataloader_module = dataloader_config.dataloader
-    else:
-        raise RuntimeError("Dataloader module in 'config.dataloader.module' is not set "
-            "in config.dataloader ({}).".format(dataloader_config))
+    # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
+    # to disable auto pad augmentation
+    disable_auto_pad = (
+        collate_fn is not None and
+        hasattr(collate_fn, "disable_image_auto_pad") and collate_fn.disable_image_auto_pad
+    )
+    if disable_auto_pad:
+        dataset.disable_image_auto_pad()
 
-    dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_args)
+    dataloader = create_loader(dataloader_module, dataset, collate_fn=collate_fn, **dataloader_args)
     return dataloader
 
 def create_experiment_logger(config : EasyDict):
