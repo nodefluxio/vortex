@@ -1,6 +1,5 @@
 import pytest
 import torch
-import pytorch_lightning as pl
 
 from pathlib import Path
 from copy import deepcopy
@@ -307,9 +306,67 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
             trainer.global_step += 2
 
 
-## TODO: 
+@pytest.mark.parametrize(
+    ('train', 'eval'),
+    [
+        pytest.param(True, True, id='train and eval'),
+        pytest.param(True, False, id='no eval'),
+        pytest.param(
+            False, True, id='no train',
+            marks=pytest.mark.xfail(reason='dataset train is required')
+        )
+    ]
+)
+def test_create_dataloaders(train, eval):
+    config = EasyDict(dict(
+        model=dict(preprocess_args=dict(
+            input_size=224,
+            input_normalization=dict(
+                mean=[0.4914, 0.4822, 0.4465],
+                std=[0.2023, 0.1994, 0.2010]
+            )
+        )),
+        dataset=dict(
+            train=dict(
+                name='ImageFolder',
+                args=dict(root='tests/test_dataset/classification/train')
+            ),
+            eval=dict(
+                name='ImageFolder',
+                args=dict(root='tests/test_dataset/classification/val')
+            )
+        ),
+        dataloader=dict(
+            module="PytorchDataLoader",
+            args=dict(num_workers=1, batch_size=2, shuffle=True),
+        ),
+    ))
+    if not train:
+        config['dataset'].pop('train')
+    if not eval:
+        config['dataset'].pop('eval')
+
+    model = prepare_model(config)
+    train_loader, val_loader = TrainingPipeline.create_dataloaders(config, model)
+
+    assert isinstance(train_loader, DataLoader)
+    assert train_loader.num_workers == 1 and train_loader.batch_size == 2
+    if eval:
+        assert isinstance(val_loader, DataLoader)
+        assert val_loader.num_workers == 1 and val_loader.batch_size == 2
+    else:
+        assert val_loader is None
+
+
+def test_resume_train():
+    assert 0
+
+def test_create_loggers():
+    assert 0
+
+
+## TODO:
 # - test on resume
 # - test dataloader
-# - test create model
 # - test logger
 # - other vortex behavior
