@@ -10,7 +10,7 @@ from copy import deepcopy
 from ..common import (
     patched_pl_trainer, prepare_model,
     MINIMAL_TRAINER_CFG,
-    DummyPLDatset
+    DummyDataModule
 )
 
 # from vortex.development.networks.models import create_model_components
@@ -128,7 +128,7 @@ def test_configure_optimizer(tmp_path, optim_method, scheduler, gpus):
         assert trainer.lr_schedulers[0]['scheduler'].step_size == 1
         trainer.lr_schedulers[0]['interval'] == "epoch"
 
-    datamodule = DummyPLDatset()
+    datamodule = DummyDataModule()
     trainer.fit(model, datamodule)
 
 
