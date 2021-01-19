@@ -39,7 +39,7 @@ def create_scheduler(config, optimizer) -> dict:
     else:
         module = scheduler_cfg['module']
     if not hasattr(lr_scheduler, module):
-        raise RuntimeError("LR Scheduler module '{}' is not available")
+        raise RuntimeError("LR Scheduler method '{}' is not available".format(module))
     interval = "epoch" if module in lr_scheduler.step_update_map['epoch_update'] \
                 else "step"
 
