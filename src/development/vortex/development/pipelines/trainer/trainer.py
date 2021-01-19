@@ -172,25 +172,31 @@ class TrainingPipeline(BasePipeline):
         logger_cfg = None
         if "logging" in config:
             logger_cfg = config["logging"]
+        elif "logger" in config["trainer"]:
+            logger_cfg = config["trainer"]["logger"]
         if logger_cfg is None or no_log:
             return False
 
         if not isinstance(logger_cfg, (dict, EasyDict)):
-            raise RuntimeError("Unknown data type of 'config.logging' field, expected to have "
+            raise TypeError("Unknown data type of 'config.logging' field, expected to have "
                 "'dict' type, got {}".format(type(logger_cfg)))
-        if "module" not in logger_cfg or "args" not in logger_cfg:
+        if "module" not in logger_cfg:
             raise RuntimeError("logger config is incomplete, 'config.logging' is expected to have "
                 "'module' and 'args' attribute, got {}".format(list(logger_cfg)))
 
-        logger_module = None
-        if logger_cfg["module"] in logger_map:
-            logger_module = logger_map[logger_cfg["module"]]
-        if hasattr(pl_loggers, logger_cfg["module"]):
-            logger_module = getattr(pl_loggers, logger_cfg["module"])
+        logger_module = logger_cfg["module"]
+        if logger_module in logger_map:
+            logger_module = logger_map[logger_module]
+        elif hasattr(pl_loggers, logger_module):
+            logger_module = getattr(pl_loggers, logger_module)
         else:
             raise RuntimeError("Unknown logger module name of '{}', available logger: {}"
-                .format(logger_cfg["module"], list(logger_map)))
-        return logger_module(save_dir=experiment_dir, **logger_cfg["args"])
+                .format(logger_module, list(logger_map)))
+        logger_args = {}
+        if "args" in logger_cfg:
+            logger_args = logger_cfg["args"]
+        logger = logger_module(save_dir=experiment_dir, **logger_args)
+        return logger
 
     @staticmethod
     def create_lr_monitor(config):
