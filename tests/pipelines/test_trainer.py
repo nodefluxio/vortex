@@ -1,5 +1,6 @@
 import pytest
 import torch
+import pytorch_lightning as pl
 
 from pathlib import Path
 from copy import deepcopy
@@ -10,7 +11,7 @@ from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
 
 from ..common import (
-    DummyModel, DummyDataset,
+    DummyModel, DummyDataset, DummyDataModule,
     prepare_model, patched_pl_trainer,
     MINIMAL_TRAINER_CFG
 )
@@ -358,10 +359,83 @@ def test_create_dataloaders(train, eval):
         assert val_loader is None
 
 
-def test_resume_train():
-    assert 0
+@pytest.mark.parametrize(
+    ("no_log", "logger_module"),
+    [
+        pytest.param(False, "tensorboard", id="tensorboard"),
+        pytest.param(False, "TensorBoardLogger", id="TensorBoardLogger"),
+        pytest.param(True, "tensorboard", id="no log"),
+        pytest.param(False, "invalid", id="invalid logger", marks=pytest.mark.xfail)
+    ]
+)
+def test_create_loggers(tmp_path, no_log, logger_module):
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
 
-def test_create_loggers():
+    ## no args
+    config['trainer']['logger'] = dict(module=logger_module)
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert isinstance(loggers, pl.loggers.TensorBoardLogger) != no_log
+
+    ## config in config.trainer.logger
+    config['trainer']['logger'] = dict(
+        module=logger_module,
+        args=dict(name=config['experiment_name'])
+    )
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert isinstance(loggers, pl.loggers.TensorBoardLogger) != no_log
+
+    ## config in config.logging
+    config['logging'] = config['trainer'].pop('logger')
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert isinstance(loggers, pl.loggers.TensorBoardLogger) != no_log
+
+    model = prepare_model(config)
+    trainer_args = dict(
+        logger=loggers, checkpoint_callback=False,
+        limit_train_batches=2, limit_val_batches=2,
+        progress_bar_refresh_rate=0, max_epochs=1,
+        num_sanity_val_steps=0, weights_summary=None,
+    )
+    trainer = patched_pl_trainer(str(tmp_path), model, gpus=None, trainer_args=trainer_args)
+    datamodule = DummyDataModule()
+
+    ## running sanity check, self.log is in model.training_step()
+    trainer.fit(model, datamodule)
+
+    if not no_log:
+        experiment_dir = tmp_path.joinpath(loggers.name, 'version_0')
+        assert any(f.match('events.out.tfevents.*') for f in experiment_dir.iterdir())
+
+
+def test_create_loggers_failed(tmp_path):
+    base_config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+
+    ## 'module' cfg not found
+    with pytest.raises(RuntimeError):
+        config = deepcopy(base_config)
+        config['logging'] = dict(
+            invalid='tensorboard',
+            args=dict(name=config['experiment_name'])
+        )
+        TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
+
+    ## logger name not found
+    with pytest.raises(RuntimeError):
+        config = deepcopy(base_config)
+        config['logging'] = dict(
+            module='nothing',
+            args=dict(name=config['experiment_name'])
+        )
+        TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
+
+    ## invalid cfg type
+    with pytest.raises(TypeError):
+        config = deepcopy(base_config)
+        config['logging'] = True
+        TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
+
+
+def test_resume_train():
     assert 0
 
 
