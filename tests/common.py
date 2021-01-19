@@ -40,7 +40,7 @@ class DummyDataset(Dataset):
     def class_names(self):
         return ["label_"+str(n) for n in range(self.num_classes)]
 
-class DummyPLDatset(pl.LightningDataModule):
+class DummyDataModule(pl.LightningDataModule):
 
     def __init__(self, batch_size=2, num_classes=5, data_size=224):
         super().__init__()
