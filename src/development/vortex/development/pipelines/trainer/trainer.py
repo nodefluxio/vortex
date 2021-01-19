@@ -33,7 +33,7 @@ class TrainingPipeline(BasePipeline):
         super().__init__()
 
         self.config = self._get_config(config)
-        TrainingPipeline._check_experiment_config(self.config)
+        self._check_experiment_config(self.config)
 
         checkpoint_path, state_dict = self._handle_resume_checkpoint(config, resume)
         self.model = self.create_model(self.config, state_dict)
@@ -83,20 +83,18 @@ class TrainingPipeline(BasePipeline):
         if 'train' in config.dataset:
             train_dataloader = create_dataloader(
                 config.dataloader, config.dataset,
-                preprocess_config=config.model.preprocess_config,
+                preprocess_config=config.model.preprocess_args,
                 collate_fn=model.collate_fn,
                 stage='train'
             )
         else:
-            raise RuntimeError("Train dataset config (config.dataset.train) is not found, "
-                "Please specify it properly")
+            raise RuntimeError("Train dataset config ('config.dataset.train') is not found, "
+                "please specify it properly")
 
-        if 'val' in config.dataset:
-            config.dataset.eval = config.dataset.val
-        if 'eval' in config.dataset:
+        if 'eval' in config.dataset and config.dataset.eval is not None:
             val_dataloader = create_dataloader(
                 config.dataloader, config.dataset,
-                preprocess_config=config.model.preprocess_config,
+                preprocess_config=config.model.preprocess_args,
                 collate_fn=model.collate_fn,
                 stage='validate'
             )
