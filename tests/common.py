@@ -3,6 +3,8 @@ import torch.nn as nn
 import pytorch_lightning as pl
 
 from torch.utils.data import Dataset, DataLoader
+from collections import OrderedDict
+
 from vortex.development.networks.models import ModelBase
 from vortex.development.pipelines.trainer import TrainingPipeline
 
@@ -10,12 +12,22 @@ from vortex.development.pipelines.trainer import TrainingPipeline
 MINIMAL_TRAINER_CFG = {
     'experiment_name': 'dummy_experiment',
     'device': 'cuda:0',
+    'model': {
+        'name': 'DummyModel',
+        'network_args': {}
+    },
     'trainer': {
         'optimizer': {
             'method': 'SGD',
             'args': {'lr': 0.001}
         },
         'epoch': 2
+    },
+    'dataset': {
+        'train': {
+            'name': 'ImageFolder',
+            'args': {'root': 'tests/test_dataset/classification/train'}
+        }
     }
 }
 
@@ -115,12 +127,13 @@ def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args={}, gpu
     TrainingPipeline._patch_trainer_components()
     if gpus:
         gpus = 1 if torch.cuda.is_available() else None
-    trainer = pl.Trainer(
+    kwargs = dict(
         gpus=gpus,
         default_root_dir=experiment_dir,
         callbacks=callbacks,
-        **trainer_args
     )
+    kwargs.update(trainer_args)
+    trainer = pl.Trainer(**kwargs)
     TrainingPipeline._patch_trainer_object(trainer)
 
     ## setup accelerator
@@ -144,3 +157,14 @@ def prepare_model(config, num_classes=5):
     model.config = config
     model.class_names = ["label_"+str(n) for n in range(num_classes)]
     return model
+
+
+def state_dict_is_equal(a, b):
+    if type(a) != type(b):
+        return False
+    elif isinstance(a, (OrderedDict, dict)):
+        return all(state_dict_is_equal(x, y) for x,y in zip(a.values(), b.values()))
+    elif isinstance(a, torch.Tensor):
+        return torch.equal(a, b)
+    else:
+        return a == b

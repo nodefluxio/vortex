@@ -20,10 +20,11 @@ from vortex.development.pipelines import (
     IRPredictionPipeline,
     HypOptPipeline
 )
-
 from vortex.development.utils.factory import create_model
 from vortex.development.utils.parser.parser import load_config
 from vortex.development.utils.parser.loader import Loader
+
+from ..common import state_dict_is_equal
 
 
 config_path = "tests/config/test_classification_pipelines.yml"
@@ -38,15 +39,6 @@ config = load_config(config_path)
 with open(hypopt_train_obj_path) as f:
     hypopt_train_obj_config = EasyDict(yaml.load(f, Loader=Loader))
 
-def state_dict_is_equal(a, b):
-    if type(a) != type(b):
-        return False
-    elif isinstance(a, (OrderedDict, dict)):
-        return all(state_dict_is_equal(x, y) for x,y in zip(a.values(), b.values()))
-    elif isinstance(a, torch.Tensor):
-        return torch.equal(a, b)
-    else:
-        return a == b
 
 class InfoPlaceHolder():
     def __init__(self):
