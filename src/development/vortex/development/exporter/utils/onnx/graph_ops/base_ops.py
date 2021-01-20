@@ -1,13 +1,15 @@
+import abc
 import onnx
 
-class GraphOpsBase:
+class GraphOpsBase(metaclass=abc.ABCMeta):
     def __init__(self):
         """Base Class to represents onnx graph ops
         """
         pass
 
+    @abc.abstractmethod
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
-        raise NotImplementedError
+        pass
     
     def __call__(self, model: onnx.ModelProto) -> onnx.ModelProto:
         """Transform model, call derived run function.
