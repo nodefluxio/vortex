@@ -6,6 +6,7 @@ from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
 from torch.utils.data import DataLoader
+from pytorch_lightning.accelerators import CPUAccelerator, GPUAccelerator
 
 from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
@@ -13,7 +14,8 @@ from vortex.development import __version__ as vortex_version
 from ..common import (
     DummyModel, DummyDataset, DummyDataModule,
     prepare_model, patched_pl_trainer,
-    MINIMAL_TRAINER_CFG
+    MINIMAL_TRAINER_CFG,
+    state_dict_is_equal
 )
 
 
@@ -22,15 +24,22 @@ from ..common import (
     [
         pytest.param(None, None, False, id="on cpu"),
         pytest.param("cuda", 1, True, id="on gpu autoselect"),
-        pytest.param("cuda:1", "1", False, id="on gpu 1")
+        pytest.param("cuda:0", "0", False, id="on gpu 1")
     ]
 )
-def test_args_device(device, expected_gpu, expected_auto_select):
+def test_args_device(tmp_path, device, expected_gpu, expected_auto_select):
     config = dict(device=device)
     expected = dict(gpus=expected_gpu, auto_select_gpus=expected_auto_select)
 
     kwargs = TrainingPipeline._trainer_args_device(config)
     assert kwargs == expected
+
+    if torch.cuda.is_available() or expected_gpu is None:
+        model = prepare_model(deepcopy(MINIMAL_TRAINER_CFG))
+        trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
+        expected_accelerator = CPUAccelerator if expected_gpu is None else GPUAccelerator
+        assert isinstance(trainer.accelerator_backend, expected_accelerator)
+        assert trainer.num_gpus == (0 if expected_gpu is None else 1)
 
 
 def test_args_validation_interval():
@@ -435,12 +444,111 @@ def test_create_loggers_failed(tmp_path):
         TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
 
 
-def test_resume_train():
-    assert 0
+def test_handle_resume_train(tmp_path):
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+
+    ## no checkpoint in config and asked to resume
+    with pytest.raises(RuntimeError):
+        TrainingPipeline._handle_resume_checkpoint(config, resume=True)
+
+    ## checkpoint None and asked to resume
+    with pytest.raises(RuntimeError):
+        config['checkpoint'] = None
+        TrainingPipeline._handle_resume_checkpoint(config, resume=True)
+
+    ## checkpoint not found
+    with pytest.raises(RuntimeError):
+        config['checkpoint'] = str(tmp_path.joinpath("ckpt.pth"))
+        TrainingPipeline._handle_resume_checkpoint(config, resume=True)
+
+    model = prepare_model(config)
+    ckpt_callback = TrainingPipeline.create_model_checkpoints(config, model)[0]
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=[ckpt_callback])
+    ckpt_callback.on_pretrain_routine_start(trainer, model)
+    ckpt_callback.on_validation_end(trainer, model)
+    fpath = tmp_path.joinpath("version_0", "checkpoints", config['experiment_name'] + "-last.pth")
+
+    config['checkpoint'] = str(fpath)
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=True)
+    assert str(ckpt_path) == str(fpath)
+    assert state_dict_is_equal(state_dict, model.cpu().state_dict())
+
+    trainer_args = dict(resume_from_checkpoint=ckpt_path)
+    trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=trainer_args)
+    trainer.checkpoint_connector.restore_weights(model)
+    assert trainer.current_epoch == 1 and trainer.global_step == 1
+
+
+def test_handle_resume_train_not_resume(tmp_path):
+    ## when resume is False
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=False)
+    assert ckpt_path is None and state_dict is None
+
+    config['checkpoint'] = None
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=False)
+    assert ckpt_path is None and state_dict is None
+
+    ## checkpoint path not found
+    config['checkpoint'] = str(tmp_path.joinpath("ckpt.pth"))
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=False)
+    assert ckpt_path is None and state_dict is None
+
+    ## checkpoint path is set and found
+    model = prepare_model(config)
+    ckpt_callback = TrainingPipeline.create_model_checkpoints(config, model)[0]
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=[ckpt_callback])
+    ckpt_callback.on_pretrain_routine_start(trainer, model)
+    ckpt_callback.on_validation_end(trainer, model)
+    fpath = tmp_path.joinpath("version_0", "checkpoints", config['experiment_name'] + "-last.pth")
+
+    config['checkpoint'] = str(fpath)
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=False)
+    assert ckpt_path == None
+    assert state_dict_is_equal(state_dict, model.cpu().state_dict())
+
+
+def test_handle_resume_verify_config(tmp_path):
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+    model = prepare_model(config)
+    ckpt_callback = TrainingPipeline.create_model_checkpoints(config, model)[0]
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=[ckpt_callback])
+    ckpt_callback.on_pretrain_routine_start(trainer, model)
+    ckpt_callback.on_validation_end(trainer, model)
+    fpath = tmp_path.joinpath("version_0", "checkpoints", config['experiment_name'] + "-last.pth")
+
+    ## normal run
+    config['checkpoint'] = str(fpath)
+    ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=True)
+    assert str(ckpt_path) == str(fpath)
+    assert state_dict_is_equal(state_dict, model.cpu().state_dict())
+
+    ## different model name
+    with pytest.raises(RuntimeError):
+        cfg_different_model = deepcopy(config)
+        cfg_different_model['model']['name'] = 'DifferentModel'
+        TrainingPipeline._handle_resume_checkpoint(cfg_different_model, resume=True)
+
+    ## different network args
+    with pytest.raises(RuntimeError):
+        cfg_different_model_args = deepcopy(config)
+        cfg_different_model_args['model']['network_args'] = dict(num_classes=2)
+        TrainingPipeline._handle_resume_checkpoint(cfg_different_model_args, resume=True)
+
+    ## different dataset name
+    with pytest.raises(RuntimeError):
+        cfg_different_dataset = deepcopy(config)
+        cfg_different_dataset['dataset']['train']['name'] = 'DifferentDataset'
+        TrainingPipeline._handle_resume_checkpoint(cfg_different_dataset, resume=True)
+
+    ## dataset config not found
+    with pytest.raises(RuntimeError):
+        cfg_not_found_dataset = deepcopy(config)
+        cfg_not_found_dataset['dataset'].pop('train')
+        TrainingPipeline._handle_resume_checkpoint(cfg_not_found_dataset, resume=True)
 
 
 ## TODO:
 # - test on resume
-# - test dataloader
-# - test logger
-# - other vortex behavior
+# - other vortex behavior (?)
