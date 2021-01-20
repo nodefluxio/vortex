@@ -224,7 +224,7 @@ class TrainingPipeline(BasePipeline):
             loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
-        trainer = pl.Trainer(
+        kwargs = dict(
             max_epochs=config['trainer']['epoch'],
             default_root_dir=experiment_dir,
             deterministic=True, benchmark=True,
@@ -232,8 +232,9 @@ class TrainingPipeline(BasePipeline):
             callbacks=callbacks,
             logger=loggers,
             resume_from_checkpoint=resume_checkpoint_path
-            **trainer_args
         )
+        kwargs.update(trainer_args)
+        trainer = pl.Trainer(**kwargs)
         TrainingPipeline._patch_trainer_object(trainer)
         return trainer
 
@@ -385,15 +386,18 @@ class TrainingPipeline(BasePipeline):
         checkpoint, state_dict = None, None
         ckpt_path = None
         if resume or ('checkpoint' in config and config['checkpoint'] is not None):
-            if 'checkpoint' not in config or config['checkpoint'] is None:
+            if resume and ('checkpoint' not in config or config['checkpoint'] is None):
                 raise RuntimeError("You specify to resume but 'checkpoint' is not configured "
                     "in the config file. Please specify 'checkpoint' option in the top level "
                     "of your config file pointing to model path used for resume.")
 
             ckpt_path = Path(config.checkpoint)
-            if resume or ckpt_path.exists():
+            if (resume and ckpt_path.exists()) or ckpt_path.exists():
                 checkpoint = torch.load(config.checkpoint, map_location=torch.device('cpu'))
                 state_dict = checkpoint['state_dict']
+            elif resume and not ckpt_path.exists():
+                raise RuntimeError("Checkpoint path of {} is not exist, make sure to specify "
+                    "the path properly".format(str(ckpt_path)))
 
             if resume:
                 model_config = EasyDict(checkpoint['config'])
@@ -406,9 +410,9 @@ class TrainingPipeline(BasePipeline):
                         "not the same as saved in model checkpoint ({}).".format(config.model.network_args, 
                         model_config.model.network_args))
 
-                if 'name' in config.dataset.train:
+                if 'dataset' in config and 'train' in config.dataset and 'name' in config.dataset.train:
                     cfg_dataset_name = config.dataset.train.name
-                elif 'dataset' in config.dataset.train:
+                elif 'dataset' in config and 'train' in config.dataset and 'dataset' in config.dataset.train:
                     cfg_dataset_name = config.dataset.train.dataset
                 else:
                     raise RuntimeError("dataset name is not found in config. Please specify in "
@@ -421,4 +425,6 @@ class TrainingPipeline(BasePipeline):
                 if cfg_dataset_name != model_dataset_name:
                     raise RuntimeError("Dataset specified in config file ({}) is not the same as saved "
                         "in model checkpoint ({}).".format(cfg_dataset_name, model_dataset_name))
+            else:
+                ckpt_path = None
         return ckpt_path, state_dict
