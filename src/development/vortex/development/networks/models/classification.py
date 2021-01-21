@@ -2,7 +2,7 @@ import torch
 import warnings
 import pytorch_lightning as pl
 
-from . import register_model
+from .registry import register_model
 from .model import ModelBase
 from .base_connector import BackbonePoolConnector
 from ..modules.losses.classification import ClassificationLoss
