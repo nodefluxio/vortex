@@ -18,9 +18,9 @@ from vortex.development.utils.factory import (
 from vortex.development.utils.parser.parser import load_config
 from vortex.development.networks.models import supported_models
 
-## TODO:
-# - create_model
-# - create_dataset
+
+## TODO: test create_dataset
+
 
 DATASET_CFG = dict(
     train=dict(

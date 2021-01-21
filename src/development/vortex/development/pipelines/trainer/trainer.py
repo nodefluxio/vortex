@@ -174,11 +174,12 @@ class TrainingPipeline(BasePipeline):
             logger_cfg = config["logging"]
         elif "logger" in config["trainer"]:
             logger_cfg = config["trainer"]["logger"]
+
         if logger_cfg is None or no_log:
             return False
-
         if isinstance(logger_cfg, bool):
             return logger_cfg
+
         if not isinstance(logger_cfg, (dict, EasyDict)):
             raise TypeError("Unknown data type of 'config.logging' field, expected to have "
                 "'dict' type, got {}".format(type(logger_cfg)))
