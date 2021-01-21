@@ -1,7 +1,6 @@
 import logging
 import warnings
 import torch
-import torch.nn as nn
 
 from copy import deepcopy
 from pathlib import Path
@@ -22,13 +21,19 @@ __all__ = ['create_model',
         #    'create_exporter'
 ]
 
-def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = None, stage=None) -> nn.Module:
+def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = None, stage: str = None) -> torch.nn.Module:
     """Function to create model and it's signature components. E.g. loss function, collate function, etc
 
     Args:
         model_config (EasyDict): Experiment file configuration at `model` section, as EasyDict object
-        state_dict (Union[str, dict, Path], optional): [description]. `model` Pytorch state dictionary or commonly known as weight, can be provided as the path to the file, or the returned dictionary object from `torch.load`. If this param is provided, it will override checkpoint specified in the experiment file. Defaults to None.
-        stage (str, optional): If set to 'train', this will enforce that the model must have `loss` and `collate_fn` attributes, hence it will make sure model can be used for training stage. If set to 'validate' it will ignore those requirements but cannot be used in training pipeline, but may still valid for other pipelines. Defaults to 'train'.
+        state_dict (Union[str, dict, Path], optional): [description]. `model` Pytorch state dictionary or commonly known as weight, 
+            can be provided as the path to the file, or the returned dictionary object from `torch.load`.
+            If this param is provided, it will override checkpoint specified in the experiment file.
+            Defaults to None.
+        stage (str, optional): If set to 'train', this will enforce that the model must have `loss` and `collate_fn` attributes,
+            hence it will make sure model can be used for training stage. If set to 'validate' it will ignore those requirements 
+            but cannot be used in training pipeline, and also may still valid for other pipelines.
+            Defaults to 'train'.
 
     Raises:
         TypeError: Raises if the provided `stage` not in 'train' or 'validate'
@@ -43,7 +48,8 @@ def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = No
         - `preprocess` : model's preprocessing module
         - `postprocess` : model's postprocessing module
         - `loss` : if provided, module for model's loss function
-        - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format into desirable format that can be accepted by `loss` components
+        - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format
+            into desirable format that can be accepted by `loss` components
 
         ```python
         from vortex.development.core.factory import create_model
@@ -81,6 +87,12 @@ def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = No
 
     logging.info('Creating Pytorch model from experiment file')
 
+    if "model" in model_config:
+        model_config = model_config["model"]
+    if "name" not in model_config:
+        raise RuntimeError("Config is not valid, expected 'config.model.name' argument but not found, "
+            "got model config: {}".format(model_config))
+
     model_name = model_config.name
     try:
         preprocess_args = model_config.preprocess_args
@@ -107,28 +119,31 @@ def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = No
     )
 
     if 'init_state_dict' in model_config or state_dict is not None:
+        model_path = None
         if isinstance(state_dict, Path):
             state_dict = str(state_dict)
 
         # Load state_dict from config if specified in experiment file
         if 'init_state_dict' in model_config and state_dict is None:
-            logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
+            logging.info("Loading state_dict from configuration file: {}".format(model_config.init_state_dict))
             model_path = model_config.init_state_dict
         # If specified using function's parameter, override the experiment config init_state_dict
         elif isinstance(state_dict, str):
-            logging.info("Loading state_dict : {}".format(state_dict))
+            logging.info("Loading state_dict: {}".format(state_dict))
             model_path = state_dict
-        else:
+        elif not isinstance(state_dict, dict):
             ## don't know why you would come to this stage
             raise RuntimeError("'config.model.init_state_dict' or 'state_dict' argument must be set.")
 
+        ckpt = None
         if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
             ckpt = torch.load(model_path, map_location=torch.device('cpu'))
-            state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        elif isinstance(state_dict, (OrderedDict, dict)):
+            ckpt = state_dict
 
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
         assert isinstance(state_dict, (OrderedDict, dict))
         model.load_state_dict(state_dict, strict=True) 
-
     return model
 
 

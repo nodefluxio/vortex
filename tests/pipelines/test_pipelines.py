@@ -20,7 +20,6 @@ from vortex.development.pipelines import (
     IRPredictionPipeline,
     HypOptPipeline
 )
-from vortex.development.utils.factory import create_model
 from vortex.development.utils.parser.parser import load_config
 from vortex.development.utils.parser.loader import Loader
 
@@ -288,46 +287,6 @@ class TestTrainingPipeline():
             assert state_dict_is_equal(ckpt['scheduler_state'], train_executor.trainer.scheduler.state_dict())
         else:
             assert not 'scheduler_state' in ckpt
-
-
-def test_create_model():
-    def _check(model):
-        assert all(x in model for x in ('network', 'preprocess', 'postprocess'))
-        assert all(x in model for x in ('loss', 'collate_fn'))
-
-    model = create_model(config.model, stage='train')
-    _check(model)
-
-    ckpt = torch.load(pth_model_path)
-
-    ## using 'state_dict' path as 'str'
-    model = create_model(config.model, state_dict=pth_model_path, stage='train')
-    _check(model)
-    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
-
-    ## using 'state_dict' path as 'Path'
-    model = create_model(config.model, state_dict=Path(pth_model_path), stage='train')
-    _check(model)
-    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
-
-    ## using 'state_dict' from ckpt
-    model = create_model(config.model, state_dict=ckpt['state_dict'], stage='train')
-    _check(model)
-    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
-
-    ## using 'init_state_dict' from config
-    new_cfg_model = deepcopy(config.model)
-    new_cfg_model['init_state_dict'] = pth_model_path
-    model = create_model(new_cfg_model, stage='train')
-    _check(model)
-    state_dict_is_equal(ckpt['state_dict'], model.network.state_dict())
-
-    ## if both 'init_state_dict' config and 'state_dict' argument is specified
-    ## 'state_dict' argument should be of top priority
-    ckpt_ep0 = torch.load(train_info.run_directory/'test_classification_pipelines-epoch-0.pth')
-    model = create_model(new_cfg_model, state_dict=ckpt_ep0['state_dict'], stage='train')
-    _check(model)
-    state_dict_is_equal(ckpt_ep0['state_dict'], model.network.state_dict())
 
 
 @pytest.mark.parametrize(
