@@ -13,6 +13,8 @@ import sympy
 from packaging import version
 assert version.parse(onnx.__version__) >= version.parse("1.5.0")
 
+from .base_ops import GraphOpsBase
+
 def get_attribute(node, attr_name, default_value=None):
     found = [attr for attr in node.attribute if attr.name == attr_name]
     if found:
@@ -1300,6 +1302,34 @@ class SymbolicShapeInference:
         if not all_shapes_inferred:
             raise Exception("Incomplete symbolic shape inference")
         return symbolic_shape_inference.out_mp_
+
+class SymbolicShapeInfer(GraphOpsBase):
+    def __init__(self, int_max=2**31 - 1, auto_merge=False, guess_output_rank=False, verbose=0):
+        """Perform symbolic shape inference
+
+        Args:
+            int_max ([type], optional): Maximum integer for comparison. Defaults to 2**31-1.
+            auto_merge (bool, optional): Try to merge (possibly unsupported) dimension for broadcasting.
+                                    Defaults to False.
+            guess_output_rank (bool, optional): Try to gues dimension of unknown op, maybe from other version.
+                                    Defaults to False.
+            verbose (int, optional): verbosity. Defaults to 0.
+        """
+        self.int_max    = int_max
+        self.verbose    = verbose
+        self.auto_merge = auto_merge
+        self.guess_output_rank = guess_output_rank
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Run symbolic shape inference
+
+        Args:
+            model (onnx.ModelProto): model to be transformed
+
+        Returns:
+            onnx.ModelProto: transformed model
+        """
+        return SymbolicShapeInference.infer_shapes(model, **vars(self))
 
 def parse_arguments():
   parser = argparse.ArgumentParser()

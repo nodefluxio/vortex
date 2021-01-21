@@ -7,10 +7,6 @@ from typing import Union, Dict, List
 
 logger = logging.getLogger(__name__)
 
-supported_ops = [
-    'embed_output_format'
-]
-
 def embed_output_format(model : onnx.ModelProto, output_format : Dict[str,Union[List[int],int]]) -> onnx.ModelProto:
     """
     embed output_format to model as `Constants`
@@ -24,3 +20,26 @@ def embed_output_format(model : onnx.ModelProto, output_format : Dict[str,Union[
 
 def get_ops(*args, **kwargs) :
     return embed_output_format
+
+from .base_ops import GraphOpsBase
+
+class EmbedOutputFormat(GraphOpsBase):
+    def __init__(self, output_format: Dict[str,Union[List[int],int]]):
+        """Embed output_format to model as `Constants`
+
+        Args:
+            output_format (Dict[str,Union[List[int],int]]):
+                mapping from str to (list of) int representing output_format
+        """        
+        self.output_format = output_format
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Actually embed output_format to model
+
+        Args:
+            model (onnx.ModelProto): model to be embedded with output_format
+
+        Returns:
+            onnx.ModelProto: transformed model
+        """        
+        return embed_output_format(model, **vars(self))

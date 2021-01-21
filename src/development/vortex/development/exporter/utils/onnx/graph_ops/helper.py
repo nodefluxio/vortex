@@ -8,13 +8,14 @@ def make_constants(value : np.ndarray, name : str) :
     """
     given numpy array and a name, create onnx `Constants` node
     """
+    data_type = onnx.numpy_helper.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
     constants = helper.make_node(
         'Constant',
         inputs=[],
         outputs=[name],
         value=helper.make_tensor(
             name='value',
-            data_type=onnx.TensorProto.INT64,
+            data_type=data_type,
             dims=value.shape,
             vals=value
         )

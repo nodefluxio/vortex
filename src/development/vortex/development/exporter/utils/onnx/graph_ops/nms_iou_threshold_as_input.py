@@ -2,17 +2,12 @@ import logging
 import onnx
 
 from onnx import helper
-
+from .base_ops import GraphOpsBase
 from .helper import (
     get_Ops, get_inputs, get_outputs, replace_node
 )
 
-
-supported_ops = [
-    'nms'
-]
 logger = logging.getLogger(__name__)
-
 
 def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_threshold', force_rewire=False) :
     """
@@ -57,3 +52,28 @@ def nms_iou_threshold_as_input(model: onnx.ModelProto, input_name: str='iou_thre
     nms_ops, ids = get_Ops(model, 'NonMaxSuppression')
     logger.info(f'updated {len(nms_ops)} NonMaxSuppression ops: {nms_ops}')
     return model
+
+class IOUThresholdAsInput(GraphOpsBase):
+    def __init__(self, input_name: str='iou_threshold', force_rewire=False):
+        """Find all existing NonMaxSuppression ops, make sure its iou_threshold is input.
+
+        Args:
+            input_name (str, optional):  desired input name for iou_threshold input to nms,
+                        if not exists, an input with input_name will be added to the graph.
+                        Defaults to 'iou_threshold'.
+            force_rewire (bool, optional): nms' iou_threshold will be rewired to input_name, if set to True.
+                        Defaults to False.
+        """        
+        self.input_name   = input_name
+        self.force_rewire = force_rewire
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Actually transform model
+
+        Args:
+            model (onnx.ModelProto): model to be transformed
+
+        Returns:
+            onnx.ModelProto: transformed model
+        """        
+        return nms_iou_threshold_as_input(model, **vars(self))

@@ -3,7 +3,7 @@ import onnx
 from .helper import get_outputs
 
 from onnx import helper
-
+from .base_ops import GraphOpsBase
 
 def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='output', output_prefix : str='output_'):
     """
@@ -45,3 +45,27 @@ def create_batch_output_sequence(model : onnx.ModelProto, output_name : str='out
     model.graph.node.append(sequence_construct_node)
     model.graph.output.append(sequence_value_info)
     return model
+
+class CreateBatchOutputSequence(GraphOpsBase):
+    def __init__(self, output_name: str='output', output_prefix: str='output_'):
+        """Combine multiple output as Sequence
+
+        Args:
+            output_name (str, optional): desired ouput name.
+                                Defaults to 'output'.
+            output_prefix (str, optional): prefix of existing output names.
+                                Defaults to 'output_'.
+        """        
+        self.output_name = output_name
+        self.output_prefix = output_prefix
+    
+    def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Run create_batch_output_sequence
+
+        Args:
+            model (onnx.ModelProto): model to be transformed
+
+        Returns:
+            onnx.ModelProto: transformed model
+        """
+        return create_batch_output_sequence(model, **vars(self))
