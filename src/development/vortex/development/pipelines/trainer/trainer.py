@@ -177,6 +177,8 @@ class TrainingPipeline(BasePipeline):
         if logger_cfg is None or no_log:
             return False
 
+        if isinstance(logger_cfg, bool):
+            return logger_cfg
         if not isinstance(logger_cfg, (dict, EasyDict)):
             raise TypeError("Unknown data type of 'config.logging' field, expected to have "
                 "'dict' type, got {}".format(type(logger_cfg)))
@@ -217,13 +219,15 @@ class TrainingPipeline(BasePipeline):
             if isinstance(config.trainer.args, dict):
                 trainer_args.update(config.trainer.args)
             else:
-                raise RuntimeError("Unknown type for 'config.trainer.args', expected to have "
+                raise TypeError("Unknown type for 'config.trainer.args', expected to have "
                     "dict type, got '{}' with value of {}".format(type(config.trainer.args), 
                     config.trainer.args))
 
         loggers = False
         callbacks = []
+        checkpoint_callback = False
         if not hypopt:
+            checkpoint_callback = True
             callbacks = TrainingPipeline.create_model_checkpoints(config, model)
             callbacks.append(TrainingPipeline.create_lr_monitor(config))
             loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
@@ -232,9 +236,10 @@ class TrainingPipeline(BasePipeline):
         kwargs = dict(
             max_epochs=config['trainer']['epoch'],
             default_root_dir=experiment_dir,
-            deterministic=True, benchmark=True,
+            benchmark=False,
             weights_summary=None,
             callbacks=callbacks,
+            checkpoint_callback=checkpoint_callback,
             logger=loggers,
             resume_from_checkpoint=resume_checkpoint_path
         )
@@ -273,12 +278,17 @@ class TrainingPipeline(BasePipeline):
 
     @staticmethod
     def _trainer_args_device(config):
+        ## TODO:
+        ## - support multi gpus select ('cuda:0,1')
+        ## - trainer only device (or gpu) config -> config.trainer.gpus
         gpus, auto_select_gpus = None, False
         device = None
         if 'device' in config:
             device = config['device']
 
-        if device is not None and ('cuda' in device or 'gpu' in device):
+        if device is None or device == 'cpu':
+            gpus, auto_select_gpus = None, False
+        elif device is not None and ('cuda' in device or 'gpu' in device):
             len_device = len(device.split(':'))
             if len_device == 1:
                 gpus, auto_select_gpus = 1, True
