@@ -1,3 +1,4 @@
+from _pytest.mark import param
 import pytest
 import torch
 import pytorch_lightning as pl
@@ -7,6 +8,8 @@ from copy import deepcopy
 from easydict import EasyDict
 from torch.utils.data import DataLoader
 from pytorch_lightning.accelerators import CPUAccelerator, GPUAccelerator
+from pytorch_lightning.callbacks import ProgressBarBase, ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.loggers import TensorBoardLogger
 
 from vortex.development.pipelines.trainer import TrainingPipeline
 from vortex.development import __version__ as vortex_version
@@ -23,8 +26,10 @@ from ..common import (
     ('device', 'expected_gpu', 'expected_auto_select'),
     [
         pytest.param(None, None, False, id="on cpu"),
+        pytest.param("cpu", None, False, id="on cpu with string"),
         pytest.param("cuda", 1, True, id="on gpu autoselect"),
-        pytest.param("cuda:0", "0", False, id="on gpu 1")
+        pytest.param("cuda:0", "0", False, id="on gpu 0"),
+        pytest.param("cuda:0:1", "0", False, id="invalid device", marks=pytest.mark.xfail)
     ]
 )
 def test_args_device(tmp_path, device, expected_gpu, expected_auto_select):
@@ -408,7 +413,16 @@ def test_create_dataloaders(train, eval):
 def test_create_loggers(tmp_path, no_log, logger_module):
     config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
 
-    ## no args
+    ## with bool logger
+    config['trainer']['logger'] = True
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert loggers == (True if not no_log else False)
+
+    config['trainer']['logger'] = False
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert loggers == False
+
+    ## with logger no args
     config['trainer']['logger'] = dict(module=logger_module)
     loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
     assert isinstance(loggers, pl.loggers.TensorBoardLogger) != no_log
@@ -443,6 +457,11 @@ def test_create_loggers(tmp_path, no_log, logger_module):
         experiment_dir = tmp_path.joinpath(loggers.name, 'version_0')
         assert any(f.match('events.out.tfevents.*') for f in experiment_dir.iterdir())
 
+    ## config in config.logging with bool
+    config['logging'] = True
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+    assert loggers == (True if not no_log else False)
+
 
 def test_create_loggers_failed(tmp_path):
     base_config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
@@ -468,7 +487,7 @@ def test_create_loggers_failed(tmp_path):
     ## invalid cfg type
     with pytest.raises(TypeError):
         config = deepcopy(base_config)
-        config['logging'] = True
+        config['logging'] = "invalid"
         TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
 
 
@@ -577,6 +596,79 @@ def test_handle_resume_verify_config(tmp_path):
         TrainingPipeline._handle_resume_checkpoint(cfg_not_found_dataset, resume=True)
 
 
-## TODO:
-# - test on resume
-# - other vortex behavior (?)
+@pytest.mark.parametrize(
+    ("device", "hypopt"),
+    [
+        pytest.param('cpu', False, id="normal model on cpu"),
+        pytest.param(
+            'cuda:0', False, id="normal mode on gpu",
+            marks=pytest.mark.skipif(not torch.cuda.is_available(), reason="test requires GPU")
+        ),
+        pytest.param('cpu', True, id="hypopt mode")
+    ]
+)
+def test_create_trainer(tmp_path, caplog, device, hypopt):
+    caplog.set_level(20)    ## set log level to INFO
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+    config['device'] = device
+    config['trainer']['validation_interval'] = 2
+    config['trainer']['seed'] = 1395
+    config['trainer']['logger'] = True
+
+    model = prepare_model(config)
+    trainer = TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=hypopt)
+
+    assert sum(1 for rec in caplog.records if rec.module == 'trainer') == 1     ## log from seed everything
+    assert trainer.max_epochs == config['trainer']['epoch']
+    assert trainer._default_root_dir == str(tmp_path)
+    assert trainer._weights_save_path == str(tmp_path)
+    assert trainer.weights_summary == None
+    assert trainer.benchmark == False
+    assert trainer.deterministic == True
+    assert trainer.check_val_every_n_epoch == 2
+
+    ## model checkpoint, lr monitor and progress bar callback if not hypopt else pbar only
+    assert len(trainer.callbacks) == (1 if hypopt else 3)
+    ## model checkpoint is not available when hypopt
+    assert any(isinstance(c, ModelCheckpoint) for c in trainer.callbacks) != hypopt
+    ## progress bar callback is always available
+    assert any(isinstance(c, ProgressBarBase) for c in trainer.callbacks)
+    ## loggers is not available when hypopt
+    assert isinstance(trainer.logger, TensorBoardLogger) != hypopt
+    assert any(isinstance(c, LearningRateMonitor) for c in trainer.callbacks) != hypopt
+
+    ## training device
+    trainer.accelerator_backend = trainer.accelerator_connector.select_accelerator()
+    trainer.accelerator_backend.setup(model)
+    expected_accelerator = CPUAccelerator if device == 'cpu' else GPUAccelerator
+    assert isinstance(trainer.accelerator_backend, expected_accelerator)
+    assert trainer.data_parallel_device_ids == (None if device == 'cpu' else [0])
+    assert trainer.num_gpus == (0 if device == 'cpu' else 1)
+
+
+def test_create_trainer_with_args(tmp_path):
+    config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+    config['trainer']['seed'] = 1395
+
+    model = prepare_model(config)
+    trainer = TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
+    assert trainer.max_epochs == config['trainer']['epoch']
+    assert trainer._default_root_dir == str(tmp_path)
+    assert trainer._weights_save_path == str(tmp_path)
+    assert trainer.weights_summary == None
+    assert trainer.benchmark == False
+    assert trainer.deterministic == True
+
+    config['trainer']['args'] = dict(benchmark=True, log_gpu_memory="min_max", auto_lr_find=True)
+    model = prepare_model(config)
+    trainer = TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
+    assert trainer.benchmark == True
+    assert trainer.log_gpu_memory == "min_max"
+    assert trainer.auto_lr_find == True
+
+    with pytest.raises(TypeError):
+        config['trainer']['args'] = "invalid"
+        TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
+
+
+## TODO: other vortex behavior (?)
