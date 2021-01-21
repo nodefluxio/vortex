@@ -214,7 +214,12 @@ class TrainingPipeline(BasePipeline):
         trainer_args.update(TrainingPipeline._trainer_args_set_seed(config))
 
         if 'args' in config.trainer and config.trainer.args is not None:
-            trainer_args.update(config.trainer.args)
+            if isinstance(config.trainer.args, dict):
+                trainer_args.update(config.trainer.args)
+            else:
+                raise RuntimeError("Unknown type for 'config.trainer.args', expected to have "
+                    "dict type, got '{}' with value of {}".format(type(config.trainer.args), 
+                    config.trainer.args))
 
         loggers = False
         callbacks = []
@@ -287,18 +292,26 @@ class TrainingPipeline(BasePipeline):
     @staticmethod
     def _trainer_args_validation_interval(config):
         val_epoch = 1
+        set_in_validator = False
         if 'validator' in config and 'val_epoch' in config['validator']:
+            set_in_validator = True
             try:
                 val_epoch = int(config['validator']['val_epoch'])
             except ValueError:
-                raise RuntimeError("Unknown value in 'config.validator.val_epoch' of {}"
+                raise ValueError("Unknown value in 'config.validator.val_epoch' of {}"
                     .format(config['validator']['val_epoch']))
-        elif 'trainer' in config and 'validate_interval' in config['trainer']:
+        elif 'trainer' in config and 'validation_interval' in config['trainer']:
             try:
-                val_epoch = int(config['trainer']['validate_interval'])
+                val_epoch = int(config['trainer']['validation_interval'])
             except ValueError:
-                raise RuntimeError(f"Unknown value in 'config.trainer.validate_interval' "
-                    "of {}".format(config['trainer']['validate_interval']))
+                raise ValueError(f"Unknown value in 'config.trainer.validation_interval' "
+                    "of {}".format(config['trainer']['validation_interval']))
+
+        if val_epoch <= 0:
+            raise ValueError("Validation interval value ({}) of {} is invalid, expected "
+                "value of more than zero (>0).".format("config.validator.val_epoch" 
+                if set_in_validator else "config.trainer.validation_interval",
+                val_epoch))
 
         return dict(check_val_every_n_epoch=val_epoch)
 

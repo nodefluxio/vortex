@@ -39,26 +39,54 @@ def test_args_device(tmp_path, device, expected_gpu, expected_auto_select):
         trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
         expected_accelerator = CPUAccelerator if expected_gpu is None else GPUAccelerator
         assert isinstance(trainer.accelerator_backend, expected_accelerator)
+        assert trainer.data_parallel_device_ids == (None if expected_gpu is None else [0])
         assert trainer.num_gpus == (0 if expected_gpu is None else 1)
 
 
-def test_args_validation_interval():
-    val_epoch = 1
-    config = dict(validator=dict(val_epoch=val_epoch))
+@pytest.mark.parametrize(
+    "val_epoch", [1, 2]
+)
+def test_args_validation_interval(tmp_path, val_epoch):
+    base_config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+
+    cfg_val_interval = dict(validator=dict(val_epoch=val_epoch))
     expected = dict(check_val_every_n_epoch=val_epoch)
-    kwargs = TrainingPipeline._trainer_args_validation_interval(config)
+    kwargs = TrainingPipeline._trainer_args_validation_interval(cfg_val_interval)
     assert kwargs == expected
 
-    config = dict(trainer=dict(validate_interval=val_epoch))
-    kwargs = TrainingPipeline._trainer_args_validation_interval(config)
+    config = deepcopy(base_config)
+    config.update(cfg_val_interval)
+    model = prepare_model(config)
+    trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
+    assert trainer.check_val_every_n_epoch == val_epoch
+
+
+    cfg_val_interval = dict(trainer=dict(validation_interval=val_epoch))
+    kwargs = TrainingPipeline._trainer_args_validation_interval(cfg_val_interval)
     assert kwargs == expected
 
-    with pytest.raises(RuntimeError):
+    config = deepcopy(base_config)
+    config['trainer'].update(cfg_val_interval['trainer'])
+    model = prepare_model(config)
+    trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
+    assert trainer.check_val_every_n_epoch == val_epoch
+
+
+def test_args_validation_interval_failed():
+    with pytest.raises(ValueError):
         config = dict(validator=dict(val_epoch="1,2"))
         TrainingPipeline._trainer_args_validation_interval(config)
 
-    with pytest.raises(RuntimeError):
-        config = dict(trainer=dict(validate_interval="1,2"))
+    with pytest.raises(ValueError):
+        config = dict(trainer=dict(validation_interval="1,2"))
+        TrainingPipeline._trainer_args_validation_interval(config)
+
+    with pytest.raises(ValueError):
+        config = dict(validator=dict(val_epoch=0))
+        TrainingPipeline._trainer_args_validation_interval(config)
+
+    with pytest.raises(ValueError):
+        config = dict(trainer=dict(validation_interval=0))
         TrainingPipeline._trainer_args_validation_interval(config)
 
 
