@@ -52,16 +52,17 @@ class DummyDataset(Dataset):
     def class_names(self):
         return ["label_"+str(n) for n in range(self.num_classes)]
 
-class DummyDataModule(pl.LightningDataModule):
 
-    def __init__(self, batch_size=2, num_classes=5, data_size=224):
+class DummyDataModule(pl.LightningDataModule):
+    def __init__(self, batch_size=2, num_classes=5, data_size=224, num_data=5):
         super().__init__()
         self.batch_size = batch_size
         self.num_classes = num_classes
         self.data_size = data_size
+        self.num_data = num_data
 
     def train_dataloader(self):
-        dataset = DummyDataset(self.num_classes, self.data_size)
+        dataset = DummyDataset(self.num_classes, self.data_size, self.num_data)
         return DataLoader(dataset, batch_size=self.batch_size)
 
     def val_dataloader(self):
@@ -72,10 +73,14 @@ class DummyDataModule(pl.LightningDataModule):
 
 
 class DummyModel(ModelBase):
-    def __init__(self, num_classes=5):
+    def __init__(self, num_classes=5, batch_size=2, data_size=224, num_data=5):
         super().__init__()
 
         self.num_classes = num_classes
+        self.batch_size = batch_size
+        self.data_size = data_size
+        self.num_data = num_data
+
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3)
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(16, self.num_classes)
@@ -122,8 +127,18 @@ class DummyModel(ModelBase):
         acc = self.accuracy(pred.detach().cpu(), target.detach().cpu())
         self.log('accuracy', acc, on_epoch=True)
 
+    def train_dataloader(self):
+        dataset = DummyDataset(self.num_classes, self.data_size, self.num_data)
+        return DataLoader(dataset, batch_size=self.batch_size)
 
-def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args={}, gpus=True):
+    def val_dataloader(self):
+        return self.train_dataloader()
+
+    def test_dataloader(self):
+        return self.train_dataloader()
+
+
+def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args=dict(), gpus=True):
     TrainingPipeline._patch_trainer_components()
     if gpus:
         gpus = 1 if torch.cuda.is_available() else None
@@ -131,6 +146,7 @@ def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args={}, gpu
         gpus=gpus,
         default_root_dir=experiment_dir,
         callbacks=callbacks,
+        weights_summary=None
     )
     kwargs.update(trainer_args)
     trainer = pl.Trainer(**kwargs)
@@ -152,8 +168,8 @@ def patched_pl_trainer(experiment_dir, model, callbacks=[], trainer_args={}, gpu
     model.trainer = trainer
     return trainer
 
-def prepare_model(config, num_classes=5):
-    model = DummyModel(num_classes=num_classes)
+def prepare_model(config, num_classes=5, model_args=dict()):
+    model = DummyModel(num_classes=num_classes, **model_args)
     model.config = config
     model.class_names = ["label_"+str(n) for n in range(num_classes)]
     return model
