@@ -40,6 +40,7 @@ class TrainingPipeline(BasePipeline):
 
         ## TODO: fix progress bar
         ## TODO: change default vortex root with environment variable
+        ## TODO: handle output directory
 
         self.experiment_dir = Path('.').joinpath("experiments", "outputs", config['experiment_name'])
         self.trainer = self.create_trainer(
