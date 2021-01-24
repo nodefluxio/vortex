@@ -671,4 +671,7 @@ def test_create_trainer_with_args(tmp_path):
         TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
 
 
+def test_training_pipeline_init():
+    pass
+
 ## TODO: other vortex behavior (?)
