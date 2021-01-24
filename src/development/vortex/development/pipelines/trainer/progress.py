@@ -5,7 +5,7 @@ from pytorch_lightning.callbacks.progress import ProgressBarBase, convert_inf
 
 
 class VortexProgressBar(ProgressBarBase):
-    def __init__(self, stage: str, refresh_rate: int = 1, process_position: int = 0, show_lr: bool = True):
+    def __init__(self, stage: str, refresh_rate: int = 1, process_position: int = 0):
         super().__init__()
         self._refresh_rate = refresh_rate
         self._process_position = process_position
@@ -22,7 +22,7 @@ class VortexProgressBar(ProgressBarBase):
         self.test_progress_bar = None
 
     def __getstate__(self):
-        # can't pickle the tqdm objects
+        # can't pickle the enlighten objects
         state = self.__dict__.copy()
         state['manager'] = None
         state['main_progress_bar'] = None
@@ -30,6 +30,16 @@ class VortexProgressBar(ProgressBarBase):
         state['val_progress_bar'] = None
         state['test_progress_bar'] = None
         return state
+
+    @property
+    def total_val_batches(self) -> int:
+        ## override from base class as it has bug when not checking validation every epoch
+        ## that returns 0 when should be validating, so just always return the actual total
+        ## when validation not disabled
+        total_val_batches = 0
+        if not self.trainer.disable_validation:
+            total_val_batches = sum(self.trainer.num_val_batches)
+        return total_val_batches
 
     @property
     def current_epoch(self) -> int:
@@ -63,7 +73,8 @@ class VortexProgressBar(ProgressBarBase):
             status_format=u'Vortex{fill}{stage}{fill}{vnum}  {elapsed}',
             color='bold_underline_white', justify=enlighten.Justify.CENTER, 
             autorefresh=True, min_delta=0.5, stage=self._stage, 
-            vnum="", position=(5*self.process_position + 5)
+            vnum="", position=(5*self.process_position + 5),
+            enabled=self.is_enabled
         )
 
     def init_metrics_bar(self) -> enlighten.StatusBar:
@@ -75,10 +86,12 @@ class VortexProgressBar(ProgressBarBase):
             status_format=metric_format,
             position=(5*self.process_position + 1),
             justify=enlighten.Justify.LEFT,
-            metrics="", **kwargs
+            metrics="", enabled=self.is_enabled,
+            **kwargs
         )
         self.manager.status_bar(
             status_format="{fill}",
+            enabled=self.is_enabled,
             position=(5*self.process_position + 2)
         )
         return metric_bar
@@ -192,7 +205,6 @@ class VortexProgressBar(ProgressBarBase):
         self._current_epoch = trainer.current_epoch
         self.main_progress_bar.count = trainer.current_epoch
 
-
     def on_epoch_start(self, trainer, pl_module):
         super().on_epoch_start(trainer, pl_module)
         total = convert_inf(self.total_train_batches)
@@ -202,11 +214,13 @@ class VortexProgressBar(ProgressBarBase):
 
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         super().on_train_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
-        if self.is_enabled and self.train_batch_idx % self.refresh_rate == 0:
+        if self._should_update(self.train_batch_idx, self.total_train_batches):
             self.refresh_metrics()
-            self.train_progress_bar.update(self.refresh_rate)
-        if self.is_enabled and self.train_batch_idx >= self.train_progress_bar.total:
+            self._update_pbar(self.train_progress_bar)
+        if self.train_batch_idx >= self.train_progress_bar.total:
             self.train_progress_bar.close()
+            if self.is_enabled and not trainer.train_loop.should_check_val_fx(batch_idx, True):
+                self.main_progress_bar.update()
 
     def on_validation_start(self, trainer, pl_module):
         super().on_validation_start(trainer, pl_module)
@@ -217,10 +231,10 @@ class VortexProgressBar(ProgressBarBase):
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         super().on_validation_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
-        if self.is_enabled and self.val_batch_idx % self.refresh_rate == 0:
+        if self._should_update(self.val_batch_idx, self.total_val_batches):
             if not self.trainer.running_sanity_check:
                 self.refresh_metrics()
-            self.val_progress_bar.update(self.refresh_rate)
+            self._update_pbar(self.val_progress_bar)
 
     def on_validation_end(self, trainer, pl_module):
         super().on_validation_end(trainer, pl_module)
@@ -244,12 +258,25 @@ class VortexProgressBar(ProgressBarBase):
 
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         super().on_test_batch_end(trainer, pl_module, outputs, batch, batch_idx, dataloader_idx)
-        if self.is_enabled and self.test_batch_idx % self.refresh_rate == 0:
+        if self._should_update(self.test_batch_idx, self.total_test_batches):
             self.refresh_metrics()
-            self.test_progress_bar.update(self.refresh_rate)
+            self._update_pbar(self.test_progress_bar)
 
     def on_test_end(self, trainer, pl_module):
         super().on_test_end(trainer, pl_module)
         self.refresh_metrics()
         self.test_progress_bar.close()
         self.manager.stop()
+
+    def _should_update(self, current, total):
+        return self.is_enabled and (current % self.refresh_rate == 0 or current >= total)
+
+    def _update_pbar(self, bar):
+        """ Updates the bar by the refresh rate without overshooting. """
+        if bar.total is not None:
+            delta = min(self.refresh_rate, bar.total - bar.count)
+        else:
+            # infinite / unknown size
+            delta = self.refresh_rate
+        if delta > 0:
+            bar.update(delta)
