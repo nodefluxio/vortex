@@ -170,9 +170,8 @@ class VortexProgressBar(ProgressBarBase):
         if not self.trainer.testing:
             self.refresh_lr()
 
-        metrics_str = ""
-        for name, val in self.trainer.progress_bar_metrics.items():
-            metrics_str += "{}: {:.4g}  ".format(name, val)
+        metrics_dict = self.trainer.progress_bar_metrics
+        metrics_str = "  ".join("{}: {:.4g}".format(n, v) for n,v in metrics_dict.items())
         self.metrics_bar.update(metrics=metrics_str)
 
     def on_fit_start(self, trainer, pl_module):
