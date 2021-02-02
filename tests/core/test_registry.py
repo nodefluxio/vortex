@@ -41,7 +41,8 @@ class DummyFour(DummyBase):
 
 @g
 class DummyFive(DummyBase):
-    def __init__(self):
+    def __init__(self, str_value: str, int_value: int):
+        self.value = str_value, int_value
         pass
 
 def test_glob_registry():
@@ -64,6 +65,30 @@ def test_glob_registry():
     # should use force
     with pytest.raises(KeyError):
         glob_registry.register_module(DummyThree)
+    
+    # instance creation test
+
+    dummy2 = glob_registry.create_from_args("Dummy2")
+    assert isinstance(dummy2, DummyTwo)
+    another_dummy = glob_registry.create_from_args("AnotherDummy", str_value="some string", int_value=0)
+    assert isinstance(another_dummy, DummyFive)
+
+    d = dict(str_value="some string", int_value=0)
+    with pytest.raises(TypeError):
+        dummy = glob_registry.create_from_args("AnotherDummy", d)
+    
+    # to construct from dict, use create_from_dict
+    dummy = glob_registry.create_from_dict("AnotherDummy", d)
+    assert isinstance(dummy, DummyFive)
+    assert dummy.value == ("some string", 0)
+
+    args = dict(
+        module="AnotherDummy",
+        str_value="some string",
+        int_value=0
+    )
+    another_dummy = glob_registry.create_from_args(**args)
+    assert isinstance(another_dummy, DummyFive)
 
 def test_registry():
     reg = Registry("testing")

@@ -1,5 +1,4 @@
 from typing import Dict, Any, Union
-import inspect
 
 class Registry:
     def __init__(self, name: str, base_class=None):
@@ -48,3 +47,12 @@ class Registry:
             self.register_module(module=cls,name=name,force=force)
             return cls
         return _register
+    
+    def create_from_args(self, module: str, *args, **kwargs):
+        # create instance from positional/keyword args
+        cls = self[module]
+        return cls(*args, **kwargs)
+    
+    def create_from_dict(self, module: str, args: dict):
+        # create instance from args packed as dictionary
+        return self.create_from_args(module, **args)
