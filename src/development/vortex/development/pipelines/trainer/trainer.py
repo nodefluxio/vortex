@@ -13,6 +13,7 @@ from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnecto
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 from .checkpoint import CheckpointConnector
+from .progress import VortexProgressBar
 from .patches import (
     patch_checkpoint_filepath_name,
     patch_checkpoint_backward_monitor,
@@ -207,6 +208,10 @@ class TrainingPipeline(BasePipeline):
         return LearningRateMonitor()
 
     @staticmethod
+    def create_progeress_bar(config):
+        return VortexProgressBar("TRAIN")
+
+    @staticmethod
     def create_trainer(
         experiment_dir, config, model, no_log=False,
         hypopt=False, resume_checkpoint_path=False
@@ -232,6 +237,7 @@ class TrainingPipeline(BasePipeline):
             checkpoint_callback = True
             callbacks = TrainingPipeline.create_model_checkpoints(config, model)
             callbacks.append(TrainingPipeline.create_lr_monitor(config))
+            callbacks.append(TrainingPipeline.create_progeress_bar(config))
             loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
