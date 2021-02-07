@@ -3,8 +3,11 @@ import numpy as np
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops import get_op
 from vortex.development.exporter.utils.onnx.graph_ops.helper import get_Ops, get_outputs
+
+# shorter version of registry
+from vortex.development import onnx_graph_ops as graph_ops
+get_op = graph_ops.create_from_args
 
 def dummy_model():
     # Create input info (ValueInfoProto)

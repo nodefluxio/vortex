@@ -3,8 +3,10 @@ import numpy as np
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops import get_op
 from vortex.development.exporter.utils.onnx.graph_ops.helper import get_Ops, get_inputs, make_constants
+
+from vortex.development.exporter.utils.onnx.graph_ops import registry
+get_op = registry.create_from_args
 
 def dummy_model():
     boxes = helper.make_tensor_value_info('boxes', TensorProto.FLOAT, None)

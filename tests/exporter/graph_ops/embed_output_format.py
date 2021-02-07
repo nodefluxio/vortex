@@ -3,9 +3,12 @@ import onnx
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops import get_op
 from vortex.development.exporter.utils.onnx.graph_ops.helper import get_Ops
 from vortex.runtime.onnx.helper import get_output_format
+
+# shorter version of registry
+from vortex.development import onnx_graph_ops as graph_ops
+get_op = graph_ops.create_from_args
 
 def dummy_model():
     # Create two input information (ValueInfoProto)
@@ -34,27 +37,18 @@ def dummy_model():
     model_def = helper.make_model(graph_def, producer_name='testing')
     return model_def
 
-def test_embed_output_format():
-    """Make sure embed_output_format graph ops running and the result can be retrieved correctly
-    """
-    model = dummy_model()
-    out_fmt = {
-        'class_label': {
-            'indices' : [0],
-            'axis' : 0,
-        },
-        'class_confidence': {
-            'indices' : [1],
-            'axis' : 0,
-        }
-    }
+out_fmt = dict(
+    class_label=dict(
+        indices=[0],
+        axis=0,
+    ),
+    class_confidence=dict(
+        indices=[1],
+        axis=0,
+    )
+)
 
-    with pytest.raises(AssertionError):
-        # this should fail
-        op = get_op('EmbedOutputFormat', output_format=out_fmt['class_label'])
-        model = op(model)
-
-    op = get_op('EmbedOutputFormat', output_format=out_fmt)
+def op_test(op, model, out_fmt):
     model = op(model)
     # for visualization
     # onnx.save(model, 'testing.onnx')
@@ -88,6 +82,25 @@ def test_embed_output_format():
     # make sure output_format can be retrieved from model
     fmt = get_output_format(model)
     assert out_fmt == fmt
+
+def test_embed_output_format():
+    """Make sure embed_output_format graph ops running and the result can be retrieved correctly
+    """
+    model = dummy_model()
+
+    with pytest.raises(AssertionError):
+        # this should fail
+        op = get_op('EmbedOutputFormat', output_format=out_fmt['class_label'])
+        model = op(model)
+
+    op = get_op('EmbedOutputFormat', output_format=out_fmt)
+    op_test(op, model, out_fmt)
+
+def test_registry():
+    assert "EmbedOutputFormat" in graph_ops
+    model = dummy_model()
+    op = graph_ops.create_from_args('EmbedOutputFormat', output_format=out_fmt)
+    op_test(op, model, out_fmt)
 
 if __name__=='__main__':
     model = dummy_model()
