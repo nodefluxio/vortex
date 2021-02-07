@@ -4,7 +4,7 @@ import enforce
 import sys
 
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
-from .utils.onnx.graph_ops import get_op
+from .utils.onnx.graph_ops import graph_ops_registry
 from .utils.onnx.graph_ops.helper import get_Ops
 
 from typing import Union, List, Tuple, Any
@@ -120,6 +120,7 @@ class OnnxExporter(BaseExporter):
             **self.export_args
         )
         model = onnx.load(filename)
+        get_op = graph_ops_registry.create_from_args
         g_ops = [
             get_op('EmbedOutputFormat', output_format=output_format),
             get_op('EmbedClassNames', class_names=class_names)
