@@ -125,7 +125,7 @@ class BackboneList(ListBase):
 
 
 class ModelList(ListBase):
-    available_model = {n.__name__: v for n,v in models.supported_models.copy().items()}
+    available_model = models.supported_models.modules
 
     def __init__(self):
         super().__init__()
