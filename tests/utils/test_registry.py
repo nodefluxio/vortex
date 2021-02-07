@@ -1,5 +1,5 @@
 import pytest
-from vortex.development.core.registry import Registry
+from vortex.development.utils.registry import Registry
 
 class DummyBase:
     def __init__(self):
@@ -21,7 +21,7 @@ class DummyTwo(DummyBase):
         pass
 
 # overwrite
-@glob_registry.register(name="DummyOne",force=True)
+@glob_registry.register(name="DummyOne",overwrite=True)
 class DummyThree(DummyBase):
     def __init__(self):
         pass
