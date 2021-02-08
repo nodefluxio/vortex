@@ -1,17 +1,17 @@
 name: Test Only
 
 # manual run, test only without linter
-on: 
-  workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Log level'     
-        required: true
-        default: 'warning'
-      tags:
-        description: 'Test scenario tags'
+# on: 
+#   workflow_dispatch:
+#     inputs:
+#       logLevel:
+#         description: 'Log level'     
+#         required: true
+#         default: 'warning'
+#       tags:
+#         description: 'Test scenario tags'
 # temporary use this, manual run button doesn't appear at actions tab
-# on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   tests:
