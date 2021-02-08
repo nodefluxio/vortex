@@ -302,7 +302,7 @@ def test_checkpoint_save_best(tmp_path, save_best):
 @pytest.mark.parametrize(
     "save_epoch",
     [
-        1, 2,
+        1, 2, 3,
         pytest.param(0, id="invalid value 0", marks=pytest.mark.xfail)
     ]
 )
@@ -310,6 +310,8 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
     config = deepcopy(MINIMAL_TRAINER_CFG)
     config['trainer'].update(dict(save_epoch=save_epoch))
     config = EasyDict(config)
+    fname_fmt = "{}-epoch={{}}.pth".format(config['experiment_name'])
+    ckpt_path = tmp_path.joinpath("version_0", "checkpoints")
 
     model = prepare_model(config)
     ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
@@ -320,21 +322,22 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
         callback.on_pretrain_routine_start(trainer, model)
 
     for callback in ckpt_callbacks:
+        ## just check save epoch checkpoint callbacks
         if not hasattr(callback, 'save_epoch'):
             continue
 
         assert callback.period == save_epoch
-
-        for _ in range(2):
+        epoch_saved = []
+        for _ in range(5):
             epoch = trainer.current_epoch
             callback.on_validation_end(trainer, model)
 
             if (epoch+1) % save_epoch == 0:
-                fname = "{}-epoch={}.pth".format(config['experiment_name'], epoch)
-                fpath = tmp_path.joinpath("version_0", "checkpoints", fname)
-                assert fpath.exists()
+                epoch_saved.append(epoch)
+                assert all(ckpt_path.joinpath(fname_fmt.format(e)).exists() for e in epoch_saved)
+                fpath_this_epoch = ckpt_path.joinpath(fname_fmt.format(epoch))
 
-                checkpoint = torch.load(fpath)
+                checkpoint = torch.load(fpath_this_epoch)
                 assert checkpoint['config'] == dict(config)
                 assert checkpoint['metrics'] == trainer.logger_connector.callback_metrics
                 assert checkpoint['class_names'] == model.class_names
@@ -343,6 +346,8 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
                 assert 'checkpoint_last' in checkpoint['callbacks']
                 assert 'checkpoint_epoch' in checkpoint['callbacks']
                 assert checkpoint['epoch'] == epoch+1
+            else:
+                assert all(ckpt_path.joinpath(fname_fmt.format(e)).exists() for e in epoch_saved)
 
             ## step
             trainer.current_epoch += 1

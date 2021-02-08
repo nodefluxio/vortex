@@ -128,7 +128,7 @@ class TrainingPipeline(BasePipeline):
                     "expected value of integer higher than 0 (> 0).".format(save_epoch))
             epoch_ckpt_callback = ModelCheckpoint(
                 filename=fname_prefix+"-{epoch}", monitor=None,
-                save_top_k=None, mode="min",
+                save_top_k=-1, mode="min",
                 period=save_epoch
             )
             epoch_ckpt_callback.save_epoch = True   ## to differentiate with last epoch ckpt
