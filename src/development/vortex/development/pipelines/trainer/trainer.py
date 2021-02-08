@@ -39,11 +39,10 @@ class TrainingPipeline(BasePipeline):
         checkpoint_path, state_dict = self._handle_resume_checkpoint(config, resume)
         self.model = self.create_model(self.config, state_dict)
 
-        ## TODO: fix progress bar
         ## TODO: change default vortex root with environment variable
         ## TODO: handle output directory
 
-        self.experiment_dir = Path('.').joinpath("experiments", "outputs", config['experiment_name'])
+        self.experiment_dir = self._format_experiment_dir(config)
         self.trainer = self.create_trainer(
             str(self.experiment_dir), self.config, self.model,
             hypopt=hypopt, no_log=no_log,
@@ -459,3 +458,11 @@ class TrainingPipeline(BasePipeline):
             else:
                 ckpt_path = None
         return ckpt_path, state_dict
+
+    @staticmethod
+    def _format_experiment_dir(config):
+        base_exp_dir = Path('.').joinpath("experiments", "outputs")
+        if 'output_directory' in config and config['output_directory']:
+            base_exp_dir = Path(config['output_directory'])
+        exp_dir = config['experiment_name']
+        return base_exp_dir.joinpath(exp_dir)

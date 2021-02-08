@@ -602,6 +602,27 @@ def test_handle_resume_verify_config(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "output_dir",
+    [
+        pytest.param(False, id="no output dir"),
+        pytest.param(None, id="output dir None"),
+        "experiments",
+        "~/vortex/experiments"
+    ]
+)
+def test_format_experiment_dir(output_dir):
+    config = deepcopy(MINIMAL_TRAINER_CFG)
+    if output_dir is not False:
+        config['output_directory'] = output_dir
+    if not output_dir:
+        output_dir = "experiments/outputs"
+
+    exp_dir = TrainingPipeline._format_experiment_dir(config)
+    assert isinstance(exp_dir, Path)
+    assert str(exp_dir) == "{}/{}".format(output_dir, config['experiment_name'])
+
+
+@pytest.mark.parametrize(
     ("device", "hypopt"),
     [
         pytest.param('cpu', False, id="normal model on cpu"),
@@ -676,7 +697,7 @@ def test_create_trainer_with_args(tmp_path):
         TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
 
 
-def test_training_pipeline_init():
-    pass
+def test_training_pipeline_init(tmp_path):
+    config_path = "tests/config/test_classification_pipelines.yml"
 
 ## TODO: other vortex behavior (?)
