@@ -11,13 +11,7 @@ name: Test Only
   #     tags:
   #       description: 'Test scenario tags'
 # temporary use this, manual run button doesn't appear at actions tab
-on:
-  push:
-    branches: [master]
-  pull_request:
-    branches: [master]
-  release:
-    types: [published, edited]
+on: [push, pull_request]
 
 jobs:
   tests:
