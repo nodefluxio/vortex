@@ -4,6 +4,10 @@ from .embed_class_names import EmbedClassNames
 from .embed_output_format import EmbedOutputFormat
 from .nms_iou_threshold_as_input import IOUThresholdAsInput
 from .symbolic_shape_infer import SymbolicShapeInfer
+from .embed_metadata import EmbedMetadata
+from .embed_output_format_metadata import EmbedOutputFormatMetadata
+from .embed_class_names_metadata import EmbedClassNamesMetadata
+from .embed_model_property import EmbedModelProperty
 from vortex.development.utils.registry import Registry
 
 GRAPH_OPS = Registry("graph_ops",base_class=GraphOpsBase)

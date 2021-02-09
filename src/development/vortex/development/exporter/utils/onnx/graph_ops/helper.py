@@ -135,3 +135,9 @@ def replace_node(model : onnx.ModelProto, id : int, new_node : onnx.NodeProto) :
     for i, node in enumerate(model.graph.node) :
         new_model.graph.node.append(node if i!=id else new_node)
     return new_model
+
+def get_metadata_prop(model: onnx.ModelProto, key: str) -> onnx.onnx_pb.StringStringEntryProto:
+    for prop in model.metadata_props:
+        if prop.key == key:
+            return prop
+    return None
