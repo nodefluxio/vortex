@@ -40,7 +40,7 @@ class TrainingPipeline(BasePipeline):
         self.model = self.create_model(self.config, state_dict)
 
         ## TODO: change default vortex root with environment variable
-        ## TODO: handle output directory
+        ## TODO: handle accumulate grad
 
         self.experiment_dir = self._format_experiment_dir(config)
         self.trainer = self.create_trainer(
@@ -60,7 +60,6 @@ class TrainingPipeline(BasePipeline):
         self.run_directory = self.experiment_dir.joinpath("version_" + self.experiment_version)
 
         if not hypopt:
-            ## TODO: fix dumped yaml order
             self._dump_config(config, self.run_directory)
             print("\nExperiment directory:", self.run_directory)
 
@@ -408,7 +407,7 @@ class TrainingPipeline(BasePipeline):
         fpath = Path(dir).joinpath("config.yml")
         config = easydict_to_dict(config)
         with fpath.open('w') as f:
-            yaml.dump(config, f, yaml.Dumper)
+            yaml.dump(config, f, yaml.Dumper, sort_keys=False)
         return fpath
 
     @staticmethod
