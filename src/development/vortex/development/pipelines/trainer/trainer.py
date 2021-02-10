@@ -36,7 +36,7 @@ class TrainingPipeline(BasePipeline):
     def __init__(self, config: Union[str, Path, dict], hypopt=False, resume=False, no_log=False):
         super().__init__()
 
-        self.config = self._get_config(config)
+        self.config = self.load_config(config)
         self._check_experiment_config(self.config)
 
         resume_checkpoint_path, state_dict = self._handle_resume_checkpoint(self.config, resume)
@@ -433,7 +433,7 @@ class TrainingPipeline(BasePipeline):
         model.config = deepcopy(config)
 
     @staticmethod
-    def _get_config(config):
+    def load_config(config):
         if isinstance(config, (str, Path)):
             config = load_config(config)
         config = EasyDict(config)
