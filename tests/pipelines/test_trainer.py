@@ -199,25 +199,25 @@ def test_args_accumulate_grad_fail(accumulate_type):
         TrainingPipeline._trainer_args_accumulate_grad(new_cfg)
 
 
-def test_get_config():
+def test_load_config():
     config_path = "tests/config/test_classification_pipelines.yml"
 
     ## test on str
-    config = TrainingPipeline._get_config(config_path)
+    config = TrainingPipeline.load_config(config_path)
     assert isinstance(config, EasyDict)
 
     ## test on Path
-    config = TrainingPipeline._get_config(Path(config_path))
+    config = TrainingPipeline.load_config(Path(config_path))
     assert isinstance(config, EasyDict)
 
     ## test on loaded config
-    config = TrainingPipeline._get_config(config)
+    config = TrainingPipeline.load_config(config)
     assert isinstance(config, EasyDict)
 
 
 def test_check_config(caplog):
     config_path = "tests/config/test_classification_pipelines.yml"
-    config = TrainingPipeline._get_config(config_path)
+    config = TrainingPipeline.load_config(config_path)
 
     ## normal
     TrainingPipeline._check_experiment_config(config)
@@ -238,12 +238,12 @@ def test_check_config(caplog):
 
 def test_dump_config(tmp_path):
     config_path = "tests/config/test_classification_pipelines.yml"
-    config = TrainingPipeline._get_config(config_path)
+    config = TrainingPipeline.load_config(config_path)
 
     dumped_cfg_path = TrainingPipeline._dump_config(config, tmp_path)
     assert dumped_cfg_path.exists()
     assert str(dumped_cfg_path) == str(tmp_path.joinpath("config.yml"))
-    dumped_config = TrainingPipeline._get_config(dumped_cfg_path)
+    dumped_config = TrainingPipeline.load_config(dumped_cfg_path)
     assert dumped_config == config
 
     ## path dir not exist
@@ -584,7 +584,7 @@ def test_create_loggers_failed(tmp_path):
 
 def test_create_model():
     config_path = "tests/config/test_classification_pipelines.yml"
-    config = TrainingPipeline._get_config(config_path)
+    config = TrainingPipeline.load_config(config_path)
     config['model']['name'] = 'Softmax'
     config['model']['backbone'] = 'resnet18'
 
@@ -634,11 +634,10 @@ def test_handle_resume_train(tmp_path):
     trainer = patched_pl_trainer(str(tmp_path), model, callbacks=[ckpt_callback])
     ckpt_callback.on_pretrain_routine_start(trainer, model)
     ckpt_callback.on_validation_end(trainer, model)
-    fpath = tmp_path.joinpath("version_0", "checkpoints", config['experiment_name'] + "-last.pth")
 
-    config['checkpoint'] = str(fpath)
+    config['checkpoint'] = ckpt_callback.best_model_path
     ckpt_path, state_dict = TrainingPipeline._handle_resume_checkpoint(config, resume=True)
-    assert str(ckpt_path) == str(fpath)
+    assert str(ckpt_path) == ckpt_callback.best_model_path
     assert state_dict_is_equal(state_dict, model.cpu().state_dict())
 
     trainer_args = dict(resume_from_checkpoint=ckpt_path)
@@ -826,13 +825,13 @@ def test_training_pipeline_init(tmp_path, hypopt, no_log):
     base_config_path = "tests/config/test_classification_pipelines.yml"
 
     ## edit config
-    config = TrainingPipeline._get_config(base_config_path)
+    config = TrainingPipeline.load_config(base_config_path)
     config['model']['network_args']['backbone'] = 'resnet18'
     config['output_directory'] = str(tmp_path)
     config['trainer']['save_best_metrics'] = ['train_loss', 'accuracy', 'precision_micro']
     config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
-    experiment_dir = tmp_path.joinpath(config['experiment_name'])
 
+    experiment_dir = tmp_path.joinpath(config['experiment_name'])
     for n in range(2):
         experiment_version = f"version_{0 if no_log or hypopt else n}"
         training_pipeline = TrainingPipeline(config_path, hypopt=hypopt, no_log=no_log)
@@ -860,7 +859,30 @@ def test_training_pipeline_init(tmp_path, hypopt, no_log):
 
 
 def test_training_pipeline_init_resume(tmp_path):
-    pass
+    base_config_path = "tests/config/test_classification_pipelines.yml"
+
+    config = TrainingPipeline.load_config(base_config_path)
+    config['model']['network_args']['backbone'] = 'resnet18'
+    config['model']['network_args']['pretrained_backbone'] = True
+    config['output_directory'] = str(tmp_path)
+    config['trainer']['save_best_metrics'] = ['train_loss', 'accuracy', 'precision_micro']
+    config['trainer']['args'] = dict(limit_train_batches=0, num_sanity_val_steps=0)
+
+    ## get checkpoint to resume
+    model = TrainingPipeline.create_model(config)
+    model.config = deepcopy(config)
+    ckpt_callback = TrainingPipeline.create_model_checkpoints(config, model)[0]
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=[ckpt_callback])
+    ckpt_callback.on_pretrain_routine_start(trainer, model)
+    ckpt_callback.on_validation_end(trainer, model)
+    config['checkpoint'] = ckpt_callback.best_model_path
+    config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
+
+    training_pipeline = TrainingPipeline(config_path, resume=True)
+    training_pipeline.trainer.fit(training_pipeline.model, training_pipeline.train_dataloader)
+    assert state_dict_is_equal(training_pipeline.model.cpu().state_dict(), model.cpu().state_dict())
+    assert training_pipeline.trainer.current_epoch == 1
+    assert training_pipeline.trainer.global_step == 1
 
 
 ## TODO: other vortex behavior (?)
