@@ -142,6 +142,61 @@ def test_args_set_seed(caplog, recwarn):
         TrainingPipeline._trainer_args_set_seed(deepcopy(config))
 
 
+@pytest.mark.parametrize(
+    'accumulate',
+    [
+        1,
+        2,
+        pytest.param({0: 2}, id='dict simple'),
+        pytest.param({2: 2, 10: 1}, id='dict more')
+    ]
+)
+def test_args_accumulate_grad(tmp_path, accumulate):
+    expected = dict(accumulate_grad_batches=accumulate)
+    old_cfg = deepcopy(MINIMAL_TRAINER_CFG)
+    new_cfg = deepcopy(MINIMAL_TRAINER_CFG)
+    if accumulate:
+        old_cfg['trainer'].update(driver=dict(args=dict(accumulation_step=accumulate)))
+        new_cfg['trainer'].update(accumulate_step=accumulate)
+
+    ## old cfg
+    kwargs = TrainingPipeline._trainer_args_accumulate_grad(old_cfg)
+    assert kwargs == expected
+    model = prepare_model(old_cfg)
+    trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
+    assert trainer.accumulate_grad_batches == accumulate
+
+    ## new cfg
+    kwargs = TrainingPipeline._trainer_args_accumulate_grad(new_cfg)
+    assert kwargs == expected
+    model = prepare_model(new_cfg)
+    trainer = patched_pl_trainer(str(tmp_path), model, trainer_args=kwargs)
+    assert trainer.accumulate_grad_batches == accumulate
+
+
+@pytest.mark.parametrize('accumulate_type', ['int', 'dict'])
+def test_args_accumulate_grad_fail(accumulate_type):
+    old_cfg = deepcopy(MINIMAL_TRAINER_CFG)
+    new_cfg = deepcopy(MINIMAL_TRAINER_CFG)
+
+    accumulate = -2 if accumulate_type == 'int' else {0: -2}
+    old_cfg['trainer'].update(driver=dict(args=dict(accumulation_step=accumulate)))
+    new_cfg['trainer'].update(accumulate_step=accumulate)
+
+    with pytest.raises(ValueError):
+        TrainingPipeline._trainer_args_accumulate_grad(old_cfg)
+    with pytest.raises(ValueError):
+        TrainingPipeline._trainer_args_accumulate_grad(new_cfg)
+
+    accumulate = None if accumulate_type == 'int' else {0: None}
+    old_cfg['trainer'].update(driver=dict(args=dict(accumulation_step=accumulate)))
+    new_cfg['trainer'].update(accumulate_step=accumulate)
+    with pytest.raises(TypeError):
+        TrainingPipeline._trainer_args_accumulate_grad(old_cfg)
+    with pytest.raises(TypeError):
+        TrainingPipeline._trainer_args_accumulate_grad(new_cfg)
+
+
 def test_get_config():
     config_path = "tests/config/test_classification_pipelines.yml"
 
@@ -698,6 +753,11 @@ def test_create_trainer_with_args(tmp_path):
 
 
 def test_training_pipeline_init(tmp_path):
-    config_path = "tests/config/test_classification_pipelines.yml"
+    base_config_path = "tests/config/test_classification_pipelines.yml"
+
+    ## edit config
+    config = TrainingPipeline._get_config(base_config_path)
+    config['model']['network_args']['backbone'] = 'resnet18'
+    config_path = TrainingPipeline._dump_config(config)
 
 ## TODO: other vortex behavior (?)

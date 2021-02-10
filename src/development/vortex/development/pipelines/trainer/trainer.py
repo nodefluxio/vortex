@@ -219,6 +219,7 @@ class TrainingPipeline(BasePipeline):
         trainer_args.update(TrainingPipeline._trainer_args_device(config))
         trainer_args.update(TrainingPipeline._trainer_args_validation_interval(config))
         trainer_args.update(TrainingPipeline._trainer_args_set_seed(config))
+        trainer_args.update(TrainingPipeline._trainer_args_accumulate_grad(config))
 
         if 'args' in config.trainer and config.trainer.args is not None:
             if isinstance(config.trainer.args, dict):
@@ -369,6 +370,36 @@ class TrainingPipeline(BasePipeline):
                 raise RuntimeError("Unknown seed config type of {} with value of {}".format(
                     type(seed_cfg), seed_cfg))
         return dict(deterministic=deterministic, benchmark=benchmark)
+
+    @staticmethod
+    def _trainer_args_accumulate_grad(config):
+        accumulate = 1
+
+        is_old_cfg_avail = ('driver' in config['trainer'] and 'args' in config['trainer']['driver'] and 
+            'accumulation_step' in config['trainer']['driver']['args'])
+        is_new_cfg_avail = ('accumulate_step' in config['trainer'])
+        if is_old_cfg_avail:
+            accumulate = config['trainer']['driver']['args']['accumulation_step']
+        elif is_new_cfg_avail:
+            accumulate = config['trainer']['accumulate_step']
+
+        if isinstance(accumulate, int):
+            is_value_valid = (accumulate > 0)
+        elif isinstance(accumulate, dict):
+            is_value_valid = all(x > 0 for x in accumulate.values())
+        else:
+            raise TypeError("Invalid type of {} in '{}' with value of {}, expected 'int' or 'dict'."
+                .format(
+                    type(accumulate), accumulate, ('config.driver.args.accumulation_step'
+                    if is_old_cfg_avail else 'config.trainer.accumulate_step')
+                ))
+        if not is_value_valid:
+            raise ValueError("Expected value of '{}' to be positive integer (>0), got {}"
+                .format(
+                    ('config.driver.args.accumulation_step' if is_old_cfg_avail 
+                    else 'config.trainer.accumulate_step'), accumulate
+                ))
+        return dict(accumulate_grad_batches=accumulate)
 
 
     @staticmethod
