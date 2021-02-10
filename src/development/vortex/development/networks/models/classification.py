@@ -160,7 +160,7 @@ class Softmax(ClassificationModel):
         self.backbone = get_backbone(
             network_args['backbone'],
             n_classes=num_classes,
-            pretrained=network_args['pretrained_backbone'],
+            pretrained=network_args.get('pretrained_backbone', True),
             feature_type="classifier"
         )
 
