@@ -1,5 +1,6 @@
 import warnings
 import logging
+import yaml
 import torch
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
@@ -8,6 +9,7 @@ from typing import Union
 from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
+from packaging.version import parse as parse_version
 
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
@@ -21,6 +23,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
+from vortex.development.utils.common import easydict_to_dict
 from vortex.development.pipelines.base_pipeline import BasePipeline
 from vortex.development.utils.parser import load_config, check_config
 from vortex.development.utils.factory import create_model, create_dataloader
@@ -106,11 +109,7 @@ class TrainingPipeline(BasePipeline):
     def create_model_checkpoints(config: dict, model: ModelBase):
         fname_prefix = config['experiment_name']
 
-        ## patches for model checkpoint
-        ModelCheckpoint.FILE_EXTENSION = ".pth"
-        ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
-        ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
-
+        TrainingPipeline._patch_model_checkpoint()
         callbacks = [
             ## default checkpoint callback: save last epoch
             ModelCheckpoint(
@@ -269,6 +268,15 @@ class TrainingPipeline(BasePipeline):
         ## patch for additional checkpoint data
         trainer.checkpoint_connector = CheckpointConnector(trainer)
         return trainer
+
+    @staticmethod
+    def _patch_model_checkpoint():
+        ## patches for model checkpoint
+        ModelCheckpoint.FILE_EXTENSION = ".pth"
+        ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
+        if parse_version(pl.__version__) < parse_version('1.1.2'):
+            ## this patch fixed in 1.1.2
+            ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
 
     @staticmethod
     def run_sanity_check(model, train_dataloader, val_dataloader=None, **trainer_kwargs):
@@ -432,9 +440,6 @@ class TrainingPipeline(BasePipeline):
 
     @staticmethod
     def _dump_config(config, dir):
-        import yaml
-        from vortex.development.utils.common import easydict_to_dict
-
         fpath = Path(dir).joinpath("config.yml")
         config = easydict_to_dict(config)
         with fpath.open('w') as f:
