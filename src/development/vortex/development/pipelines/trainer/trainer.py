@@ -39,31 +39,38 @@ class TrainingPipeline(BasePipeline):
         self.config = self._get_config(config)
         self._check_experiment_config(self.config)
 
-        checkpoint_path, state_dict = self._handle_resume_checkpoint(config, resume)
+        resume_checkpoint_path, state_dict = self._handle_resume_checkpoint(self.config, resume)
         self.model = self.create_model(self.config, state_dict)
 
         ## TODO: change default vortex root with environment variable
-        ## TODO: handle accumulate grad
 
-        self.experiment_dir = self._format_experiment_dir(config)
+        self.experiment_dir = self._format_experiment_dir(self.config)
+        if not no_log:
+            self.experiment_dir.mkdir(parents=True, exist_ok=True)
+
         self.trainer = self.create_trainer(
             str(self.experiment_dir), self.config, self.model,
             hypopt=hypopt, no_log=no_log,
-            resume_checkpoint_path=checkpoint_path
+            resume_checkpoint_path=resume_checkpoint_path
         )
 
         self.train_dataloader, self.val_dataloader = self.create_dataloaders(self.config, self.model)
         self._copy_data_to_model(self.train_dataloader, self.config, self.model)
 
-        self.experiment_version = (
-            self.trainer.logger.version
-            if isinstance(self.trainer.logger.version, str)
-            else f"version_{self.trainer.logger.version}"
-        )
-        self.run_directory = self.experiment_dir.joinpath("version_" + self.experiment_version)
+        if self.trainer.logger is None:
+            self.experiment_version = "version_0"
+            self.run_directory = self.experiment_dir.joinpath(self.experiment_version)
+        else:
+            self.experiment_version = (
+                self.trainer.logger.version
+                if isinstance(self.trainer.logger.version, str)
+                else f"version_{self.trainer.logger.version}"
+            )
+            self.run_directory = self.experiment_dir.joinpath(self.experiment_version)
 
         if not hypopt:
-            self._dump_config(config, self.run_directory)
+            if not no_log:  ## TODO: should we dump config when not log?
+                self._dump_config(self.config, self.run_directory)
             print("\nExperiment directory:", self.run_directory)
 
     def run(self):
@@ -72,8 +79,10 @@ class TrainingPipeline(BasePipeline):
 
     @staticmethod
     def create_model(config, state_dict=None) -> ModelBase:
+        if not isinstance(config, EasyDict):
+            config = EasyDict(config)
         model = create_model(config.model, state_dict=state_dict)
-        if isinstance(model, pl.LightningModule):
+        if not isinstance(model, pl.LightningModule):
             raise RuntimeError("model '{}' is not a 'LightningModule' subclass. "
                 "Please update it to inherit 'LightningModule', see more in "
                 "https://pytorch-lightning.readthedocs.io/en/latest/lightning_module.html"
@@ -169,13 +178,16 @@ class TrainingPipeline(BasePipeline):
         }
 
         logger_cfg = None
-        if "logging" in config:
+        if no_log:
+            return False
+        elif "logging" in config:
             logger_cfg = config["logging"]
         elif "logger" in config["trainer"]:
             logger_cfg = config["trainer"]["logger"]
 
-        if logger_cfg is None or no_log:
-            return False
+        if logger_cfg is None:
+            ## use default (tensorboard) logger
+            return True
         if isinstance(logger_cfg, bool):
             return logger_cfg
 
@@ -441,6 +453,7 @@ class TrainingPipeline(BasePipeline):
     @staticmethod
     def _dump_config(config, dir):
         fpath = Path(dir).joinpath("config.yml")
+        fpath.parent.mkdir(parents=True, exist_ok=True)
         config = easydict_to_dict(config)
         with fpath.open('w') as f:
             yaml.dump(config, f, yaml.Dumper, sort_keys=False)

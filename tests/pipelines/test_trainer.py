@@ -1,6 +1,6 @@
-from _pytest.mark import param
 import pytest
 import torch
+import torch.nn as nn
 import pytorch_lightning as pl
 
 from pathlib import Path
@@ -12,6 +12,8 @@ from pytorch_lightning.callbacks import ProgressBarBase, ModelCheckpoint, Learni
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from vortex.development.pipelines.trainer import TrainingPipeline
+from vortex.development.pipelines.trainer.progress import VortexProgressBar
+from vortex.development.networks.models import register_model
 from vortex.development import __version__ as vortex_version
 
 from ..common import (
@@ -134,7 +136,7 @@ def test_args_set_seed(caplog, recwarn):
     kwargs = TrainingPipeline._trainer_args_set_seed(deepcopy(config))
     assert kwargs == expected_ret
     assert len(recwarn) == 0
-    assert len(caplog.records) == 1
+    assert len([r for r in caplog.records if 'vortex' in r.name]) == 1
 
     ## unknown type 
     with pytest.raises(RuntimeError):
@@ -243,6 +245,10 @@ def test_dump_config(tmp_path):
     assert str(dumped_cfg_path) == str(tmp_path.joinpath("config.yml"))
     dumped_config = TrainingPipeline._get_config(dumped_cfg_path)
     assert dumped_config == config
+
+    ## path dir not exist
+    dumped_cfg_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
+    assert dumped_cfg_path.exists()
 
 
 def test_copy_data_to_model():
@@ -473,15 +479,6 @@ def test_create_dataloaders(train, eval):
 def test_create_loggers(tmp_path, no_log, logger_module):
     config = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
 
-    ## with bool logger
-    config['trainer']['logger'] = True
-    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
-    assert loggers == (True if not no_log else False)
-
-    config['trainer']['logger'] = False
-    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
-    assert loggers == False
-
     ## with logger no args
     config['trainer']['logger'] = dict(module=logger_module)
     loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
@@ -517,10 +514,44 @@ def test_create_loggers(tmp_path, no_log, logger_module):
         experiment_dir = tmp_path.joinpath(loggers.name, 'version_0')
         assert any(f.match('events.out.tfevents.*') for f in experiment_dir.iterdir())
 
-    ## config in config.logging with bool
-    config['logging'] = True
-    loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
-    assert loggers == (True if not no_log else False)
+
+@pytest.mark.parametrize(
+    "no_log",
+    [
+        pytest.param(True, id="no log"),
+        pytest.param(False, id="with log")
+    ]
+)
+def test_create_loggers_default(tmp_path, no_log):
+    config_old = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+    config_new = EasyDict(deepcopy(MINIMAL_TRAINER_CFG))
+
+    ## without config (default logger)
+    loggers = TrainingPipeline.create_loggers(str(tmp_path), config_new, no_log)
+    assert loggers != no_log
+
+    def assign(n, val):
+        if n == 'old':
+            config_old['trainer']['logger'] = val
+        elif n == 'new':
+            config_new['logging'] = val
+
+    for v in ('old', 'new'):
+        config = config_old if v == 'old' else config_new
+
+        ## with None logger (default logger)
+        assign(v, None)
+        loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+        assert loggers != no_log
+
+        ## with bool logger
+        assign(v, True)
+        loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+        assert loggers != no_log
+
+        assign(v, False)
+        loggers = TrainingPipeline.create_loggers(str(tmp_path), config, no_log)
+        assert loggers == False
 
 
 def test_create_loggers_failed(tmp_path):
@@ -549,6 +580,36 @@ def test_create_loggers_failed(tmp_path):
         config = deepcopy(base_config)
         config['logging'] = "invalid"
         TrainingPipeline.create_loggers(str(tmp_path), config, no_log=False)
+
+
+def test_create_model():
+    config_path = "tests/config/test_classification_pipelines.yml"
+    config = TrainingPipeline._get_config(config_path)
+    config['model']['name'] = 'Softmax'
+    config['model']['backbone'] = 'resnet18'
+
+    model = TrainingPipeline.create_model(config)
+    assert model.__class__.__name__ == config['model']['name']
+    assert isinstance(model, pl.LightningModule)
+
+
+    class TempModel(nn.Module):
+        def __init__(self, network_args, preprocess_args, postprocess_args, loss_args):
+            super().__init__()
+            self.conv1 = nn.Conv2d(3, 16, 3)
+            self.avgpool = nn.AdaptiveAvgPool2d(1)
+            self.fc = nn.Linear(16, 2)
+
+        def forward(self, x):
+            x = self.conv1(x)
+            x = self.avgpool(x)
+            x = self.fc(x.flatten(1))
+            return x
+
+    register_model(TempModel)
+    config['model']['name'] = 'TempModel'
+    with pytest.raises(RuntimeError):
+        model = TrainingPipeline.create_model(config)
 
 
 def test_handle_resume_train(tmp_path):
@@ -752,12 +813,54 @@ def test_create_trainer_with_args(tmp_path):
         TrainingPipeline.create_trainer(str(tmp_path), config, model, hypopt=False)
 
 
-def test_training_pipeline_init(tmp_path):
+@pytest.mark.parametrize(
+    ("hypopt", "no_log"),
+    [
+        pytest.param(False, False, id="normal training"),
+        pytest.param(False, True, id="no log"),
+        pytest.param(True, False, id="hypopt"),
+        pytest.param(True, True, id="hypopt no log"),
+    ]
+)
+def test_training_pipeline_init(tmp_path, hypopt, no_log):
     base_config_path = "tests/config/test_classification_pipelines.yml"
 
     ## edit config
     config = TrainingPipeline._get_config(base_config_path)
     config['model']['network_args']['backbone'] = 'resnet18'
-    config_path = TrainingPipeline._dump_config(config)
+    config['output_directory'] = str(tmp_path)
+    config['trainer']['save_best_metrics'] = ['train_loss', 'accuracy', 'precision_micro']
+    config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
+    experiment_dir = tmp_path.joinpath(config['experiment_name'])
+
+    for n in range(2):
+        experiment_version = f"version_{0 if no_log or hypopt else n}"
+        training_pipeline = TrainingPipeline(config_path, hypopt=hypopt, no_log=no_log)
+        assert training_pipeline.config == config
+        assert training_pipeline.model.config == training_pipeline.config
+        assert str(training_pipeline.experiment_dir) == str(experiment_dir)
+        assert isinstance(training_pipeline.trainer, pl.Trainer)
+        assert training_pipeline.train_dataloader is not None
+        assert training_pipeline.experiment_version == experiment_version
+        assert str(training_pipeline.run_directory) == str(experiment_dir.joinpath(experiment_version))
+
+        trainer_callbacks = training_pipeline.trainer.callbacks
+        if hypopt:
+            assert not training_pipeline.run_directory.joinpath("config.yml").exists()
+            assert len(training_pipeline.trainer.checkpoint_callbacks) == 0
+            assert len([x for x in trainer_callbacks if isinstance(x, LearningRateMonitor)]) == 0
+            assert len([x for x in trainer_callbacks if isinstance(x, VortexProgressBar)]) == 0
+        else:
+            assert training_pipeline.run_directory.joinpath("config.yml").exists() != no_log
+            assert len(training_pipeline.trainer.checkpoint_callbacks) > 0
+            assert len([x for x in trainer_callbacks if isinstance(x, LearningRateMonitor)]) > 0
+            assert len([x for x in trainer_callbacks if isinstance(x, VortexProgressBar)]) > 0
+        if no_log:
+            assert training_pipeline.trainer.logger is None
+
+
+def test_training_pipeline_init_resume(tmp_path):
+    pass
+
 
 ## TODO: other vortex behavior (?)
