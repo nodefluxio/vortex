@@ -2,8 +2,7 @@ import onnx
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.runtime.onnx.graph_ops.helper import get_Ops
-from vortex.runtime.onnx.helper import get_class_names
+from vortex.runtime.onnx.graph_ops.helper import get_Ops, get_class_names
 
 # shorter version of registry
 from vortex.development import ONNX_GRAPH_OPS as graph_ops

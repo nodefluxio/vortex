@@ -27,7 +27,7 @@ class OnnxRuntime(BaseRuntime) :
     def __init__(self, model : Union[str,Path], providers : Any, fallback : bool, input_name : str = 'input', output_name : Union[str,List[str]] = 'output', execution_mode : Union[str,int] = 'sequential', graph_optimization_level : Union[str,int] = 'basic') :
         import onnxruntime
         import onnx
-        from vortex.runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
+        from vortex.runtime.onnx.graph_ops.helper import get_output_format, get_input_specs, get_output_names, get_class_names
 
         sess_options = onnxruntime.SessionOptions()
         if graph_optimization_level in OnnxRuntime.graph_optimization_level.keys() :

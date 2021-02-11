@@ -23,7 +23,7 @@ class EmbedOutputFormat(GraphOpsBase):
         self.output_format = output_format
     
     @classmethod
-    def embed_output_format(cls, model : onnx.ModelProto, output_format : Dict[str,Union[List[int],int]]) -> onnx.ModelProto:
+    def apply(cls, model : onnx.ModelProto, output_format : Dict[str,Union[List[int],int]]) -> onnx.ModelProto:
         """
         embed output_format to model as `Constants`
         """
@@ -43,4 +43,4 @@ class EmbedOutputFormat(GraphOpsBase):
         Returns:
             onnx.ModelProto: transformed model
         """        
-        return self.embed_output_format(model, **vars(self))
+        return self.apply(model, **vars(self))

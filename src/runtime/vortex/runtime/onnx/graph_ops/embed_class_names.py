@@ -1,9 +1,9 @@
 import logging
 import onnx
 
-from .helper import make_class_names
+from .helper import make_class_names, get_outputs
 from .base_ops import GraphOpsBase
-from typing import Dict
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class EmbedClassNames(GraphOpsBase):
         self.class_names = class_names
     
     @classmethod
-    def embed_class_names(cls, model : onnx.ModelProto, class_names : Dict[str,int]) -> onnx.ModelProto:
+    def apply(cls, model : onnx.ModelProto, class_names : Dict[str,int]) -> onnx.ModelProto:
         """
         embed class_names to model as `Constants`
         """
@@ -28,6 +28,13 @@ class EmbedClassNames(GraphOpsBase):
             model.graph.output.append(value_info)
         return model
     
+    @classmethod
+    def parse(cls, model : onnx.ModelProto, ignore_suffix=['_axis', '_indices', '_label']) -> List[str] :
+        outputs = get_outputs(model)
+        ignored = lambda x : any(suffix in x for suffix in ignore_suffix)
+        output_names = [op.name for op in outputs if not ignored(op.name)]
+        return output_names
+    
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
         """Actually embed class_names to model
 
@@ -37,4 +44,4 @@ class EmbedClassNames(GraphOpsBase):
         Returns:
             onnx.ModelProto: transformed model
         """        
-        return self.embed_class_names(model, **vars(self))
+        return self.apply(model, **vars(self))
