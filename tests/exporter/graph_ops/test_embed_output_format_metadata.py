@@ -27,5 +27,6 @@ def test_embed_output_format_metadata():
     formatter = lambda x: str(x)
     op = graph_ops.create_from_args('EmbedOutputFormatMetadata', output_format=out_fmt)
     model = op(model)
-    onnx.save(model, 'testing.onnx')
+    # onnx.save(model, 'testing.onnx')
+    # parse should return dictionary same as input
     assert op.parse(model) == out_fmt
