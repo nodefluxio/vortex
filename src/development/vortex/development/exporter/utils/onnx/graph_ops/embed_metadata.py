@@ -14,6 +14,21 @@ class EmbedMetadata(GraphOpsBase):
     
     @classmethod
     def apply(cls, model: onnx.ModelProto, key: str, value: Any, formatter: Callable) -> onnx.ModelProto:
+        """Embed information to existing model
+
+        Args:
+            model (onnx.ModelProto): model
+            key (str): a name representing the value
+            value (Any): value to be embedded into model
+            formatter (Callable): a callable to format value to string
+
+        Raises:
+            TypeError: key is not string
+            TypeError: return value from `formatter(value)`
+
+        Returns:
+            onnx.ModelProto: model
+        """
         str_value = formatter(value)
         if not isinstance(key, str):
             raise TypeError(f"expect key to be a string, got {type(key)}")
@@ -25,4 +40,12 @@ class EmbedMetadata(GraphOpsBase):
         return model
 
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
+        """Run transformation
+
+        Args:
+            model (onnx.ModelProto): model
+
+        Returns:
+            onnx.ModelProto: model with embedded metadata
+        """
         return self.apply(model, **vars(self))

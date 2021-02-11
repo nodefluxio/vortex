@@ -11,12 +11,25 @@ logger = logging.getLogger(__name__)
 
 class EmbedClassNamesMetadata(GraphOpsBase):
     field_name = "class_labels"
+    # label format used for both formatting and parsing (reverse format)
     label_fmt = "{:d}:{}"
     def __init__(self, class_names: Union[List[str],Dict]):
         self.class_names = class_names
     
     @classmethod
     def apply(cls, model: onnx.ModelProto, class_names: Union[List[str],Dict]):
+        """Embed class_names information to model
+
+        Args:
+            model (onnx.ModelProto): model
+            class_names (Union[List[str],Dict]): class_names, either list of string or mapping from string to int
+
+        Raises:
+            TypeError: class_names is not dict nor list
+
+        Returns:
+            onnx.ModelProto: model
+        """
         if not isinstance(class_names, (dict,list)):
             raise TypeError("expects class_names to be dictionary or list")
         if isinstance(class_names, list):
@@ -35,10 +48,21 @@ class EmbedClassNamesMetadata(GraphOpsBase):
     
     @classmethod
     def parse(cls, model: onnx.ModelProto) -> Dict[int,str]:
-        class_labels = get_metadata_prop(model, 'class_labels')
+        """Extract `class_names` information from model
+
+        Args:
+            model (onnx.ModelProto): model
+
+        Raises:
+            ValueError: if model doesn't contains `class_labels`
+
+        Returns:
+            Dict[int,str]: a mapping from class label (int) to class name
+        """
+        class_labels = get_metadata_prop(model, cls.field_name)
         if class_labels is None:
             raise ValueError("model doesn't contains classs_labels")
-        # class label is protobuf type
+        # class label is onnx protobuf type (StringStringEntryProto)
         class_labels = str(class_labels.value)
         class_names  = dict()
         class_labels = class_labels.split(',')
