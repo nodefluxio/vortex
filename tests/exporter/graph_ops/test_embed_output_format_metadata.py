@@ -3,7 +3,7 @@ import onnx
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops.helper import get_metadata_prop
+from vortex.runtime.onnx.graph_ops.helper import get_metadata_prop
 
 from .dummy_model import dummy_model
 
