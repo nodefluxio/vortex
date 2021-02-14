@@ -777,8 +777,9 @@ def test_create_trainer(tmp_path, caplog, device, hypopt):
     assert trainer.deterministic == True
     assert trainer.check_val_every_n_epoch == 2
 
-    ## model checkpoint, lr monitor and progress bar callback if not hypopt else pbar only
-    assert len(trainer.callbacks) == (1 if hypopt else 3)
+    ## model checkpoint, lr monitor, progress bar, and one custom callback
+    ## if not hypopt else pbar only
+    assert len(trainer.callbacks) == (1 if hypopt else 4)
     ## model checkpoint is not available when hypopt
     assert any(isinstance(c, ModelCheckpoint) for c in trainer.callbacks) != hypopt
     ## progress bar callback is always available
