@@ -304,6 +304,7 @@ def test_checkpoint_save_best(tmp_path, save_best):
     model = prepare_model(config)
     ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
     trainer = patched_pl_trainer(str(tmp_path), model, callbacks=ckpt_callbacks)
+    ckpt_path = tmp_path.joinpath("version_0", "checkpoints")
 
     if isinstance(save_best, str):
         save_best = [save_best]
@@ -334,16 +335,16 @@ def test_checkpoint_save_best(tmp_path, save_best):
 
             callback.on_validation_end(trainer, model)
 
-            fname = "{}-best_{}.pth".format(config['experiment_name'], monitor)
-            fpath = tmp_path.joinpath("version_0", "checkpoints", fname)
-            assert fpath.exists()
+            fname_pattern = "{}-best_{}=*.pth".format(config['experiment_name'], monitor)
+            fpaths = [p for p in ckpt_path.iterdir() if p.match(fname_pattern)]
+            assert len(fpaths) == 1
 
             if (opt_strategy == 'max' and action == torch.add) or (opt_strategy == 'min' and action == torch.sub):
                 saved_metrics = trainer.logger_connector.callback_metrics
             else:
                 saved_metrics = prev_metrics_val 
 
-            checkpoint = torch.load(fpath)
+            checkpoint = torch.load(fpaths[0])
             assert checkpoint['config'] == dict(config)
             assert checkpoint['metrics'] == saved_metrics
             assert checkpoint['class_names'] == model.class_names
@@ -427,9 +428,11 @@ def test_checkpoint_save_epoch(tmp_path, save_epoch):
     ]
 )
 def test_create_dataloaders(train, eval):
+    batch_size = 4
+    input_size = 224
     config = EasyDict(dict(
         model=dict(preprocess_args=dict(
-            input_size=224,
+            input_size=input_size,
             input_normalization=dict(
                 mean=[0.4914, 0.4822, 0.4465],
                 std=[0.2023, 0.1994, 0.2010]
@@ -447,7 +450,7 @@ def test_create_dataloaders(train, eval):
         ),
         dataloader=dict(
             module="PytorchDataLoader",
-            args=dict(num_workers=1, batch_size=2, shuffle=True),
+            args=dict(num_workers=1, batch_size=batch_size, shuffle=True),
         ),
     ))
     if not train:
@@ -459,10 +462,16 @@ def test_create_dataloaders(train, eval):
     train_loader, val_loader = TrainingPipeline.create_dataloaders(config, model)
 
     assert isinstance(train_loader, DataLoader)
-    assert train_loader.num_workers == 1 and train_loader.batch_size == 2
+    assert train_loader.num_workers == 1 and train_loader.batch_size == batch_size
+    train_batch = next(iter(train_loader))
+    assert train_batch[0].shape == torch.Size([batch_size, 3, input_size, input_size])
+    assert train_batch[1].shape == torch.Size([batch_size, 1])
     if eval:
         assert isinstance(val_loader, DataLoader)
-        assert val_loader.num_workers == 1 and val_loader.batch_size == 2
+        assert val_loader.num_workers == 1 and val_loader.batch_size == batch_size
+        val_batch = next(iter(val_loader))
+        assert val_batch[0].shape == torch.Size([batch_size, 3, input_size, input_size])
+        assert val_batch[1].shape == torch.Size([batch_size, 1])
     else:
         assert val_loader is None
 
@@ -813,18 +822,51 @@ def test_create_trainer_with_args(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("multiple_ckpt", "hypopt"),
+    [
+        pytest.param(False, False, id="normal"),
+        pytest.param(True, False, id="multiple checkpoint"),
+        pytest.param(False, True, id="hypopt"),
+        pytest.param(True, True, id="multiple checkpoint in hypopt")
+    ]
+)
+def test_copy_final_checkpoint(tmp_path, multiple_ckpt, hypopt):
+    config = deepcopy(MINIMAL_TRAINER_CFG)
+    if multiple_ckpt:
+        config['trainer'].update(save_epoch=1)
+        config['trainer'].update(save_best_metrics=['accuracy', 'train_loss'])
+    config = EasyDict(config)
+    ckpt_path = tmp_path.joinpath("version_0", "checkpoints")
+
+    model = prepare_model(config)
+    ckpt_callbacks = []
+    ckpt_callbacks = TrainingPipeline.create_model_checkpoints(config, model)
+    trainer = patched_pl_trainer(str(tmp_path), model, callbacks=ckpt_callbacks)
+    for callback in trainer.checkpoint_callbacks:
+        callback.on_pretrain_routine_start(trainer, model)
+        callback.on_validation_end(trainer, model)
+
+    res_fpath = TrainingPipeline._copy_final_checkpoint(trainer, config, tmp_path, hypopt)
+    if hypopt:
+        assert res_fpath == ""
+    else:
+        assert res_fpath == str(tmp_path.joinpath(f"{config['experiment_name']}.pth"))
+        assert ckpt_path.joinpath(f"{config['experiment_name']}.pth").exists()
+        assert not ckpt_path.joinpath(f"{config['experiment_name']}-last.pth").exists()
+
+
+@pytest.mark.parametrize(
     ("hypopt", "no_log"),
     [
-        pytest.param(False, False, id="normal training"),
+        pytest.param(False, False, id="normal"),
         pytest.param(False, True, id="no log"),
         pytest.param(True, False, id="hypopt"),
         pytest.param(True, True, id="hypopt no log"),
     ]
 )
 def test_training_pipeline_init(tmp_path, hypopt, no_log):
-    base_config_path = "tests/config/test_classification_pipelines.yml"
-
     ## edit config
+    base_config_path = "tests/config/test_classification_pipelines.yml"
     config = TrainingPipeline.load_config(base_config_path)
     config['model']['network_args']['backbone'] = 'resnet18'
     config['output_directory'] = str(tmp_path)
@@ -832,8 +874,10 @@ def test_training_pipeline_init(tmp_path, hypopt, no_log):
     config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
 
     experiment_dir = tmp_path.joinpath(config['experiment_name'])
+    all_experiments = []
     for n in range(2):
         experiment_version = f"version_{0 if no_log or hypopt else n}"
+        all_experiments.append(experiment_version)
         training_pipeline = TrainingPipeline(config_path, hypopt=hypopt, no_log=no_log)
         assert training_pipeline.config == config
         assert training_pipeline.model.config == training_pipeline.config
@@ -856,6 +900,7 @@ def test_training_pipeline_init(tmp_path, hypopt, no_log):
             assert len([x for x in trainer_callbacks if isinstance(x, VortexProgressBar)]) > 0
         if no_log:
             assert training_pipeline.trainer.logger is None
+    assert all([experiment_dir.joinpath(v).exists() for v in all_experiments]) != (no_log or hypopt)
 
 
 def test_training_pipeline_init_resume(tmp_path):
@@ -885,4 +930,62 @@ def test_training_pipeline_init_resume(tmp_path):
     assert training_pipeline.trainer.global_step == 1
 
 
-## TODO: other vortex behavior (?)
+def test_training_pipeline_run(tmp_path):
+    hypopt = False
+    no_log = False
+    ## edit config
+    base_config_path = "tests/config/test_classification_pipelines.yml"
+    monitor_metrics = ['val_loss', 'accuracy', 'precision_micro']
+    config = TrainingPipeline.load_config(base_config_path)
+    config['model']['network_args']['backbone'] = 'resnet18'
+    config['output_directory'] = str(tmp_path)
+    config['trainer']['save_best_metrics'] = monitor_metrics
+    config['trainer']['args'] = dict(limit_train_batches=3, limit_val_batches=2)
+    config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
+
+    experiment_dir = tmp_path.joinpath(config['experiment_name'])
+    all_experiments = []
+    trial = (2 if no_log or hypopt else 3)
+    resume = False
+    start_epoch = 0
+    for n in range(trial):
+        experiment_version = f"version_{0 if no_log or hypopt else n}"
+        all_experiments.append(experiment_version)
+        run_dir = experiment_dir.joinpath(experiment_version)
+        ckpt_path = run_dir.joinpath("checkpoints")
+
+        training_pipeline = TrainingPipeline(config_path, hypopt=hypopt, no_log=no_log, resume=resume)
+        training_pipeline.run()
+
+        ## check checkpoint
+        ## TODO: unit test on save epoch with trainer.fit()
+        all_epoch_saved = all([
+            ckpt_path.joinpath("{}-epoch={}.pth".format(config['experiment_name'], e)).exists()
+            for e in range(start_epoch, config['trainer']['epoch'])
+        ])
+        assert all_epoch_saved != (no_log or hypopt)
+        for m in monitor_metrics:
+            fname_pattern = "{}-best_{}=*.pth".format(config['experiment_name'], m)
+            fpaths = [p for p in ckpt_path.iterdir() if p.match(fname_pattern)]
+            assert len(fpaths) == (0 if no_log or hypopt else 1)
+        ## check final checkpoint
+        fname = "{}.pth".format(config['experiment_name'])
+        assert ckpt_path.joinpath(fname).exists() != (no_log or hypopt)
+        assert experiment_dir.joinpath(fname).exists() != (no_log or hypopt)
+
+        ## check config dump
+        assert run_dir.joinpath("config.yml").exists() != (no_log or hypopt)
+        ## check epoch and step
+        assert training_pipeline.trainer.current_epoch == config['trainer']['epoch']-1
+        assert training_pipeline.trainer.global_step == config['trainer']['epoch']*3
+
+        if n == 1:
+            start_epoch = config['trainer']['epoch']
+            config['trainer']['epoch'] = 5
+            ckpt_last = [c for c in training_pipeline.trainer.checkpoint_callbacks
+                if c.monitor is None and hasattr(c, "save_epoch")]
+            config['checkpoint'] = ckpt_last[0].best_model_path
+            config_path = TrainingPipeline._dump_config(config, tmp_path.joinpath('tmp'))
+            resume = True
+
+    assert all([experiment_dir.joinpath(v).exists() for v in all_experiments]) != (no_log or hypopt)
