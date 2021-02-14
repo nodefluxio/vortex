@@ -2,7 +2,7 @@ from typing import Optional, Union
 from pathlib import Path
 
 from pytorch_lightning.trainer.connectors.checkpoint_connector import CheckpointConnector as PLCheckpointConnector
-from pytorch_lightning.callbacks import ModelCheckpoint as PLModelCheckpoint
+from pytorch_lightning.callbacks import Callback, ModelCheckpoint as PLModelCheckpoint
 
 from vortex.development import __version__ as vortex_version
 
@@ -22,6 +22,27 @@ class CheckpointConnector(PLCheckpointConnector):
         checkpoint['class_names'] = model.class_names
         checkpoint['config'] = dict(model.config)
         return checkpoint
+
+
+class AlwaysSaveCheckpointCallback(Callback):
+    """This callback ensure to always save checkpoint regardless of 'check_val_every_n_epoch' args
+    force calling 'ModelCheckpoint.on_validation_end' inside 'on_epoch_end'
+    """
+    def __init__(self):
+        super().__init__()
+
+    def on_epoch_end(self, trainer, pl_module):
+        for callback in trainer.checkpoint_callbacks:
+            if self._should_skip_save(callback, trainer):
+                continue
+            callback.on_validation_end(trainer, pl_module)
+
+    def _should_skip_save(self, callback, trainer):
+        return (
+            callback.monitor is not None and
+            callback.monitor not in trainer.logger_connector.callback_metrics and
+            len(trainer.logger_connector.callback_metrics) != 0
+        )
 
 
 class ModelCheckpoint(PLModelCheckpoint):

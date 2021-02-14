@@ -181,6 +181,8 @@ class Softmax(ClassificationModel):
 
     def training_step(self, batch, batch_idx):
         img, target = batch
+        if target.ndim == 2:
+            target = target.squeeze(1)
         pred = self(img)
         loss = self.criterion(pred, target)
         return {
@@ -191,6 +193,8 @@ class Softmax(ClassificationModel):
 
     def validation_step(self, batch, batch_idx):
         img, target = batch
+        if target.ndim == 2:
+            target = target.squeeze(1)
         pred = self(img)
         loss = self.criterion(pred, target)
         return {

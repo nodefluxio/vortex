@@ -1,5 +1,6 @@
 import warnings
 import logging
+import shutil
 import yaml
 import torch
 import pytorch_lightning as pl
@@ -14,7 +15,7 @@ from packaging.version import parse as parse_version
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
-from .checkpoint import CheckpointConnector
+from .checkpoint import CheckpointConnector, AlwaysSaveCheckpointCallback
 from .progress import VortexProgressBar
 from .patches import (
     patch_checkpoint_filepath_name,
@@ -35,6 +36,10 @@ LOGGER = logging.getLogger(__name__)
 class TrainingPipeline(BasePipeline):
     def __init__(self, config: Union[str, Path, dict], hypopt=False, resume=False, no_log=False):
         super().__init__()
+
+        self.hypopt = hypopt
+        self.no_log = no_log
+        self.resume = resume
 
         self.config = self.load_config(config)
         self._check_experiment_config(self.config)
@@ -75,6 +80,7 @@ class TrainingPipeline(BasePipeline):
 
     def run(self):
         self.trainer.fit(self.model, self.train_dataloader, self.val_dataloader)
+        self._copy_final_checkpoint(self.trainer, self.config, self.experiment_dir, self.hypopt)
 
 
     @staticmethod
@@ -108,7 +114,8 @@ class TrainingPipeline(BasePipeline):
                 config.dataloader, config.dataset,
                 preprocess_config=config.model.preprocess_args,
                 collate_fn=model.collate_fn,
-                stage='validate'
+                stage='validate',
+                force_normalize=True
             )
 
         return train_dataloader, val_dataloader
@@ -158,7 +165,7 @@ class TrainingPipeline(BasePipeline):
                     raise RuntimeError("metric '{}' is not available to track for 'save_best_metrics' "
                         "argument, available metrics: {}".format(m, list(available_metrics.keys())))
                 callbacks.append(ModelCheckpoint(
-                    filename=fname_prefix + "-best_" + m,
+                    filename=fname_prefix + "-best_{" + m + ":.2f}",
                     monitor=m,
                     mode=available_metrics[m]
                 ))
@@ -248,6 +255,7 @@ class TrainingPipeline(BasePipeline):
             callbacks = TrainingPipeline.create_model_checkpoints(config, model)
             callbacks.append(TrainingPipeline.create_lr_monitor(config))
             callbacks.append(TrainingPipeline.create_progeress_bar(config))
+            callbacks.append(AlwaysSaveCheckpointCallback())
             loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
@@ -514,3 +522,24 @@ class TrainingPipeline(BasePipeline):
             base_exp_dir = Path(config['output_directory'])
         exp_dir = config['experiment_name']
         return base_exp_dir.joinpath(exp_dir)
+
+    @staticmethod
+    def _copy_final_checkpoint(trainer, config, experiment_dir, hypopt):
+        if hypopt:
+            return ""
+
+        ckpt_last_callback = [c for c in trainer.checkpoint_callbacks
+            if c.monitor is None and not hasattr(c, "save_epoch")]
+        if len(ckpt_last_callback) == 0:
+            return ""
+
+        ckpt_last_callback = ckpt_last_callback[0]
+        if ckpt_last_callback.best_model_path:
+            last_fpath = Path(ckpt_last_callback.best_model_path)
+            fname = f"{config['experiment_name']}.pth"
+            ## copy weight to experiment dir
+            final_fpath = Path(experiment_dir).joinpath(fname)
+            shutil.copy(last_fpath, str(final_fpath))
+            ## rename last epoch filename
+            shutil.move(last_fpath, last_fpath.parent.joinpath(fname))
+            return str(final_fpath)
