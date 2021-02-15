@@ -980,7 +980,10 @@ def test_training_pipeline_run(tmp_path):
         assert training_pipeline.trainer.current_epoch == config['trainer']['epoch']-1
         assert training_pipeline.trainer.global_step == config['trainer']['epoch']*3
 
-        if n == 1:
+        if n == 0:
+            ## test using the loaded config
+            config_path = config
+        elif n == 1:
             start_epoch = config['trainer']['epoch']
             config['trainer']['epoch'] = 5
             ckpt_last = [c for c in training_pipeline.trainer.checkpoint_callbacks
