@@ -1,5 +1,4 @@
 import inspect
-from functools import partial
 
 
 from .model import ModelBase
