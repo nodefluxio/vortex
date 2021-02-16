@@ -36,7 +36,7 @@ class Registry:
     def register_module(self, module, name: Union[str,None]=None, force: bool=False, overwrite: bool=False):
         # typecheck
         if not isinstance(force,bool):
-            raise TypeError("expect force to be string type, got {}".format(type(force)))
+            raise TypeError("expect force to be bool type, got {}".format(type(force)))
         # typecheck
         if not isinstance(overwrite,bool):
             raise TypeError("expect overwrite to be string type, got {}".format(type(overwrite)))
