@@ -33,49 +33,54 @@ class Registry:
         """
         return self.get(key)
     
-    def register_module(self, module, name: Union[str,None]=None, force: bool=False, overwrite: bool=False):
+    def register(self, module=None, name: Union[str,None]=None, force: bool=False, overwrite: bool=False):
         # typecheck
         if not isinstance(force,bool):
             raise TypeError("expect force to be bool type, got {}".format(type(force)))
         # typecheck
         if not isinstance(overwrite,bool):
             raise TypeError("expect overwrite to be string type, got {}".format(type(overwrite)))
-        # typecheck
-        # if not (inspect.isfunction(module) or inspect.isclass(module)):
-        if not inspect.isclass(module):
-            raise TypeError("expect module to be a type or function")
-        # only accepts:
-        # - base_class is None: happily accepts any class
-        # - force is True: acts like base_class is None
-        # - base_class is not None: module must be a subclass of base_class
+        if module is None:
+            def _register(mod):
+                self.register(module=mod,name=name,force=force,overwrite=overwrite)
+                return mod
+            return _register
+        else:
+            # typecheck
+            if not (inspect.isfunction(module) or inspect.isclass(module)):
+                raise TypeError("expect module to be a type or function")
+            # only accepts:
+            # - base_class is None: happily accepts any class
+            # - force is True: acts like base_class is None
+            # - base_class is not None: module must be a subclass of base_class
 
-        # set local "base_class" to None if forced, hence acts like self.base_class is None
-        base_class = self.base_class if not force else None
-        if base_class is not None:
-            if not issubclass(module, base_class):
-                raise TypeError(
-                    "expect module to be a subclass of {}, got {}, use force=True to force register"
-                    .format(base_class.__name__,module.__name__)
+            # set local "base_class" to None if forced, hence acts like self.base_class is None
+            base_class = self.base_class if not force else None
+            if base_class is not None:
+                if not issubclass(module, base_class):
+                    raise TypeError(
+                        "expect module to be a subclass of {}, got {}, use force=True to force register"
+                        .format(base_class.__name__,module.__name__)
+                    )
+            # name validation:
+            # - module is class: can infer name from class
+            # - function: possibly ugly name, name must be explicitly provided
+            valid_name = inspect.isclass(module) or isinstance(name,str)
+            if not valid_name:
+                raise ValueError("name must be provided if module is function")
+            if name is None:
+                name = module.__name__
+            if not overwrite and name in self.modules:
+                raise KeyError(
+                    "module {} already exists, use overwrite=True to overwrite"
+                    .format(name)
                 )
-        # name validation:
-        # - module is class: can infer name from class
-        # - function: possibly ugly name, name must be explicitly provided
-        valid_name = inspect.isclass(module) or isinstance(name,str)
-        if not valid_name:
-            raise ValueError("name must be provided if module is function")
-        if name is None:
-            name = module.__name__
-        if not overwrite and name in self.modules:
-            raise KeyError(
-                "module {} already exists, use overwrite=True to overwrite"
-                .format(name)
-            )
-        self.modules[name] = module
+            self.modules[name] = module
     
     def add(self, *args, **kwargs):
         """Alias to register_module
         """
-        self.register_module(*args, **kwargs)
+        self.register(*args, **kwargs)
     
     def pop(self, module: str, *args):
         """Remove desired class associated with `module`
@@ -120,23 +125,6 @@ class Registry:
         """
         return copy(self)
 
-    def register(self, name: str=None, force: bool=False, overwrite: bool=False):
-        """Decorator Factory to register module
-
-        Args:
-            name (str, optional): desired name of the module. Defaults to None.
-            force (bool, optional): force the decorated class to be added, may ignore base_class. Defaults to False.
-            overwrite (bool, optional): overwrite existing module if exists. Defaults to False.
-
-        Returns:
-            Callable: decorator function
-        """
-        # actualy decorator factor, bind args to be called
-        def _register(cls):
-            self.register_module(module=cls,name=name,force=force,overwrite=overwrite)
-            return cls
-        return _register
-    
     def create_from_args(self, module: str, *args, **kwargs):
         """create instance from positional/keyword args
 
