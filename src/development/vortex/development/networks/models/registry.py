@@ -4,11 +4,11 @@ import inspect
 from .model import ModelBase
 from vortex.development.utils.registry import Registry
 
-# TODO: naming fix
-model_registry = Registry("model",base_class=ModelBase)
-supported_models = model_registry
+MODELS = Registry("Models",base_class=ModelBase)
+# alias
+supported_models = MODELS
 
 # provide alias to support internal use
 # e.g. from .registry import register model
-register_model = model_registry.register
-remove_model = model_registry.pop
+register_model = MODELS.register
+remove_model = MODELS.pop

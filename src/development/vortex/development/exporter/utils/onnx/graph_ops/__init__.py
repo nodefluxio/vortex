@@ -6,11 +6,10 @@ from .nms_iou_threshold_as_input import IOUThresholdAsInput
 from .symbolic_shape_infer import SymbolicShapeInfer
 from vortex.development.utils.registry import Registry
 
-# TODO: naming fix
-graph_ops_registry = Registry("graph_ops",base_class=GraphOpsBase)
+GRAPH_OPS = Registry("graph_ops",base_class=GraphOpsBase)
 
-graph_ops_registry.add(CreateBatchOutputSequence)
-graph_ops_registry.add(EmbedClassNames)
-graph_ops_registry.add(EmbedOutputFormat)
-graph_ops_registry.add(IOUThresholdAsInput)
-graph_ops_registry.add(SymbolicShapeInfer)
+GRAPH_OPS.add(CreateBatchOutputSequence)
+GRAPH_OPS.add(EmbedClassNames)
+GRAPH_OPS.add(EmbedOutputFormat)
+GRAPH_OPS.add(IOUThresholdAsInput)
+GRAPH_OPS.add(SymbolicShapeInfer)
