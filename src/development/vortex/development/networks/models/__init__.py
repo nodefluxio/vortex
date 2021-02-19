@@ -3,5 +3,5 @@ from . import classification
 from . import detection
 
 from .model import ModelBase
-from .registry import supported_models, register_model, remove_model
+from .registry import MODELS, supported_models, register_model, remove_model
 
