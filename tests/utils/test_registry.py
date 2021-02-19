@@ -45,26 +45,42 @@ class DummyFive(DummyBase):
         self.value = str_value, int_value
         pass
 
+@glob_registry.register(name="dummy_functions",force=True)
+def create_dummy(str_value: str, int_value: int):
+    return DummyFive(str_value, int_value)
+
+def create_other_dummy(str_value: str, int_value: int):
+    return DummyFive(str_value, int_value)
+
 def test_glob_registry():
-    assert len(glob_registry) == 4
+    assert len(glob_registry) == 5
     assert "DummyOne" in glob_registry
     assert "Dummy2" in glob_registry
     assert "DummyFour" in glob_registry
     assert "DummyThree" not in glob_registry
     assert "AnotherDummy" in glob_registry
+    assert "dummy_functions" in glob_registry
     repr(glob_registry)
     # actually glob already has DummyThree type, this provide alias
-    glob_registry.register_module(DummyThree)
-    assert len(glob_registry) == 5
+    glob_registry.register(DummyThree)
+    assert len(glob_registry) == 6
     assert "DummyThree" in glob_registry
 
     # glob registry is strict
     with pytest.raises(TypeError):
-        glob_registry.register_module(AnotherType)
+        glob_registry.register(AnotherType)
     
     # should use force
     with pytest.raises(KeyError):
-        glob_registry.register_module(DummyThree)
+        glob_registry.register(DummyThree)
+
+    # should use force
+    with pytest.raises(TypeError):
+        glob_registry.register(create_other_dummy)
+    
+    # should give name
+    with pytest.raises(ValueError):
+        glob_registry.register(create_other_dummy, force=True)
     
     # instance creation test
 
@@ -90,9 +106,17 @@ def test_glob_registry():
     another_dummy = glob_registry.create_from_args(**args)
     assert isinstance(another_dummy, DummyFive)
 
+    args = dict(
+        module="dummy_functions",
+        str_value="some string",
+        int_value=0
+    )
+    another_dummy = glob_registry.create_from_args(**args)
+    assert isinstance(another_dummy, DummyFive)
+
 def test_registry():
     reg = Registry("testing")
     # can mix type if desired
-    reg.register_module(AnotherType)
-    reg.register_module(DummyBase)
+    reg.register(AnotherType)
+    reg.register(DummyBase)
     assert len(reg) == 2
