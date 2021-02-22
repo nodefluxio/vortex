@@ -8,7 +8,7 @@ from vortex.runtime.onnx.graph_ops.helper import get_metadata_prop
 from .dummy_model import dummy_model
 
 # shorter version of registry
-from vortex.development import onnx_graph_ops as graph_ops
+from vortex.development import ONNX_GRAPH_OPS as graph_ops
 
 out_fmt = dict(
     class_label=dict(

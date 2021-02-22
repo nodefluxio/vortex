@@ -7,7 +7,7 @@ from onnx import AttributeProto, TensorProto, GraphProto
 from .dummy_model import dummy_model
 
 # shorter version of registry
-from vortex.development import onnx_graph_ops as graph_ops
+from vortex.development import ONNX_GRAPH_OPS as graph_ops
 
 def test_embed_class_names():
     class_names = ['cat', 'dog']
