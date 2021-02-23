@@ -180,7 +180,7 @@ def remove_nodes(model : onnx.ModelProto, ids : List[int]) :
 def get_input_specs(model : onnx.ModelProto) -> OrderedDict :
     inputs = get_inputs(model)
     input_names = [inp.name for inp in inputs]
-    input_types = [TensorProto.DataType.Name(inp.type.tensor_type.elem_type).lower() for inp in inputs]
+    input_types = [onnx.TensorProto.DataType.Name(inp.type.tensor_type.elem_type).lower() for inp in inputs]
     input_shape = [inp.type.tensor_type.shape for inp in inputs]
     input_shape = list(map(lambda shape : [dim.dim_value for dim in shape.dim], input_shape))
     input_specs = []

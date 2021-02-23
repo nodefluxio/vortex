@@ -49,7 +49,11 @@ class BaseRuntime:
                         for name, spec in input_specs.items()
         )
         self.input_specs = input_specs
-        assert all(isinstance(name, str) for name in class_names)
+        if isinstance(class_names, list):
+            assert all(isinstance(name, str) for name in class_names)
+        elif isinstance(class_names, dict):
+            assert all(isinstance(name, str) for name in class_names.values())
+            assert all(isinstance(key, int) for key in class_names.keys())
         self.class_names = class_names
 
     def predict(self, *args, **kwargs):

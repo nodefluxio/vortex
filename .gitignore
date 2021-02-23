@@ -282,3 +282,6 @@ experiments/outputs/**/reports
 *cifar-10-batches-py
 
 !tests/test_dataset/*
+lightning_logs
+checkpoints
+logs
