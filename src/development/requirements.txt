@@ -29,4 +29,5 @@ thop
 ray
 sympy
 pytorch_lightning==1.1.4
+parse
 # nvidia-dali-cuda100 # Cannot be installed via setuptools, spawn as subprocess pip installation in setup.py
