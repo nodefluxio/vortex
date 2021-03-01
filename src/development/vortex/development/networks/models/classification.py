@@ -215,4 +215,5 @@ class Softmax(ClassificationModel):
 
 
 ## backward compatibility for name 'softmax'
-register_model('softmax', Softmax)
+register_model(name="softmax")(Softmax)
+# or model_registry.add(...), model_registry.resgister_module(...)
