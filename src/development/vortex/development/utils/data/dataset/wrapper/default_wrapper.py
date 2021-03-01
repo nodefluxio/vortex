@@ -33,6 +33,7 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
     def __init__(self, dataset: str, stage: str, preprocess_args: Union[EasyDict, dict],
                  augmentations: Union[Tuple[str, dict], List, Callable] = None,
                  dataset_args: Union[EasyDict, dict] = {},
+                 force_normalize: bool = False
                  ):
         super().__init__(dataset=dataset,
                          stage=stage,
@@ -42,6 +43,10 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
                          )
         # Configured computer vision augmentation initialization
         self.augments = None
+        self.force_normalize = force_normalize
+
+        if 'scaler' not in self.preprocess_args.input_normalization:
+            self.preprocess_args.input_normalization.scaler = 255
 
         if stage == 'train' and self.augmentations_list is not None:
             self.augments = []
@@ -118,14 +123,11 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
         # Configured computer vision augment -- END
         # Standard computer vision augment -- START
         image, target = self.standard_augments(image, target)
-        if self.stage == 'train':
+        if self.stage == 'train' or self.force_normalize:
             input_normalization = self.preprocess_args.input_normalization
-            if 'scaler' not in input_normalization:
-                input_normalization.scaler=255
             image = torch.from_numpy(np.expand_dims(image, axis=0))
             image = to_tensor(image,scaler=input_normalization.scaler)
-            image = normalize(
-                image, input_normalization.mean, input_normalization.std).squeeze(0)
+            image = normalize(image, input_normalization.mean, input_normalization.std).squeeze(0)
         # Standard computer vision augment -- END
         if not isinstance(target, torch.Tensor):
             if isinstance(target, np.ndarray):
@@ -134,8 +136,7 @@ class DefaultDatasetWrapper(BasicDatasetWrapper):
                 raise RuntimeError(
                     'unsupported data type for target, got %s' % type(target))
 
-        data = image, target
-        return data
+        return image, target
 
 def check_and_fix_coordinates(image: np.ndarray, target: np.ndarray, data_format: EasyDict):
     # Check bounding box coordinates

@@ -197,12 +197,12 @@ class VortexProgressBar(ProgressBarBase):
     def on_train_start(self, trainer, pl_module):
         super().on_train_start(trainer, pl_module)
         self.main_progress_bar = self.init_epoch_pbar(trainer.max_epochs)
-        self.main_progress_bar.refresh()
         self.metrics_bar = self.init_metrics_bar()
         self.refresh_lr()
 
         self._current_epoch = trainer.current_epoch
         self.main_progress_bar.count = trainer.current_epoch
+        self.main_progress_bar.refresh()
 
     def on_epoch_start(self, trainer, pl_module):
         super().on_epoch_start(trainer, pl_module)

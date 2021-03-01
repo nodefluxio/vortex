@@ -1,5 +1,7 @@
 import warnings
 import logging
+import shutil
+import yaml
 import torch
 import pytorch_lightning as pl
 import pytorch_lightning.loggers as pl_loggers
@@ -8,11 +10,12 @@ from typing import Union
 from pathlib import Path
 from copy import deepcopy
 from easydict import EasyDict
+from packaging.version import parse as parse_version
 
 from pytorch_lightning.trainer.connectors.logger_connector import LoggerConnector
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
-from .checkpoint import CheckpointConnector
+from .checkpoint import CheckpointConnector, AlwaysSaveCheckpointCallback
 from .progress import VortexProgressBar
 from .patches import (
     patch_checkpoint_filepath_name,
@@ -21,6 +24,7 @@ from .patches import (
     patch_trainer_on_load_checkpoint,
     patch_trainer_on_save_checkpoint
 )
+from vortex.development.utils.common import easydict_to_dict
 from vortex.development.pipelines.base_pipeline import BasePipeline
 from vortex.development.utils.parser import load_config, check_config
 from vortex.development.utils.factory import create_model, create_dataloader
@@ -33,46 +37,58 @@ class TrainingPipeline(BasePipeline):
     def __init__(self, config: Union[str, Path, dict], hypopt=False, resume=False, no_log=False):
         super().__init__()
 
-        self.config = self._get_config(config)
+        self.hypopt = hypopt
+        self.no_log = no_log
+        self.resume = resume
+
+        self.config = self.load_config(config)
         self._check_experiment_config(self.config)
 
-        checkpoint_path, state_dict = self._handle_resume_checkpoint(config, resume)
+        resume_checkpoint_path, state_dict = self._handle_resume_checkpoint(self.config, resume)
         self.model = self.create_model(self.config, state_dict)
 
-        ## TODO: fix progress bar
         ## TODO: change default vortex root with environment variable
-        ## TODO: handle output directory
 
-        self.experiment_dir = Path('.').joinpath("experiments", "outputs", config['experiment_name'])
+        self.experiment_dir = self._format_experiment_dir(self.config)
+        if not no_log:
+            self.experiment_dir.mkdir(parents=True, exist_ok=True)
+
         self.trainer = self.create_trainer(
             str(self.experiment_dir), self.config, self.model,
             hypopt=hypopt, no_log=no_log,
-            resume_checkpoint_path=checkpoint_path
+            resume_checkpoint_path=resume_checkpoint_path
         )
 
         self.train_dataloader, self.val_dataloader = self.create_dataloaders(self.config, self.model)
         self._copy_data_to_model(self.train_dataloader, self.config, self.model)
 
-        self.experiment_version = (
-            self.trainer.logger.version
-            if isinstance(self.trainer.logger.version, str)
-            else f"version_{self.trainer.logger.version}"
-        )
-        self.run_directory = self.experiment_dir.joinpath("version_" + self.experiment_version)
+        if self.trainer.logger is None:
+            self.experiment_version = "version_0"
+            self.run_directory = self.experiment_dir.joinpath(self.experiment_version)
+        else:
+            self.experiment_version = (
+                self.trainer.logger.version
+                if isinstance(self.trainer.logger.version, str)
+                else f"version_{self.trainer.logger.version}"
+            )
+            self.run_directory = self.experiment_dir.joinpath(self.experiment_version)
 
         if not hypopt:
-            ## TODO: fix dumped yaml order
-            self._dump_config(config, self.run_directory)
+            if not no_log:  ## TODO: should we dump config when not log?
+                self._dump_config(self.config, self.run_directory)
             print("\nExperiment directory:", self.run_directory)
 
     def run(self):
         self.trainer.fit(self.model, self.train_dataloader, self.val_dataloader)
+        self._copy_final_checkpoint(self.trainer, self.config, self.experiment_dir, self.hypopt)
 
 
     @staticmethod
     def create_model(config, state_dict=None) -> ModelBase:
+        if not isinstance(config, EasyDict):
+            config = EasyDict(config)
         model = create_model(config.model, state_dict=state_dict)
-        if isinstance(model, pl.LightningModule):
+        if not isinstance(model, pl.LightningModule):
             raise RuntimeError("model '{}' is not a 'LightningModule' subclass. "
                 "Please update it to inherit 'LightningModule', see more in "
                 "https://pytorch-lightning.readthedocs.io/en/latest/lightning_module.html"
@@ -98,7 +114,8 @@ class TrainingPipeline(BasePipeline):
                 config.dataloader, config.dataset,
                 preprocess_config=config.model.preprocess_args,
                 collate_fn=model.collate_fn,
-                stage='validate'
+                stage='validate',
+                force_normalize=True
             )
 
         return train_dataloader, val_dataloader
@@ -108,11 +125,7 @@ class TrainingPipeline(BasePipeline):
     def create_model_checkpoints(config: dict, model: ModelBase):
         fname_prefix = config['experiment_name']
 
-        ## patches for model checkpoint
-        ModelCheckpoint.FILE_EXTENSION = ".pth"
-        ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
-        ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
-
+        TrainingPipeline._patch_model_checkpoint()
         callbacks = [
             ## default checkpoint callback: save last epoch
             ModelCheckpoint(
@@ -128,7 +141,7 @@ class TrainingPipeline(BasePipeline):
                     "expected value of integer higher than 0 (> 0).".format(save_epoch))
             epoch_ckpt_callback = ModelCheckpoint(
                 filename=fname_prefix+"-{epoch}", monitor=None,
-                save_top_k=None, mode="min",
+                save_top_k=-1, mode="min",
                 period=save_epoch
             )
             epoch_ckpt_callback.save_epoch = True   ## to differentiate with last epoch ckpt
@@ -152,7 +165,7 @@ class TrainingPipeline(BasePipeline):
                     raise RuntimeError("metric '{}' is not available to track for 'save_best_metrics' "
                         "argument, available metrics: {}".format(m, list(available_metrics.keys())))
                 callbacks.append(ModelCheckpoint(
-                    filename=fname_prefix + "-best_" + m,
+                    filename=fname_prefix + "-best_{" + m + ":.2f}",
                     monitor=m,
                     mode=available_metrics[m]
                 ))
@@ -172,13 +185,16 @@ class TrainingPipeline(BasePipeline):
         }
 
         logger_cfg = None
-        if "logging" in config:
+        if no_log:
+            return False
+        elif "logging" in config:
             logger_cfg = config["logging"]
         elif "logger" in config["trainer"]:
             logger_cfg = config["trainer"]["logger"]
 
-        if logger_cfg is None or no_log:
-            return False
+        if logger_cfg is None:
+            ## use default (tensorboard) logger
+            return True
         if isinstance(logger_cfg, bool):
             return logger_cfg
 
@@ -221,6 +237,7 @@ class TrainingPipeline(BasePipeline):
         trainer_args.update(TrainingPipeline._trainer_args_device(config))
         trainer_args.update(TrainingPipeline._trainer_args_validation_interval(config))
         trainer_args.update(TrainingPipeline._trainer_args_set_seed(config))
+        trainer_args.update(TrainingPipeline._trainer_args_accumulate_grad(config))
 
         if 'args' in config.trainer and config.trainer.args is not None:
             if isinstance(config.trainer.args, dict):
@@ -238,6 +255,7 @@ class TrainingPipeline(BasePipeline):
             callbacks = TrainingPipeline.create_model_checkpoints(config, model)
             callbacks.append(TrainingPipeline.create_lr_monitor(config))
             callbacks.append(TrainingPipeline.create_progeress_bar(config))
+            callbacks.append(AlwaysSaveCheckpointCallback())
             loggers = TrainingPipeline.create_loggers(experiment_dir, config, no_log)
 
         TrainingPipeline._patch_trainer_components()
@@ -270,6 +288,15 @@ class TrainingPipeline(BasePipeline):
         ## patch for additional checkpoint data
         trainer.checkpoint_connector = CheckpointConnector(trainer)
         return trainer
+
+    @staticmethod
+    def _patch_model_checkpoint():
+        ## patches for model checkpoint
+        ModelCheckpoint.FILE_EXTENSION = ".pth"
+        ModelCheckpoint._add_backward_monitor_support = patch_checkpoint_backward_monitor
+        if parse_version(pl.__version__) < parse_version('1.1.2'):
+            ## this patch fixed in 1.1.2
+            ModelCheckpoint._get_metric_interpolated_filepath_name = patch_checkpoint_filepath_name
 
     @staticmethod
     def run_sanity_check(model, train_dataloader, val_dataloader=None, **trainer_kwargs):
@@ -372,6 +399,36 @@ class TrainingPipeline(BasePipeline):
                     type(seed_cfg), seed_cfg))
         return dict(deterministic=deterministic, benchmark=benchmark)
 
+    @staticmethod
+    def _trainer_args_accumulate_grad(config):
+        accumulate = 1
+
+        is_old_cfg_avail = ('driver' in config['trainer'] and 'args' in config['trainer']['driver'] and 
+            'accumulation_step' in config['trainer']['driver']['args'])
+        is_new_cfg_avail = ('accumulate_step' in config['trainer'])
+        if is_old_cfg_avail:
+            accumulate = config['trainer']['driver']['args']['accumulation_step']
+        elif is_new_cfg_avail:
+            accumulate = config['trainer']['accumulate_step']
+
+        if isinstance(accumulate, int):
+            is_value_valid = (accumulate > 0)
+        elif isinstance(accumulate, dict):
+            is_value_valid = all(x > 0 for x in accumulate.values())
+        else:
+            raise TypeError("Invalid type of {} in '{}' with value of {}, expected 'int' or 'dict'."
+                .format(
+                    type(accumulate), accumulate, ('config.driver.args.accumulation_step'
+                    if is_old_cfg_avail else 'config.trainer.accumulate_step')
+                ))
+        if not is_value_valid:
+            raise ValueError("Expected value of '{}' to be positive integer (>0), got {}"
+                .format(
+                    ('config.driver.args.accumulation_step' if is_old_cfg_avail 
+                    else 'config.trainer.accumulate_step'), accumulate
+                ))
+        return dict(accumulate_grad_batches=accumulate)
+
 
     @staticmethod
     def _copy_data_to_model(dataloader, config, model):
@@ -384,7 +441,7 @@ class TrainingPipeline(BasePipeline):
         model.config = deepcopy(config)
 
     @staticmethod
-    def _get_config(config):
+    def load_config(config):
         if isinstance(config, (str, Path)):
             config = load_config(config)
         config = EasyDict(config)
@@ -403,13 +460,11 @@ class TrainingPipeline(BasePipeline):
 
     @staticmethod
     def _dump_config(config, dir):
-        import yaml
-        from vortex.development.utils.common import easydict_to_dict
-
         fpath = Path(dir).joinpath("config.yml")
+        fpath.parent.mkdir(parents=True, exist_ok=True)
         config = easydict_to_dict(config)
         with fpath.open('w') as f:
-            yaml.dump(config, f, yaml.Dumper)
+            yaml.dump(config, f, yaml.Dumper, sort_keys=False)
         return fpath
 
     @staticmethod
@@ -459,3 +514,32 @@ class TrainingPipeline(BasePipeline):
             else:
                 ckpt_path = None
         return ckpt_path, state_dict
+
+    @staticmethod
+    def _format_experiment_dir(config):
+        base_exp_dir = Path('.').joinpath("experiments", "outputs")
+        if 'output_directory' in config and config['output_directory']:
+            base_exp_dir = Path(config['output_directory'])
+        exp_dir = config['experiment_name']
+        return base_exp_dir.joinpath(exp_dir)
+
+    @staticmethod
+    def _copy_final_checkpoint(trainer, config, experiment_dir, hypopt):
+        if hypopt:
+            return ""
+
+        ckpt_last_callback = [c for c in trainer.checkpoint_callbacks
+            if c.monitor is None and not hasattr(c, "save_epoch")]
+        if len(ckpt_last_callback) == 0:
+            return ""
+
+        ckpt_last_callback = ckpt_last_callback[0]
+        if ckpt_last_callback.best_model_path:
+            last_fpath = Path(ckpt_last_callback.best_model_path)
+            fname = f"{config['experiment_name']}.pth"
+            ## copy weight to experiment dir
+            final_fpath = Path(experiment_dir).joinpath(fname)
+            shutil.copy(last_fpath, str(final_fpath))
+            ## rename last epoch filename
+            shutil.move(last_fpath, last_fpath.parent.joinpath(fname))
+            return str(final_fpath)

@@ -150,7 +150,8 @@ def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = No
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str,
-                   wrapper_format : str = 'default'
+                   wrapper_format : str = 'default',
+                   force_normalize: bool = False
                    ):
     from vortex.development.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 
@@ -180,21 +181,28 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
+    if force_normalize and wrapper_format != 'default':
+        raise RuntimeError("'force_normalize' argument only supported for 'default' wrapper_format, "
+            "e.g. use 'PytorchDataLoader' dataloader module.")
+
+    kwargs = dict()
     if wrapper_format=='default':
         dataset_wrapper = DefaultDatasetWrapper
+        kwargs.update(force_normalize=force_normalize)
     elif wrapper_format=='basic':
         dataset_wrapper = BasicDatasetWrapper
     else:
         raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
     return dataset_wrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
-                          augmentations=augmentations, dataset_args=dataset_args)
+                          augmentations=augmentations, dataset_args=dataset_args, **kwargs)
 
 def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
                       collate_fn : Union[Callable,str,None] = None,
+                      force_normalize: bool = False
                       ) -> Type[Iterable]:
     """Function to create iterable data loader object
 
@@ -204,6 +212,8 @@ def create_dataloader(dataloader_config : EasyDict,
         preprocess_config (EasyDict): Experiment file configuration at `model.preprocess_args` section, as EasyDict object
         stage (str, optional): Specify the experiment stage, either 'train' or 'validate'. Defaults to 'train'.
         collate_fn (Union[Callable,str,None], optional): Collate function to reformat batch data serving. Defaults to None.
+        force_normalize (bool): force normalize and permute of returned batch, useful if you want to return
+            batches like in train stage. Defaults to False.
 
     Raises:
         TypeError: Raises if provided `collate_fn` type is neither 'str' (registered in Vortex), Callable (custom function), or None
@@ -298,7 +308,8 @@ def create_dataloader(dataloader_config : EasyDict,
         dataset_config=dataset_config, 
         stage=stage, 
         preprocess_config=preprocess_config,
-        wrapper_format=wrapper_format[dataloader_module]
+        wrapper_format=wrapper_format[dataloader_module],
+        force_normalize=force_normalize
     )
 
     if isinstance(collate_fn, str):

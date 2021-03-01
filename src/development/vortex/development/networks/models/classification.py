@@ -160,7 +160,7 @@ class Softmax(ClassificationModel):
         self.backbone = get_backbone(
             network_args['backbone'],
             n_classes=num_classes,
-            pretrained=network_args['pretrained_backbone'],
+            pretrained=network_args.get('pretrained_backbone', True),
             feature_type="classifier"
         )
 
@@ -181,6 +181,8 @@ class Softmax(ClassificationModel):
 
     def training_step(self, batch, batch_idx):
         img, target = batch
+        if target.ndim == 2:
+            target = target.squeeze(1)
         pred = self(img)
         loss = self.criterion(pred, target)
         return {
@@ -191,6 +193,8 @@ class Softmax(ClassificationModel):
 
     def validation_step(self, batch, batch_idx):
         img, target = batch
+        if target.ndim == 2:
+            target = target.squeeze(1)
         pred = self(img)
         loss = self.criterion(pred, target)
         return {
