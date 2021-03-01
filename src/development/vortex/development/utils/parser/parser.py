@@ -124,8 +124,8 @@ def __seed_tree(required: bool = True, exp_step: ExperimentType = ExperimentType
 def __dataloader_tree(required: bool = True, exp_step: ExperimentType = ExperimentType.UNKNOWN):
     dataloader = ExperimentNode('dataloader', required=required,
                                 docstring='dataloader currently only support pytorch DataLoader')
-    loader = ExperimentNode('module', parent=dataloader)
-    loader_args = ExperimentNode('args', parent=dataloader)
+    loader = ExperimentNode('module', parent=dataloader, required=False)
+    loader_args = ExperimentNode('args', parent=dataloader, required=False)
     # collater = ExperimentNode('collater', parent=dataloader)
     # collater_class = ExperimentNode('collater', parent=collater)
     # collater_args = ExperimentNode('args', parent=collater)
@@ -413,10 +413,10 @@ def _check_deprecation(config):
         warnings.warn("'config.dataset.dataloader.dataloader' is now changed to "
             "'config.dataloader.module'")
         config.dataloader.module = config.dataloader.pop('dataloader')
-    if 'dataloader' in config and config.dataloader.module.lower() == 'dataloader':
-        warnings.warn("'DataLoader' module in 'config.dataloader.module' is now "
-            "changed to 'PytorchDataLoader'")
-        config.dataloader.module = "PytorchDataLoader"
+    # if 'dataloader' in config and config.dataloader.module.lower() == 'dataloader':
+    #     warnings.warn("'DataLoader' module in 'config.dataloader.module' is now "
+    #         "changed to 'PytorchDataLoader'")
+    #     config.dataloader.module = "PytorchDataLoader"
 
     if 'trainer' in config and 'scheduler' in config.trainer:
         warnings.warn("'config.trainer.scheduler' is now changed to "

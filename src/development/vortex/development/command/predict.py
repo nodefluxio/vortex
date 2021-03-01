@@ -3,7 +3,7 @@ import warnings
 import torch
 
 from vortex.development.utils.parser import load_config
-from vortex.development.core.pipelines import PytorchPredictionPipeline
+from vortex.development.pipelines import PytorchPredictionPipeline
 
 description = 'Vortex Pytorch model prediction pipeline; may receive multiple image(s) for batched prediction'
 

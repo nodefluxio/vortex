@@ -1,7 +1,64 @@
+import torch
+import shutil
+
+from torch.optim import Optimizer
+from copy import deepcopy
 from pathlib import Path
 from easydict import EasyDict
-import shutil
 from typing import Union
+
+from . import lr_scheduler
+
+
+def create_optimizer(config, param_groups) -> Optimizer:
+    """create optimizer from vortex config
+    """
+    optim_cfg = config['trainer']['optimizer']
+    if 'method' in optim_cfg:
+        module = optim_cfg['method']
+    else:
+        module = optim_cfg['module']
+    kwargs = deepcopy(optim_cfg['args'])
+    kwargs.update(dict(params=param_groups))
+    if not hasattr(torch.optim, module):
+        raise RuntimeError("Optimizer module '{}' is not available, see "
+            "https://pytorch.org/docs/stable/optim.html#algorithms for "
+            "all available optimizer modules".format(module))
+    optim = getattr(torch.optim, module)(**kwargs)
+    return optim
+
+def create_scheduler(config, optimizer) -> dict:
+    """create scheduler and the PL config as dict from vortex config
+    """
+    if not 'lr_scheduler' in config['trainer'] or config['trainer']['lr_scheduler'] is None:
+        return dict()
+
+    scheduler_cfg = config['trainer']['lr_scheduler']
+    if 'method' in scheduler_cfg:
+        module = scheduler_cfg['method']
+    else:
+        module = scheduler_cfg['module']
+    if not hasattr(lr_scheduler, module):
+        raise RuntimeError("LR Scheduler method '{}' is not available".format(module))
+    interval = "epoch" if module in lr_scheduler.step_update_map['epoch_update'] \
+                else "step"
+
+    monitor = None
+    if 'monitor' in scheduler_cfg:
+        monitor = scheduler_cfg['monitor']
+
+    kwargs = scheduler_cfg['args']
+    kwargs.update(dict(optimizer=optimizer))
+    scheduler = getattr(lr_scheduler, module)(**kwargs)
+    ret = {
+        'lr_scheduler': scheduler,
+        'interval': interval,
+        'strict': True,
+    }
+    if monitor:
+        ret.update(dict(monitor=monitor))
+    return ret
+
 
 def check_and_create_output_dir(config : EasyDict,
                                 experiment_logger = None,
@@ -28,3 +85,17 @@ def check_and_create_output_dir(config : EasyDict,
             shutil.copy(config_path,str(run_directory/'config.yml'))
 
     return experiment_directory,run_directory
+
+def easydict_to_dict(edict):
+    base = {}
+    for key, value in edict.items():
+        if isinstance(value, EasyDict):
+            base[key] = easydict_to_dict(value)
+        elif isinstance(value, (list, tuple)):
+            base[key] = type(value)(
+                easydict_to_dict(item) if isinstance(item, EasyDict) else
+                    item for item in value
+            )
+        else:
+            base[key] = value
+    return base

@@ -1,6 +1,5 @@
-import os
-import sys
 import logging
+import warnings
 import torch
 
 from copy import deepcopy
@@ -9,7 +8,7 @@ from easydict import EasyDict
 from typing import Union, Callable, Type, Iterable
 from collections import OrderedDict
 
-from vortex.development.networks.models import create_model_components
+from vortex.development.networks.models import supported_models
 from vortex.development.utils.data.collater import create_collater
 from vortex.development.utils.logger import create_logger
 from vortex.runtime.factory import create_runtime_model
@@ -22,15 +21,19 @@ __all__ = ['create_model',
         #    'create_exporter'
 ]
 
-def create_model(model_config : EasyDict,
-                 state_dict : Union[str, dict, Path] = None,
-                 stage : str = 'train') -> EasyDict:
+def create_model(model_config: EasyDict, state_dict: Union[str, dict, Path] = None, stage: str = None) -> torch.nn.Module:
     """Function to create model and it's signature components. E.g. loss function, collate function, etc
 
     Args:
         model_config (EasyDict): Experiment file configuration at `model` section, as EasyDict object
-        state_dict (Union[str, dict, Path], optional): [description]. `model` Pytorch state dictionary or commonly known as weight, can be provided as the path to the file, or the returned dictionary object from `torch.load`. If this param is provided, it will override checkpoint specified in the experiment file. Defaults to None.
-        stage (str, optional): If set to 'train', this will enforce that the model must have `loss` and `collate_fn` attributes, hence it will make sure model can be used for training stage. If set to 'validate' it will ignore those requirements but cannot be used in training pipeline, but may still valid for other pipelines. Defaults to 'train'.
+        state_dict (Union[str, dict, Path], optional): [description]. `model` Pytorch state dictionary or commonly known as weight, 
+            can be provided as the path to the file, or the returned dictionary object from `torch.load`.
+            If this param is provided, it will override checkpoint specified in the experiment file.
+            Defaults to None.
+        stage (str, optional): If set to 'train', this will enforce that the model must have `loss` and `collate_fn` attributes,
+            hence it will make sure model can be used for training stage. If set to 'validate' it will ignore those requirements 
+            but cannot be used in training pipeline, and also may still valid for other pipelines.
+            Defaults to 'train'.
 
     Raises:
         TypeError: Raises if the provided `stage` not in 'train' or 'validate'
@@ -45,7 +48,8 @@ def create_model(model_config : EasyDict,
         - `preprocess` : model's preprocessing module
         - `postprocess` : model's postprocessing module
         - `loss` : if provided, module for model's loss function
-        - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format into desirable format that can be accepted by `loss` components
+        - `collate_fn` : if provided, module to be embedded to dataloader's `collate_fn` function to modify dataset label's format
+            into desirable format that can be accepted by `loss` components
 
         ```python
         from vortex.development.core.factory import create_model
@@ -78,10 +82,16 @@ def create_model(model_config : EasyDict,
         ```
     """
 
-    if stage not in ['train','validate']:
-        raise TypeError('Unknown model "stage" argument, got {}, expected "train" or "validate"'%stage)
+    if stage is not None:
+        warnings.warn("Deprecated argument 'stage' is used, you can remove this safely.", DeprecationWarning)
 
     logging.info('Creating Pytorch model from experiment file')
+
+    if "model" in model_config:
+        model_config = model_config["model"]
+    if "name" not in model_config:
+        raise RuntimeError("Config is not valid, expected 'config.model.name' argument but not found, "
+            "got model config: {}".format(model_config))
 
     model_name = model_config.name
     try:
@@ -100,44 +110,48 @@ def create_model(model_config : EasyDict,
         postprocess_args = model_config.postprocess_args
     except:
         postprocess_args = {}
-    model_components = create_model_components(
-        model_name,
+
+    model = supported_models[model_name](
         preprocess_args=preprocess_args,
         network_args=network_args,
         loss_args=loss_args,
         postprocess_args=postprocess_args,
-        stage=stage)
-
-    if not isinstance(model_components, EasyDict):
-        model_components = EasyDict(model_components)
+    )
 
     if 'init_state_dict' in model_config or state_dict is not None:
+        model_path = None
         if isinstance(state_dict, Path):
             state_dict = str(state_dict)
 
-        model_path = None
         # Load state_dict from config if specified in experiment file
         if 'init_state_dict' in model_config and state_dict is None:
-            logging.info("Loading state_dict from configuration file : {}".format(model_config.init_state_dict))
+            logging.info("Loading state_dict from configuration file: {}".format(model_config.init_state_dict))
             model_path = model_config.init_state_dict
         # If specified using function's parameter, override the experiment config init_state_dict
         elif isinstance(state_dict, str):
-            logging.info("Loading state_dict : {}".format(state_dict))
+            logging.info("Loading state_dict: {}".format(state_dict))
             model_path = state_dict
+        elif not isinstance(state_dict, dict):
+            ## don't know why you would come to this stage
+            raise RuntimeError("'config.model.init_state_dict' or 'state_dict' argument must be set.")
 
+        ckpt = None
         if ('init_state_dict' in model_config and state_dict is None) or isinstance(state_dict, str):
-            assert model_path
-            ckpt = torch.load(model_path)
-            state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
-        assert isinstance(state_dict, (OrderedDict, dict))
-        model_components.network.load_state_dict(state_dict, strict=True) 
+            ckpt = torch.load(model_path, map_location=torch.device('cpu'))
+        elif isinstance(state_dict, (OrderedDict, dict)):
+            ckpt = state_dict
 
-    return model_components
+        state_dict = ckpt['state_dict'] if 'state_dict' in ckpt else ckpt
+        assert isinstance(state_dict, (OrderedDict, dict))
+        model.load_state_dict(state_dict, strict=True) 
+    return model
+
 
 def create_dataset(dataset_config : EasyDict,
                    preprocess_config : EasyDict,
                    stage : str,
-                   wrapper_format : str = 'default'
+                   wrapper_format : str = 'default',
+                   force_normalize: bool = False
                    ):
     from vortex.development.utils.data.dataset.wrapper import BasicDatasetWrapper, DefaultDatasetWrapper
 
@@ -167,21 +181,28 @@ def create_dataset(dataset_config : EasyDict,
     else:
         raise TypeError('Unknown dataset "stage" argument, got {}, expected "train" or "validate"'%stage)
 
+    if force_normalize and wrapper_format != 'default':
+        raise RuntimeError("'force_normalize' argument only supported for 'default' wrapper_format, "
+            "e.g. use 'PytorchDataLoader' dataloader module.")
+
+    kwargs = dict()
     if wrapper_format=='default':
         dataset_wrapper = DefaultDatasetWrapper
+        kwargs.update(force_normalize=force_normalize)
     elif wrapper_format=='basic':
         dataset_wrapper = BasicDatasetWrapper
     else:
         raise RuntimeError('Unknown dataset `wrapper_format`, should be either "default" or "basic", got {} '.format(wrapper_format))
 
     return dataset_wrapper(dataset=dataset, stage=stage, preprocess_args=preprocess_config,
-                          augmentations=augmentations, dataset_args=dataset_args)
+                          augmentations=augmentations, dataset_args=dataset_args, **kwargs)
 
 def create_dataloader(dataloader_config : EasyDict,
                       dataset_config : EasyDict, 
                       preprocess_config : EasyDict, 
                       stage : str = 'train',
                       collate_fn : Union[Callable,str,None] = None,
+                      force_normalize: bool = False
                       ) -> Type[Iterable]:
     """Function to create iterable data loader object
 
@@ -191,6 +212,8 @@ def create_dataloader(dataloader_config : EasyDict,
         preprocess_config (EasyDict): Experiment file configuration at `model.preprocess_args` section, as EasyDict object
         stage (str, optional): Specify the experiment stage, either 'train' or 'validate'. Defaults to 'train'.
         collate_fn (Union[Callable,str,None], optional): Collate function to reformat batch data serving. Defaults to None.
+        force_normalize (bool): force normalize and permute of returned batch, useful if you want to return
+            batches like in train stage. Defaults to False.
 
     Raises:
         TypeError: Raises if provided `collate_fn` type is neither 'str' (registered in Vortex), Callable (custom function), or None
@@ -261,17 +284,35 @@ def create_dataloader(dataloader_config : EasyDict,
     dataset_config = deepcopy(dataset_config)
     preprocess_config = deepcopy(preprocess_config)
 
-    dataloader_module = dataloader_config.module
-    # For backward compatibility purpose
+    if stage not in ('train', 'validate'):
+        raise RuntimeError("Unknown stage of {}, expected value: 'train' or 'validate'"
+            .format(stage))
+
+    cfg_field = 'eval' if stage == 'validate' else stage
+    if "module" in dataloader_config:
+        dataloader_module = dataloader_config.module
+        dataloader_args = dataloader_config.args
+    elif cfg_field in dataloader_config:
+        dataloader_module = dataloader_config[cfg_field]['module']
+        dataloader_args = dataloader_config[cfg_field]['args']
+    else:
+        raise RuntimeError("Dataloader module config for stage {} is not found, please "
+            "specify them in 'config.dataloader.module' or 'config.dataloader.{}.module'. "
+            "dataloader config: {}".format(stage, cfg_field, dataloader_config))
+
+    # for backward compatibility
     if dataloader_module == 'DataLoader':
         dataloader_module = 'PytorchDataLoader'
-    dataloader_args = dataloader_config.args
 
-    dataset = create_dataset(dataset_config=dataset_config, 
-                             stage=stage, 
-                             preprocess_config=preprocess_config,
-                             wrapper_format=wrapper_format[dataloader_module])
-    if isinstance(collate_fn,str):
+    dataset = create_dataset(
+        dataset_config=dataset_config, 
+        stage=stage, 
+        preprocess_config=preprocess_config,
+        wrapper_format=wrapper_format[dataloader_module],
+        force_normalize=force_normalize
+    )
+
+    if isinstance(collate_fn, str):
         collater_args = {}
         try:
             collater_args = dataloader_config.collater.args
@@ -279,25 +320,20 @@ def create_dataloader(dataloader_config : EasyDict,
             collater_args = {}
         collater_args['dataformat'] = dataset.data_format
         collate_fn = create_collater(collate_fn, **collater_args)
-
-        # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
-        # to disable auto pad augmentation
-        if collate_fn.disable_image_auto_pad:
-            dataset.disable_image_auto_pad()
-
     elif not (hasattr(collate_fn, '__call__') or collate_fn is None):
         raise TypeError("Unknown type of 'collate_fn', should be in the type of string, "
             "Callable, or None. Got {}".format(type(collate_fn)))
 
-    if 'module' in dataloader_config:
-        dataloader_module = dataloader_config.module
-    elif 'dataloader' in dataloader_config:
-        dataloader_module = dataloader_config.dataloader
-    else:
-        raise RuntimeError("Dataloader module in 'config.dataloader.module' is not set "
-            "in config.dataloader ({}).".format(dataloader_config))
+    # Re-initialize dataset (Temp workaround), adding `disable_image_auto_pad` to collate_fn object 
+    # to disable auto pad augmentation
+    disable_auto_pad = (
+        collate_fn is not None and
+        hasattr(collate_fn, "disable_image_auto_pad") and collate_fn.disable_image_auto_pad
+    )
+    if disable_auto_pad:
+        dataset.disable_image_auto_pad()
 
-    dataloader = create_loader(dataloader_module,dataset,collate_fn = collate_fn, **dataloader_args)
+    dataloader = create_loader(dataloader_module, dataset, collate_fn=collate_fn, **dataloader_args)
     return dataloader
 
 def create_experiment_logger(config : EasyDict):

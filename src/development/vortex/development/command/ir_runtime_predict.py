@@ -1,7 +1,7 @@
 import argparse
 import warnings
 
-from vortex.development.core.pipelines import IRPredictionPipeline
+from vortex.development.pipelines import IRPredictionPipeline
 from vortex.runtime import model_runtime_map
 
 description = 'Vortex IR model prediction pipeline; may receive multiple image(s) for batched prediction'

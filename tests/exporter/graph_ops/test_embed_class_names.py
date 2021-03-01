@@ -2,9 +2,12 @@ import onnx
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops import get_op
 from vortex.development.exporter.utils.onnx.graph_ops.helper import get_Ops
 from vortex.runtime.onnx.helper import get_class_names
+
+# shorter version of registry
+from vortex.development import ONNX_GRAPH_OPS as graph_ops
+get_op = graph_ops.create_from_args
 
 def dummy_model():
     # Create two input information (ValueInfoProto)
@@ -33,17 +36,13 @@ def dummy_model():
     model_def = helper.make_model(graph_def, producer_name='testing')
     return model_def
 
-def test_embed_class_names():
-    """Embed class names to graph
-    """
-    model = dummy_model()
+# common test var
+class_names = dict(
+    cat=0,
+    dog=1,
+)
 
-    class_names = dict(
-        cat=0,
-        dog=1,
-    )
-    op = get_op('EmbedClassNames', class_names=class_names)
-
+def op_test(op, model):
     # actually transform model
     model = op(model)
 
@@ -69,3 +68,17 @@ def test_embed_class_names():
     names = get_class_names(model)
     # note: get_class_names return lists
     assert names == ['cat', 'dog']
+
+def test_embed_class_names():
+    """Embed class names to graph
+    """
+    model = dummy_model()
+
+    op = get_op('EmbedClassNames', class_names=class_names)
+    op_test(op, model)
+
+def test_registry():
+    assert "EmbedClassNames" in graph_ops
+    model = dummy_model()
+    op = graph_ops.create_from_args('EmbedClassNames', class_names=class_names)
+    op_test(op, model)

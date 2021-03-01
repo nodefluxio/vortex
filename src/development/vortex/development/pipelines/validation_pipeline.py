@@ -7,11 +7,10 @@ from typing import Union
 
 from vortex.development.utils.parser import check_config
 from vortex.development.utils.common import check_and_create_output_dir
-from vortex.development.core.factory import create_model,create_dataset
+from vortex.development.utils.factory import create_model, create_dataset
 from vortex.development.utils.reporting.report import generate_reports
 from vortex.runtime import model_runtime_map
-from vortex.development.core.pipelines.base_pipeline import BasePipeline
-from vortex.development.core import engine as engine
+from vortex.development.pipelines.base_pipeline import BasePipeline
 
 __all__ = ['PytorchValidationPipeline','IRValidationPipeline']
 
@@ -257,7 +256,7 @@ class PytorchValidationPipeline(BaseValidationPipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import PytorchValidationPipeline
+            from vortex.development.pipelines import PytorchValidationPipeline
             
             # Parse config
             config_path = 'experiments/config/example.yml'
@@ -306,7 +305,7 @@ class IRValidationPipeline(BaseValidationPipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import IRValidationPipeline
+            from vortex.development.pipelines import IRValidationPipeline
             
             # Parse config
             config_path = 'experiments/config/example.yml'

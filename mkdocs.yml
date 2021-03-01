@@ -21,8 +21,8 @@ nav:
         - 'Backbones Network' : 'modules/backbones.md'
         - 'Graph Exporter' : 'modules/exporter.md'
     - API :
-        - 'vortex.development.core.pipelines' : 'api/vortex.development.core.pipelines.md'
-        - 'vortex.development.core.factory' : 'api/vortex.development.core.factory.md'
+        - 'vortex.development.pipelines' : 'api/vortex.development.pipelines.md'
+        - 'vortex.development.utils.factory' : 'api/vortex.development.utils.factory.md'
         - 'vortex.runtime' : 'api/vortex.runtime.md'
     - Repository : 'https://github.com/nodefluxio/vortex'
 markdown_extensions:

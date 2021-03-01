@@ -7,9 +7,9 @@ import torch
 import warnings
 
 from vortex.development.utils.common import check_and_create_output_dir
-from vortex.development.core.factory import create_model,create_dataset,create_exporter
+from vortex.development.utils.factory import create_model,create_dataset,create_exporter
 from vortex.development.predictor import create_predictor
-from vortex.development.core.pipelines.base_pipeline import BasePipeline
+from vortex.development.pipelines.base_pipeline import BasePipeline
 
 __all__ = ['GraphExportPipeline']
 
@@ -31,8 +31,8 @@ class GraphExportPipeline(BasePipeline):
         Example:
             ```python
             from vortex.development.utils.parser import load_config
-            from vortex.development.core.pipelines import GraphExportPipeline
-            
+            from vortex.development.pipelines import GraphExportPipeline
+
             # Parse config
             config = load_config('experiments/config/example.yml')
             graph_exporter = GraphExportPipeline(config=config,
