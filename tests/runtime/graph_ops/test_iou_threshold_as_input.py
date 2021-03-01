@@ -3,7 +3,7 @@ import numpy as np
 from functools import partial
 from onnx import helper
 from onnx import AttributeProto, TensorProto, GraphProto
-from vortex.development.exporter.utils.onnx.graph_ops.helper import get_Ops, get_inputs, make_constants
+from vortex.runtime.onnx.graph_ops.helper import get_Ops, get_inputs, make_constants
 
 from vortex.development import ONNX_GRAPH_OPS as graph_ops
 get_op = graph_ops.create_from_args
