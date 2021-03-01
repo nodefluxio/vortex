@@ -8,8 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Pytorch Lightning training pipeline
+- registry class
+- model base class
+- add 'config.trainer.validation_interval' field with same functionality as 'config.validator.val_epoch'
+- add 'config.trainer.logger' field with same functionality as 'config.logging'
+- add 'config.dataloader.train' and 'config.dataloader.eval' field to support different args for train and val dataloader
+- support for bool value for logger config, with default logger use tensorboard logger
 
 ### Changed
+- `model_components` is removed, and changed with model base class
+- deprecating 'config.seed', and move to 'config.trainer.seed'
+- deprecating `stage` argument in `create_model`
 
 ### Fixed
 
