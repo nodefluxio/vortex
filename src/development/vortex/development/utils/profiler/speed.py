@@ -22,13 +22,19 @@ class TimeData(ContextDecorator):
         self.total_time += dt
         self.data.append(dt)
     
-    def __enter__(self) :
+    def start(self):
         self.t0 = time()
+
+    def stop(self):
+        self.t1 = time()
+        self.update(self.t1 - self.t0)
+
+    def __enter__(self) :
+        self.start()
         return self
     
     def __exit__(self, *exc) :
-        self.t1 = time()
-        self.update(self.t1 - self.t0)
+        self.stop()
     
     def report(self) :
         results = dict(
