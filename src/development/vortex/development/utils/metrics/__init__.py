@@ -8,5 +8,9 @@ from .classification import (
     label_binarize,
     pr_curve,
     roc_curve,
-    roc_auc_score
+    roc_auc_score,
+    ClassificationMetrics,
+    MetricBase
 )
+
+from .registry import METRICS
