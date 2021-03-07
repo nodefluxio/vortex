@@ -241,28 +241,27 @@ class GPUMonitor(threading.Thread) :
         sns.set(style="whitegrid")
         fig, (ax1, ax2) = plt.subplots(2)
         plt.gcf().set_size_inches((6.4,9.6))
-        gpu_data = np.asarray(self.memory)
-        columns = []
-        gpu_memory_usage = []
+        gpu_data = {}
         for key, memory in self.process_memory.items() :
             memory_used = memory['memory']
-            columns.append('{} ({})'.format(memory['name'], np.mean(memory_used)))  # e.g. python (500), python3.5 (1024)
-            gpu_memory_usage.append(memory_used)
-        columns.append("system")
-        linewidth, columns = 0.5, ['memory'] if not len(columns) else columns
-        gpu_memory_usage.append(self.memory)
-        gpu_memory_usage = np.asarray(gpu_memory_usage).transpose(1,0)
-        gpu_data = pd.DataFrame(
-            gpu_memory_usage, 
-            columns=columns
+            field_name = '{} ({})'.format(memory['name'], np.mean(memory_used))
+            columns.append(field_name)  # e.g. python (500), python3.5 (1024)
+            gpu_data[field_name] = memory_used
+        gpu_data['system'] = np.asarray(self.memory)
+        # make sure values in gpu_data have same length, so pandas won't complains
+        n_data = min(map(lambda v: len(v), gpu_data.values()))
+        for key, value in gpu_data.items():
+            gpu_data[key] = value[:n_data]
+        linewidth = 0.5
+        gpu_df = pd.DataFrame(
+            data=gpu_data
         )
-        sns.lineplot(data=gpu_data, palette="tab10", linewidth=linewidth, dashes=False, ax=ax1)
+        sns.lineplot(data=gpu_df, palette="tab10", linewidth=linewidth, dashes=False, ax=ax1)
         ax1.set(xlabel='time (x{0:.2f}s)'.format(self.dt), ylabel='GPU Memory')
         ax1.set_title("GPU Memory")
 
         ax2.set_title("GPU Memory")
-        percentile = np.percentile(gpu_data, q=np.arange(100))
-        ax2.boxplot(gpu_memory_usage, showfliers=False)
+        ax2.boxplot(gpu_data.values(), showfliers=False)
         plt.autoscale()
         plt.tight_layout()
         plt.savefig(output_filename)
