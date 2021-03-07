@@ -145,10 +145,14 @@ class Model(ModelBase):
     
     def validation_step_end(self, validation_step_outputs):
         self.log_dict(self.metrics.compute(), on_epoch=True, prog_bar=True, logger=True)
+        # we know that ClassificationMetrics' state need to be reset
+        self.metrics.eval_init()
 
     def training_epoch_end(self, outs):
         # log epoch metric
         self.log_dict(self.metrics.compute())
+        # we know that ClassificationMetrics' state need to be reset
+        self.metrics.eval_init()
 
     def get_example_inputs(self):
         return self.sample,
@@ -192,7 +196,7 @@ def train():
         pl.loggers.TensorBoardLogger('logs/'),
     ]
     trainer = pl.Trainer(
-        max_epochs=5, gpus=1, logger=loggers
+        max_epochs=50, gpus=1, logger=loggers
     )
     model = Model(10)
     trainer.fit(model, dataset)
@@ -233,5 +237,5 @@ def evaluate():
         md.save(output_filename)
 
 if __name__=='__main__':
-    # train()
+    train()
     evaluate()
