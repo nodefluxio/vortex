@@ -145,6 +145,8 @@ class Model(ModelBase):
     
     def validation_step_end(self, validation_step_outputs):
         self.log_dict(self.metrics.compute(), on_epoch=True, prog_bar=True, logger=True)
+    
+    def validation_epoch_end(self, *args, **kwargs):
         # we know that ClassificationMetrics' state need to be reset
         self.metrics.eval_init()
 
