@@ -25,9 +25,12 @@ class OnnxRuntime(BaseRuntime) :
         'parallel' : 1,
     }
     def __init__(self, model : Union[str,Path], providers : Any, fallback : bool, input_name : str = 'input', output_name : Union[str,List[str]] = 'output', execution_mode : Union[str,int] = 'sequential', graph_optimization_level : Union[str,int] = 'basic') :
+        self._init_session(model, providers, fallback, execution_mode, graph_optimization_level)
+        self._init_properties(model, input_name, output_name)
+
+    def _init_session(self, model: Union[str,Path], providers: Any, fallback: bool, execution_mode, graph_optimization_level):
         import onnxruntime
         import onnx
-        from vortex.runtime.onnx.helper import get_output_format, get_input_specs, get_output_names, get_class_names
 
         sess_options = onnxruntime.SessionOptions()
         if graph_optimization_level in OnnxRuntime.graph_optimization_level.keys() :
@@ -52,15 +55,27 @@ class OnnxRuntime(BaseRuntime) :
             logging.info("disabling onnx runtime fallback")
             self.session.disable_fallback()
 
+    def _init_properties(self, model, input_name, output_name):
+        import onnx
+        from vortex.runtime.onnx.graph_ops.helper import get_output_format, get_input_specs, get_output_names, get_class_names
+        from vortex.runtime.onnx.graph_ops.embed_model_property import EmbedModelProperty
+        from vortex.runtime.onnx.graph_ops.embed_metrics import EmbedMetrics
         onnx_protobuf = onnx.load(model)
-        output_format = get_output_format(onnx_protobuf)
-        input_specs = get_input_specs(onnx_protobuf)
+        # read/parse properties
+        try:
+            props = EmbedModelProperty.parse(onnx_protobuf)
+            output_format = props['output_format']
+            class_names   = props['class_names']
+        except:
+            output_format = get_output_format(onnx_protobuf)
+            class_names = get_class_names(onnx_protobuf)
+        # input specs and output_names
+        input_specs  = get_input_specs(onnx_protobuf)
         output_names = get_output_names(onnx_protobuf)
         if not isinstance(output_name, list) :
             output_name = [output_name]
         assert all(name in output_names for name in output_name), \
             "graph doesn't have output : {}".format(output_name)
-        class_names = get_class_names(onnx_protobuf)
         super(OnnxRuntime,self).__init__(
             input_specs=input_specs, 
             output_name=output_name, 
@@ -68,6 +83,10 @@ class OnnxRuntime(BaseRuntime) :
             class_names=class_names,
         )
         assert len(self.output_name) == 1
+        self.metrics = EmbedMetrics.parse(onnx_protobuf)
+        self.properties = {}
+        for prop in onnx_protobuf.metadata_props:
+            self.properties[prop.key] = prop.value
 
     @staticmethod
     def is_available() :
