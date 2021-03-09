@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.arch_utils import load_pretrained
 
 
@@ -13,21 +13,22 @@ supported_models = [
     'vgg11', 'vgg11_bn', 'vgg13', 'vgg13_bn', 'vgg16', 'vgg16_bn', 'vgg19_bn', 'vgg19'
 ]
 
-model_urls = {
-    'vgg11': 'https://download.pytorch.org/models/vgg11-bbd30ac9.pth',
-    'vgg13': 'https://download.pytorch.org/models/vgg13-c768596a.pth',
-    'vgg16': 'https://download.pytorch.org/models/vgg16-397923af.pth',
-    'vgg19': 'https://download.pytorch.org/models/vgg19-dcbb9e9d.pth',
-    'vgg11_bn': 'https://download.pytorch.org/models/vgg11_bn-6002323d.pth',
-    'vgg13_bn': 'https://download.pytorch.org/models/vgg13_bn-abd245e5.pth',
-    'vgg16_bn': 'https://download.pytorch.org/models/vgg16_bn-6c64b313.pth',
-    'vgg19_bn': 'https://download.pytorch.org/models/vgg19_bn-c79401a0.pth',
+_complete_url = lambda x: 'https://download.pytorch.org/models/' + x
+default_cfgs = {
+    'vgg11': BackboneConfig(pretrained_url=_complete_url('vgg11-bbd30ac9.pth')),
+    'vgg13': BackboneConfig(pretrained_url=_complete_url('vgg13-c768596a.pth')),
+    'vgg16': BackboneConfig(pretrained_url=_complete_url('vgg16-397923af.pth')),
+    'vgg19': BackboneConfig(pretrained_url=_complete_url('vgg19-dcbb9e9d.pth')),
+    'vgg11_bn': BackboneConfig(pretrained_url=_complete_url('vgg11_bn-6002323d.pth')),
+    'vgg13_bn': BackboneConfig(pretrained_url=_complete_url('vgg13_bn-abd245e5.pth')),
+    'vgg16_bn': BackboneConfig(pretrained_url=_complete_url('vgg16_bn-6c64b313.pth')),
+    'vgg19_bn': BackboneConfig(pretrained_url=_complete_url('vgg19_bn-c79401a0.pth')),
 }
 
-class VGG(nn.Module):
+class VGG(BackboneBase):
 
-    def __init__(self, features, num_classes=1000, init_weights=True, norm_layer=None, norm_kwargs=None):
-        super(VGG, self).__init__()
+    def __init__(self, features, num_classes=1000, init_weights=True, norm_layer=None, norm_kwargs=None, default_config=None):
+        super(VGG, self).__init__(default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -45,7 +46,9 @@ class VGG(nn.Module):
             nn.Dropout(),
             nn.Linear(4096, num_classes),
         )
-        self.num_classes = num_classes
+        self._num_classes = num_classes
+
+        self._stages_channel = (64, 128, 256, 512, 512)
         if init_weights:
             self._initialize_weights()
 
@@ -57,14 +60,25 @@ class VGG(nn.Module):
         return x
 
     def get_stages(self):
-        channels = [64, 128, 256, 512, 512]
         stages, tmp = [], []
         for m in self.features:
             tmp.append(m)
             if isinstance(m, nn.MaxPool2d):
                 stages.append(nn.Sequential(*tmp))
                 tmp = []
-        return nn.Sequential(*stages), channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return 4096
 
     def get_classifier(self) :
         return nn.Sequential(
@@ -73,9 +87,16 @@ class VGG(nn.Module):
             self.classifier
         )
 
-    def reset_classifier(self, num_classes):
-        self.num_classes = num_classes
-        self.classifier[-1] = nn.Linear(4096, num_classes)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(4096, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.classifier[-1] = classifier
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -113,7 +134,7 @@ def make_layers(cfg, batch_norm=False, norm_layer=None, norm_kwargs=None):
 
 
 
-default_cfgs = {
+model_cfgs = {
     'vgg11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'vgg13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'vgg16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
@@ -134,11 +155,12 @@ def _vgg(arch, batch_norm, pretrained, progress, **kwargs):
         norm_layer = kwargs['norm_layer']
     if 'norm_kwargs' in kwargs:
         norm_kwargs = kwargs['norm_kwargs']
-    features = make_layers(default_cfgs[arch_stripped], batch_norm=batch_norm, 
+    features = make_layers(model_cfgs[arch_stripped], batch_norm=batch_norm, 
         norm_layer=norm_layer, norm_kwargs=norm_kwargs)
-    model = VGG(features, **kwargs)
+
+    model = VGG(features, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="features.0", progress=progress)
     return model
 
@@ -229,21 +251,3 @@ def vgg19_bn(pretrained=False, progress=True, **kwargs):
         progress (bool): If True, displays a progress bar of the download to stderr
     """
     return _vgg('vgg19_bn', True, pretrained, progress, **kwargs)
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, available model: %s" \
-            % (model_name, supported_models))
-
-    model = eval(f'{model_name}(pretrained=pretrained, num_classes=n_classes, *args,**kwargs)')
-    stages, channels = model.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(model.features, model.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

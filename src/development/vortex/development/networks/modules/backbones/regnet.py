@@ -20,7 +20,7 @@ Modififed by Vortex Team
 import numpy as np
 import torch.nn as nn
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.layers import ConvBnAct, SEModule, AvgPool2dSame, DropPath, ClassifierHead
 from ..utils.arch_utils import load_pretrained
 
@@ -59,33 +59,33 @@ model_cfgs = dict(
 )
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-regnet/' + x
-model_urls = {
-    'regnetx_002': _complete_url('regnetx_002-e7e85e5c.pth'),
-    'regnetx_004': _complete_url('regnetx_004-7d0e9424.pth'),
-    'regnetx_006': _complete_url('regnetx_006-85ec1baa.pth'),
-    'regnetx_008': _complete_url('regnetx_008-d8b470eb.pth'),
-    'regnetx_016': _complete_url('regnetx_016-65ca972a.pth'),
-    'regnetx_032': _complete_url('regnetx_032-ed0c7f7e.pth'),
-    'regnetx_040': _complete_url('regnetx_040-73c2a654.pth'),
-    'regnetx_064': _complete_url('regnetx_064-29278baa.pth'),
-    'regnetx_080': _complete_url('regnetx_080-7c7fcab1.pth'),
-    'regnetx_120': _complete_url('regnetx_120-65d5521e.pth'),
-    'regnetx_160': _complete_url('regnetx_160-c98c4112.pth'),
-    'regnetx_320': _complete_url('regnetx_320-8ea38b93.pth'),
-    'regnety_002': _complete_url('regnety_002-e68ca334.pth'),
-    'regnety_004': _complete_url('regnety_004-0db870e6.pth'),
-    'regnety_006': _complete_url('regnety_006-c67e57ec.pth'),
-    'regnety_008': _complete_url('regnety_008-dc900dbe.pth'),
-    'regnety_016': _complete_url('regnety_016-54367f74.pth'),
-    'regnety_032': 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/regnety_032_ra-7f2439f9.pth',
-    'regnety_040': _complete_url('regnety_040-f0d569f9.pth'),
-    'regnety_064': _complete_url('regnety_064-0a48325c.pth'),
-    'regnety_080': _complete_url('regnety_080-e7f3eb93.pth'),
-    'regnety_120': _complete_url('regnety_120-721ba79a.pth'),
-    'regnety_160': _complete_url('regnety_160-d64013cd.pth'),
-    'regnety_320': _complete_url('regnety_320-ba464b29.pth'),
+default_cfgs = {
+    'regnetx_002': BackboneConfig(pretrained_url=_complete_url('regnetx_002-e7e85e5c.pth')),
+    'regnetx_004': BackboneConfig(pretrained_url=_complete_url('regnetx_004-7d0e9424.pth')),
+    'regnetx_006': BackboneConfig(pretrained_url=_complete_url('regnetx_006-85ec1baa.pth')),
+    'regnetx_008': BackboneConfig(pretrained_url=_complete_url('regnetx_008-d8b470eb.pth')),
+    'regnetx_016': BackboneConfig(pretrained_url=_complete_url('regnetx_016-65ca972a.pth')),
+    'regnetx_032': BackboneConfig(pretrained_url=_complete_url('regnetx_032-ed0c7f7e.pth')),
+    'regnetx_040': BackboneConfig(pretrained_url=_complete_url('regnetx_040-73c2a654.pth')),
+    'regnetx_064': BackboneConfig(pretrained_url=_complete_url('regnetx_064-29278baa.pth')),
+    'regnetx_080': BackboneConfig(pretrained_url=_complete_url('regnetx_080-7c7fcab1.pth')),
+    'regnetx_120': BackboneConfig(pretrained_url=_complete_url('regnetx_120-65d5521e.pth')),
+    'regnetx_160': BackboneConfig(pretrained_url=_complete_url('regnetx_160-c98c4112.pth')),
+    'regnetx_320': BackboneConfig(pretrained_url=_complete_url('regnetx_320-8ea38b93.pth')),
+    'regnety_002': BackboneConfig(pretrained_url=_complete_url('regnety_002-e68ca334.pth')),
+    'regnety_004': BackboneConfig(pretrained_url=_complete_url('regnety_004-0db870e6.pth')),
+    'regnety_006': BackboneConfig(pretrained_url=_complete_url('regnety_006-c67e57ec.pth')),
+    'regnety_008': BackboneConfig(pretrained_url=_complete_url('regnety_008-dc900dbe.pth')),
+    'regnety_016': BackboneConfig(pretrained_url=_complete_url('regnety_016-54367f74.pth')),
+    'regnety_032': BackboneConfig(pretrained_url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/regnety_032_ra-7f2439f9.pth'),
+    'regnety_040': BackboneConfig(pretrained_url=_complete_url('regnety_040-f0d569f9.pth')),
+    'regnety_064': BackboneConfig(pretrained_url=_complete_url('regnety_064-0a48325c.pth')),
+    'regnety_080': BackboneConfig(pretrained_url=_complete_url('regnety_080-e7f3eb93.pth')),
+    'regnety_120': BackboneConfig(pretrained_url=_complete_url('regnety_120-721ba79a.pth')),
+    'regnety_160': BackboneConfig(pretrained_url=_complete_url('regnety_160-d64013cd.pth')),
+    'regnety_320': BackboneConfig(pretrained_url=_complete_url('regnety_320-ba464b29.pth')),
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 def quantize_float(f, q):
@@ -227,7 +227,7 @@ class RegStage(nn.Module):
         return x
 
 
-class RegNet(nn.Module):
+class RegNet(BackboneBase):
     """RegNet model.
 
     Paper: https://arxiv.org/abs/2003.13678
@@ -235,13 +235,13 @@ class RegNet(nn.Module):
     """
 
     def __init__(self, cfg, in_chans=3, num_classes=1000, output_stride=32, drop_path_rate=0.,
-                 drop_rate=0., zero_init_last_bn=True, norm_layer=None, norm_kwargs=None):
-        super().__init__()
+                 drop_rate=0., zero_init_last_bn=True, norm_layer=None, norm_kwargs=None, default_config=None):
+        super().__init__(default_config)
         norm_layer = norm_layer or nn.BatchNorm2d
         norm_kwargs = norm_kwargs or {}
 
         # TODO add drop block, drop path, anti-aliasing, custom bn/act args
-        self.num_classes = num_classes
+        self._num_classes = num_classes
         self.drop_rate = drop_rate
         assert output_stride in (8, 16, 32)
 
@@ -263,6 +263,8 @@ class RegNet(nn.Module):
             prev_width = stage_args['out_chs']
             self.out_channels.append(stage_args['out_chs'])
             curr_stride *= stage_args['stride']
+
+        self._stages_channel = tuple(self.out_channels.copy())
 
         # Construct the head
         self.num_features = prev_width
@@ -321,15 +323,34 @@ class RegNet(nn.Module):
         return stage_params
 
     def get_stages(self):
-        out_channels = self.out_channels[:-1].copy()
         stages = [m for m in list(self.children())[:-1]]
-        return nn.Sequential(*stages), out_channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
 
     def get_classifier(self):
         return self.head
 
-    def reset_classifier(self, num_classes):
-        self.head = ClassifierHead(self.num_features, num_classes, drop_rate=self.drop_rate)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.head.fc = classifier
 
     def forward_features(self, x):
         for block in list(self.children())[:-1]:
@@ -347,9 +368,9 @@ def _regnet(arch, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = RegNet(model_cfgs[arch], **kwargs)
+    model = RegNet(model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv", classifier_name="head.fc", progress=progress)
     return model
 
@@ -449,21 +470,3 @@ def regnety_160(pretrained=False, progress=True, **kwargs):
 def regnety_320(pretrained=False, progress=True, **kwargs):
     """RegNetY-32GF"""
     return _regnet('regnety_320', pretrained, progress, **kwargs)
-
-
-def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model {} is not supported yet, available: {}".format(model_name, supported_models))
-
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got {}".format(feature_type))
-    return backbone

@@ -23,33 +23,74 @@ from ..utils.activations import get_act_layer
 from ..utils.arch_utils import round_channels
 from ..utils.layers import resolve_act_layer, resolve_norm_layer
 from ..utils.conv2d import create_conv2d, CondConv2d
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneBase, BackboneConfig
 
 from copy import deepcopy
 
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/' + x
-
-model_urls = {
-    'efficientnet_b0': _complete_url('tf_efficientnet_b0_ns-c0e6a31c.pth'),
-    'efficientnet_b1': _complete_url('tf_efficientnet_b1_ns-99dd0c41.pth'),
-    'efficientnet_b2': _complete_url('tf_efficientnet_b2_ns-00306e48.pth'),
-    'efficientnet_b3': _complete_url('tf_efficientnet_b3_ns-9d44bf68.pth'),
-    'efficientnet_b4': _complete_url('tf_efficientnet_b4_ns-d6313a46.pth'),
-    'efficientnet_b5': _complete_url('tf_efficientnet_b5_ns-6f26d0cf.pth'),
-    'efficientnet_b6': _complete_url('tf_efficientnet_b6_ns-51548356.pth'),
-    'efficientnet_b7': _complete_url('tf_efficientnet_b7_ns-1dbc32de.pth'),
-    'efficientnet_b8': _complete_url('tf_efficientnet_b8_ra-572d5dd9.pth'),  ## this is actually lower than b5
-    'efficientnet_l2': _complete_url('tf_efficientnet_l2_ns-df73bb44.pth'),
-    'efficientnet_l2_475': _complete_url('tf_efficientnet_l2_ns_475-bebbd00a.pth'),
-    'efficientnet_edge_s': _complete_url('efficientnet_es_ra-f111e99c.pth'),
-    'efficientnet_edge_m': _complete_url('tf_efficientnet_em-e78cfe58.pth'),
-    'efficientnet_edge_l': _complete_url('tf_efficientnet_el-5143854e.pth'),
-    'efficientnet_lite0': _complete_url('tf_efficientnet_lite0-0aa007d2.pth'),
-    'efficientnet_lite1': _complete_url('tf_efficientnet_lite1-bde8b488.pth'),
-    'efficientnet_lite2': _complete_url('tf_efficientnet_lite2-dcccb7df.pth'),
-    'efficientnet_lite3': _complete_url('tf_efficientnet_lite3-b733e338.pth'),
-    'efficientnet_lite4': _complete_url('tf_efficientnet_lite4-741542c3.pth'),
+default_cfgs = {
+    'efficientnet_b0': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b0_ns-c0e6a31c.pth'), input_size=(3, 224, 224)
+    ),
+    'efficientnet_b1': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b1_ns-99dd0c41.pth'), input_size=(3, 240, 240)
+    ),
+    'efficientnet_b2': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b2_ns-00306e48.pth'), input_size=(3, 260, 260)
+    ),
+    'efficientnet_b3': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b3_ns-9d44bf68.pth'), input_size=(3, 300, 300)
+    ),
+    'efficientnet_b4': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b4_ns-d6313a46.pth'), input_size=(3, 380, 380)
+    ),
+    'efficientnet_b5': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b5_ns-6f26d0cf.pth'), input_size=(3, 456, 456)
+    ),
+    'efficientnet_b6': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b6_ns-51548356.pth'), input_size=(3, 528, 528)
+    ),
+    'efficientnet_b7': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_b7_ns-1dbc32de.pth'), input_size=(3, 600, 600)
+    ),
+    'efficientnet_b8': BackboneConfig(  ## this is actually lower than b5
+        pretrained_url=_complete_url('tf_efficientnet_b8_ra-572d5dd9.pth'), input_size=(3, 672, 672)
+    ),
+    'efficientnet_l2': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_l2_ns-df73bb44.pth'), input_size=(3, 800, 800)
+    ),
+    'efficientnet_l2_475': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_l2_ns_475-bebbd00a.pth'), input_size=(3, 475, 475)
+    ),
+    'efficientnet_edge_s': BackboneConfig(pretrained_url=_complete_url('efficientnet_es_ra-f111e99c.pth')),
+    'efficientnet_edge_m': BackboneConfig(
+        pretrained_url=_complete_url('efficientnet_em_ra2-66250f76.pth'), input_size=(3, 240, 240)
+    ),
+    'efficientnet_edge_l': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_el-5143854e.pth'), input_size=(3, 300, 300),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5),
+    ),
+    'efficientnet_lite0': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_lite0-0aa007d2.pth'),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5),
+    ),
+    'efficientnet_lite1': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_lite1-bde8b488.pth'), input_size=(3, 240, 240),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5),
+    ),
+    'efficientnet_lite2': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_lite2-dcccb7df.pth'), input_size=(3, 260, 260),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5)
+    ),
+    'efficientnet_lite3': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_lite3-b733e338.pth'), input_size=(3, 300, 300),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5)
+    ),
+    'efficientnet_lite4': BackboneConfig(
+        pretrained_url=_complete_url('tf_efficientnet_lite4-741542c3.pth'), input_size=(3, 380, 380),
+        normalize_mean=(0.5, 0.5, 0.5), normalize_std=(0.5, 0.5, 0.5)
+    ),
 }
 """ Pretrained model URL
 provided by `"rwightman/pytorch-image-models" <https://github.com/rwightman/pytorch-image-models>`_
@@ -57,7 +98,7 @@ only take the highest performing weight (if there are multiple weights)
 for EfficientNet B0-B7 we use weight trained with NoisyStudent
 """
 
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
@@ -215,11 +256,11 @@ class EfficientNetBuilder(nn.Module):
         return nn.Sequential(*blocks)
 
 
-class EfficientNet(nn.Module):
+class EfficientNet(BackboneBase):
     def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
-                 norm_layer=None, norm_kwargs=None, **kwargs):
-        super(EfficientNet, self).__init__()
+                 norm_layer=None, norm_kwargs=None, default_config=None):
+        super(EfficientNet, self).__init__(default_config)
         assert isinstance(global_params, dict)
 
         if norm_layer is None:
@@ -266,7 +307,9 @@ class EfficientNet(nn.Module):
         dropout_rate = self.arch_params[3]
         self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
         self.classifier = nn.Linear(self.num_features, num_classes)
-        self.num_classes = num_classes
+        self._num_classes = num_classes
+
+        self._stages_channel = tuple(np.array(self.out_channels[1:])[[0,1,2,4,-1]])
 
         self.out_channels.extend([self.num_features, num_classes])
         effnet_init_weights(self)
@@ -298,7 +341,6 @@ class EfficientNet(nn.Module):
         (https://github.com/google/automl/tree/master/efficientdet),
         which takes the layers with spatial reduction of 2
         """
-        channels = np.array(self.out_channels[1:-2])[[0,1,2,4,-1]]
         if len(self.blocks) == 6:
             last_stage = self.blocks[5]
         elif len(self.blocks) == 7:
@@ -316,7 +358,19 @@ class EfficientNet(nn.Module):
             nn.Sequential(self.blocks[3], self.blocks[4]),
             last_stage
         ]
-        return nn.Sequential(*stages), channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
 
     def get_classifier(self):
         classifier = [
@@ -325,9 +379,16 @@ class EfficientNet(nn.Module):
         ]
         return nn.Sequential(*classifier)
 
-    def reset_classifier(self, num_classes):
-        self.num_classes = num_classes
-        self.classifier = nn.Linear(self.num_features, num_classes)
+    def reset_classifier(self, num_classes, classifier = None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.classifier = classifier
 
 
 def effnet_init_weights(model, fix_group_fanout=True):
@@ -374,7 +435,8 @@ def _create_model(variant, block_def, global_params, arch_params, num_classes,
         override_params, pretrained, progress, **kwargs):
     assert isinstance(arch_params, container_abcs.Sequence), \
         "'arch_params' should be a sequence (e.g. list or tuple)"
-    
+
+    global_params.update({'drop_path_rate': 0.0})
     if override_params is not None:
         assert isinstance(override_params, container_abcs.Mapping), \
             "'override_params' should be a mapping (e.g. dict)"
@@ -383,9 +445,9 @@ def _create_model(variant, block_def, global_params, arch_params, num_classes,
     if not pretrained:
         kwargs['num_classes'] = num_classes
 
-    model = EfficientNet(block_def, arch_params, global_params, **kwargs)
+    model = EfficientNet(block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[variant], progress=progress)
+        state_dict = load_state_dict_from_url(default_cfgs[variant].pretrained_url, progress=progress)
         model.load_state_dict(state_dict, strict=True)
         if num_classes != 1000:
             model.reset_classifier(num_classes)
@@ -664,7 +726,8 @@ def efficientnet_edge_s(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _efficientnet_edge('efficientnet_edge_s', (1.0, 1.0, 224, 0.2), 
+    override_params = {'pad_type': ''}
+    model = _efficientnet_edge('efficientnet_edge_s', (1.0, 1.0, 224, 0.2), override_params=override_params,
         pretrained=pretrained, progress=progress, **kwargs)
     return model
 
@@ -677,7 +740,8 @@ def efficientnet_edge_m(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _efficientnet_edge('efficientnet_edge_m', (1.0, 1.1, 240, 0.2), 
+    override_params = {'pad_type': ''}
+    model = _efficientnet_edge('efficientnet_edge_m', (1.0, 1.1, 240, 0.2), override_params=override_params,
         pretrained=pretrained, progress=progress, **kwargs)
     return model
 
@@ -759,24 +823,3 @@ def efficientnet_lite4(pretrained=False, progress=True, **kwargs):
     model = _efficientnet_lite('efficientnet_lite4', (1.4, 1.8, 300, 0.3), 
         pretrained=pretrained, progress=progress, **kwargs)
     return model
-
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, available : %s" %(model_name, supported_models))
-
-    kwargs['override_params'] = {
-        'drop_path_rate': 0.0
-    }
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

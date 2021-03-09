@@ -18,18 +18,18 @@ Modified by Vortex Team
 import torch
 import torch.nn as nn
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneBase, BackboneConfig
 from ..utils.layers import ClassifierHead, ConvBnAct, DropPath
 from ..utils.arch_utils import load_pretrained
 
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/' + x
-model_urls = {
-    'cspresnet50': _complete_url('cspresnet50_ra-d3e8d487.pth'),
-    'cspresnext50': _complete_url('cspresnext50_ra_224-648b4713.pth'),
-    'cspdarknet53': _complete_url('cspdarknet53_ra_256-d05c7c21.pth'),
+default_cfgs = {
+    'cspresnet50': BackboneConfig(pretrained_url=_complete_url('cspresnet50_ra-d3e8d487.pth'), input_size=(3, 256, 256)),
+    'cspresnext50': BackboneConfig(pretrained_url=_complete_url('cspresnext50_ra_224-648b4713.pth'), input_size=(3, 256, 256)),
+    'cspdarknet53': BackboneConfig(pretrained_url=_complete_url('cspdarknet53_ra_256-d05c7c21.pth'), input_size=(3, 256, 256)),
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 model_cfgs = dict(
     cspresnet50=dict(
@@ -217,7 +217,7 @@ class CrossStage(nn.Module):
 
     
 
-class CSPNet(nn.Module):
+class CSPNet(BackboneBase):
     """Cross Stage Partial base model.
 
     Paper: `CSPNet: A New Backbone that can Enhance Learning Capability of CNN` - https://arxiv.org/abs/1911.11929
@@ -229,10 +229,10 @@ class CSPNet(nn.Module):
 
     def __init__(self, cfg, in_channel=3, num_classes=1000, output_stride=32, drop_rate=0.,
                  act_layer=nn.LeakyReLU, block_fn=ResBottleneck, aa_layer=None, drop_path_rate=0.,
-                 zero_init_last_bn=True, norm_layer=nn.BatchNorm2d, norm_kwargs=None):
-        super().__init__()
+                 zero_init_last_bn=True, norm_layer=nn.BatchNorm2d, norm_kwargs=None, default_config=None):
+        super().__init__(default_config)
         norm_kwargs = norm_kwargs or {}
-        self.num_classes = num_classes
+        self._num_classes = num_classes
         self.drop_rate = drop_rate
         assert output_stride in (8, 16, 32)
         layer_args = dict(act_layer=act_layer, norm_layer=norm_layer, 
@@ -255,6 +255,10 @@ class CSPNet(nn.Module):
             self.stages.add_module(str(i), CrossStage(prev_chs, **sa, **layer_args, block_fn=block_fn))
             prev_chs = sa['out_chs']
             curr_stride *= sa['stride']
+
+        stages_channel = self.out_channels if len(self.out_channels) == 5 else self.out_channels[1:]
+        self._stages_channel = tuple(stages_channel)
+        self._num_classes = num_classes
 
         # Construct the head
         self.num_features = prev_chs
@@ -307,26 +311,44 @@ class CSPNet(nn.Module):
         return stage_args
 
     def get_stages(self):
-        out_channels, first_stage = None, None
+        first_stage = None
         start_stages = 0
         if len(self.out_channels) == 6:
-            out_channels = self.out_channels[:-1]
             first_stage = self.stem
         elif len(self.out_channels) == 7:
-            out_channels = self.out_channels[1:-1]
             first_stage = nn.Sequential(self.stem, self.stages[0])
             start_stages = 1
         else:
             raise RuntimeError("Unknown error, report this as a bug!")
 
         stages = [first_stage] + [m for m in self.stages[start_stages:]]
-        return nn.Sequential(*stages), out_channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
 
     def get_classifier(self):
         return self.head
 
-    def reset_classifier(self, num_classes):
-        self.head = ClassifierHead(self.num_features, num_classes, drop_rate=self.drop_rate)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.head.fc = classifier
 
     def forward_features(self, x):
         x = self.stem(x)
@@ -344,9 +366,9 @@ def _cspnet(arch, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = CSPNet(model_cfgs[arch], **kwargs)
+    model = CSPNet(model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv1", classifier_name="head.fc", progress=progress)
     return model
 
@@ -362,21 +384,3 @@ def cspresnext50(pretrained=False, progress=True, **kwargs):
 def cspdarknet53(pretrained=False, progress=True, **kwargs):
     return _cspnet('cspdarknet53', pretrained=pretrained, progress=progress, 
         block_fn=DarkBlock, **kwargs)
-
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model {} is not supported yet, available: {}".format(model_name, supported_models))
-
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got {}".format(feature_type))
-    return backbone

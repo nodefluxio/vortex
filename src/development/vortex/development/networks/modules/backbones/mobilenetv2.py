@@ -1,6 +1,6 @@
 from torch import nn
 import torch
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.arch_utils import load_pretrained
 from ..utils.layers import make_divisible
 
@@ -8,10 +8,9 @@ from ..utils.layers import make_divisible
 __all__ = ['MobileNetV2', 'mobilenet_v2']
 
 
-model_urls = {
-    'mobilenet_v2': 'https://download.pytorch.org/models/mobilenet_v2-b0353104.pth',
+default_cfgs = {
+    'mobilenet_v2': BackboneConfig(pretrained_url='https://download.pytorch.org/models/mobilenet_v2-b0353104.pth'),
 }
-
 
 supported_models = [
     'mobilenet_v2'
@@ -61,9 +60,9 @@ class InvertedResidual(nn.Module):
             return self.conv(x)
 
 
-class MobileNetV2(nn.Module):
+class MobileNetV2(BackboneBase):
     def __init__(self, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, 
-                 round_nearest=8, in_channel=3, norm_layer=None, norm_kwargs=None):
+                 round_nearest=8, in_channel=3, norm_layer=None, norm_kwargs=None, default_config=None):
         """
         MobileNet V2 main class
         Args:
@@ -73,7 +72,7 @@ class MobileNetV2(nn.Module):
             round_nearest (int): Round the number of channels in each layer to be a multiple of this number
             Set to 1 to turn off rounding
         """
-        super(MobileNetV2, self).__init__()
+        super(MobileNetV2, self).__init__(default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -126,6 +125,9 @@ class MobileNetV2(nn.Module):
             nn.Linear(self.last_channel, num_classes),
         )
 
+        self._stages_channel = (stem_size, 24, 32, 96, 320)
+        self._num_classes = num_classes
+
         # weight initialization
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -155,8 +157,19 @@ class MobileNetV2(nn.Module):
             self.features[5:12],
             self.features[12:18]
         )
-        channels = [16, 24, 32, 96, 320]
-        return stages, channels
+        return stages
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.last_channel
 
     def get_classifier(self):
         return nn.Sequential(
@@ -166,11 +179,19 @@ class MobileNetV2(nn.Module):
             self.classifier
         )
 
-    def reset_classifier(self, num_classes):
-        self.classifier = nn.Sequential(
-            nn.Dropout(0.2),
-            nn.Linear(self.last_channel, num_classes),
-        )
+    def reset_classifier(self, num_classes, classifier = None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Sequential(
+                nn.Dropout(0.2),
+                nn.Linear(self.last_channel, num_classes),
+            )
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.classifier = classifier
 
 
 def mobilenet_v2(pretrained=False, progress=True, num_classes=1000, **kwargs):
@@ -184,26 +205,8 @@ def mobilenet_v2(pretrained=False, progress=True, num_classes=1000, **kwargs):
     if not pretrained:
         kwargs['num_classes'] = num_classes
 
-    model = MobileNetV2(**kwargs)
+    model = MobileNetV2(default_config=default_cfgs["mobilenet_v2"], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls["mobilenet_v2"], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs["mobilenet_v2"].pretrained_url, num_classes=num_classes, 
             first_conv_name="features.0.0", progress=progress)
     return model
-
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not (model_name in supported_models):
-        raise RuntimeError("unsupported model: %s; supported in mobilenetv2: %s" %
-                           (model_name, supported_models))
-    model = mobilenet_v2(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)
-    stages, channels = model.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, model.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

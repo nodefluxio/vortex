@@ -17,22 +17,40 @@ import torch.nn.functional as F
 from functools import partial
 from collections import OrderedDict
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.inplace_abn import InplaceAbn
 from ..utils.layers import SEModule, ClassifierHead
 from ..utils.arch_utils import load_pretrained
 
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-tresnet/' + x
-model_urls = {
-    'tresnet_m': _complete_url('tresnet_m_80_8-dbc13962.pth'),
-    'tresnet_l': _complete_url('tresnet_l_81_5-235b486c.pth'),
-    'tresnet_xl': _complete_url('tresnet_xl_82_0-a2d51b00.pth'),
-    'tresnet_m_448': _complete_url('tresnet_m_448-bc359d10.pth'),
-    'tresnet_l_448': _complete_url('tresnet_l_448-940d0cd1.pth'),
-    'tresnet_xl_448': _complete_url('tresnet_xl_448-8c1815de.pth')
+default_cfgs = {
+    'tresnet_m': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_m_80_8-dbc13962.pth'),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'tresnet_l': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_l_81_5-235b486c.pth'),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'tresnet_xl': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_xl_82_0-a2d51b00.pth'),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'tresnet_m_448': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_m_448-bc359d10.pth'), input_size=(3, 448, 448),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'tresnet_l_448': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_l_448-940d0cd1.pth'), input_size=(3, 448, 448),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'tresnet_xl_448': BackboneConfig(
+        pretrained_url=_complete_url('tresnet_xl_448-8c1815de.pth'), input_size=(3, 448, 448),
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 def IABN2Float(module: nn.Module) -> nn.Module:
@@ -246,16 +264,17 @@ class Bottleneck(nn.Module):
         return out
 
 
-class TResNet(nn.Module):
+class TResNet(BackboneBase):
     def __init__(self, layers, in_channel=3, num_classes=1000, width_factor=1.0, 
-                 no_aa_jit=False, drop_rate=0., norm_layer=None, norm_kwargs=None):
-        super(TResNet, self).__init__()
+                 no_aa_jit=False, drop_rate=0., norm_layer=None, norm_kwargs=None,
+                 default_config=None):
+        super(TResNet, self).__init__(default_config)
         if norm_layer or norm_kwargs:
             import warnings
             warnings.warn("Can not change norm_layer for TResNet variant models, "
                 "ignoring argument value.")
 
-        self.num_classes = num_classes
+        self._num_classes = num_classes
         self.drop_rate = drop_rate
 
         # JIT layers
@@ -288,6 +307,14 @@ class TResNet(nn.Module):
         # head
         self.num_features = (self.planes * 8) * Bottleneck.expansion
         self.head = ClassifierHead(self.num_features, num_classes, pool_type='fast', drop_rate=drop_rate)
+
+        self._stages_channel = (
+            self.planes, 
+            self.planes * BasicBlock.expansion, 
+            self.planes * 2 * BasicBlock.expansion,
+            self.planes * 4 * Bottleneck.expansion,
+            self.planes * 8 * Bottleneck.expansion
+        )
 
         # model initilization
         for m in self.modules():
@@ -326,28 +353,39 @@ class TResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def get_stages(self):
-        out_channels = [
-            self.planes, 
-            self.planes * BasicBlock.expansion, 
-            self.planes * 2 * BasicBlock.expansion,
-            self.planes * 4 * Bottleneck.expansion,
-            self.planes * 8 * Bottleneck.expansion
-        ]
-
-        stages = [
+        return nn.Sequential(
             nn.Sequential(self.body.SpaceToDepth, self.body.conv1),
             self.body.layer1,
             self.body.layer2,
             self.body.layer3,
             self.body.layer4,
-        ]
-        return nn.Sequential(*stages), out_channels
-    
+        )
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
+
     def get_classifier(self):
         return self.head
 
-    def reset_classifier(self, num_classes):
-        self.head = ClassifierHead(self.num_features, num_classes, pool_type='fast', drop_rate=self.drop_rate)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.head.fc = classifier
 
     def forward_features(self, x):
         return self.body(x)
@@ -362,9 +400,9 @@ def _tresnet(arch, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = TResNet(layers, **kwargs)
+    model = TResNet(layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="body.conv1", classifier_name="head.fc", progress=progress)
     return model
 
@@ -392,21 +430,3 @@ def tresnet_l_448(pretrained=False, progress=True, **kwargs):
 def tresnet_xl_448(pretrained=False, progress=True, **kwargs):
     return _tresnet('tresnet_xl_448', pretrained=pretrained, progress=progress, 
         layers=[4, 5, 24, 3], width_factor=1.3, **kwargs)
-
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model {} is not supported yet, available: {}".format(model_name, supported_models))
-
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got {}".format(feature_type))
-    return backbone

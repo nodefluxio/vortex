@@ -19,17 +19,21 @@ import math
 from ..utils.arch_utils import make_divisible, load_pretrained
 from ..utils.activations import get_act_layer
 from ..utils.layers import ConvBnAct, ClassifierHead
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-rexnet/' + x
-model_urls = {
-    'rexnet_100': _complete_url('rexnetv1_100-1b4dddf4.pth'),
-    'rexnet_130': _complete_url('rexnetv1_130-590d768e.pth'),
-    'rexnet_150': _complete_url('rexnetv1_150-bd1a6aa8.pth'),
-    'rexnet_200': _complete_url('rexnetv1_200-8c0b7f2d.pth'),
+default_cfgs = {
+    'rexnet_100': BackboneConfig(pretrained_url=_complete_url('rexnetv1_100-1b4dddf4.pth')),
+    'rexnet_130': BackboneConfig(pretrained_url=_complete_url('rexnetv1_130-590d768e.pth')),
+    'rexnet_150': BackboneConfig(pretrained_url=_complete_url('rexnetv1_150-bd1a6aa8.pth')),
+    'rexnet_200': BackboneConfig(pretrained_url=_complete_url('rexnetv1_200-8c0b7f2d.pth')),
+    'rexnetr_100': BackboneConfig(),
+    'rexnetr_130': BackboneConfig(),
+    'rexnetr_150': BackboneConfig(),
+    'rexnetr_200': BackboneConfig(),
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 class SEWithNorm(nn.Module):
@@ -103,7 +107,7 @@ class LinearBottleneck(nn.Module):
             x[:, 0:self.in_channels] += shortcut
         return x
 
-class ReXNetV1(nn.Module):
+class ReXNetV1(BackboneBase):
     """ReXNet model variant
 
     NOTE: ReXNet variant can't be trained with single batch data using BatchNorm2d,
@@ -111,8 +115,8 @@ class ReXNetV1(nn.Module):
     """
     def __init__(self, in_channel=3, num_classes=1000, output_stride=32, norm_layer=None, norm_kwargs=None,
                  initial_chs=16, final_chs=180, width_mult=1.0, depth_mult=1.0, use_se=True,
-                 se_rd=12, ch_div=1, drop_rate=0.2):
-        super(ReXNetV1, self).__init__()
+                 se_rd=12, ch_div=1, drop_rate=0.2, default_config=None):
+        super(ReXNetV1, self).__init__(default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -132,6 +136,9 @@ class ReXNetV1(nn.Module):
             ch_div=ch_div, norm_kwargs=norm_kwargs)
         self.num_features = self.out_channels[-1]
         self.features = nn.Sequential(*features)
+
+        self._stages_channel = tuple(self.out_channels[2:].copy())
+        self._num_classes = num_classes
 
         self.head = ClassifierHead(self.num_features, num_classes, drop_rate=drop_rate)
         self.out_channels.append(num_classes)
@@ -176,21 +183,39 @@ class ReXNetV1(nn.Module):
         return features
 
     def get_stages(self):
-        out_channels = self.out_channels[2:-1].copy()
-        stages = [
+        return nn.Sequential(
             nn.Sequential(self.stem, *self.features[0:3]),
             self.features[3:5],
             self.features[5:11],
             self.features[11:-1],
             self.features[-1]
-        ]
-        return nn.Sequential(*stages), out_channels
+        )
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
 
     def get_classifier(self):
         return self.head
 
-    def reset_classifier(self, num_classes):
-        self.head = ClassifierHead(self.num_features, num_classes, drop_rate=self.drop_rate)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.head.fc = classifier
 
     def forward_features(self, x):
         x = self.stem(x)
@@ -208,9 +233,9 @@ def _rexnet(arch, pretrained, progress, **kwargs):
     if pretrained and "num_classes" in kwargs:
         num_classes = kwargs.pop("num_classes")
 
-    model = ReXNetV1(**kwargs)
-    if pretrained and arch in model_urls:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+    model = ReXNetV1(default_config=default_cfgs[arch], **kwargs)
+    if pretrained and default_cfgs[arch].pretrained_url is not None:
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv", classifier_name="head.fc", progress=progress)
     else:
         if pretrained:
@@ -258,21 +283,3 @@ def rexnetr_150(pretrained=False, progress=True, **kwargs):
 def rexnetr_200(pretrained=False, progress=True, **kwargs):
     """ReXNet V1 2.0x w/ rounded (mod 8) channels"""
     return _rexnet('rexnetr_200', pretrained, progress, width_mult=2.0, ch_div=8, **kwargs)
-
-
-def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model {} is not supported, available: {}".format(model_name, supported_models))
-
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone
