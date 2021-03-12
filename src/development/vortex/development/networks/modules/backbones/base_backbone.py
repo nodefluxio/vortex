@@ -18,7 +18,7 @@ class BackboneConfig(NamedTuple):
 
 
 class BackboneBase(ABC, nn.Module):
-    def __init__(self, default_config=None):
+    def __init__(self, name: str, default_config: BackboneConfig = None):
         super().__init__()
 
         if default_config is None:
@@ -27,6 +27,10 @@ class BackboneBase(ABC, nn.Module):
             raise TypeError("'default_config' argument is expected to have 'BackboneConfig' type, "
                 "got {}.".format(type(default_config)))
         self._default_cfg = default_config
+
+        if not isinstance(name, str):
+            raise RuntimeError("'name' argument is expected to have 'str' type, got {}".format(type(name)))
+        self._name = name
 
         self._inferred_channels = None
 
@@ -58,6 +62,18 @@ class BackboneBase(ABC, nn.Module):
     @property
     def default_config(self) -> BackboneConfig:
         return self._default_cfg
+
+    @default_config.setter
+    def default_config(self, val):
+        self._default_cfg = val
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, val):
+        self._name = val
 
     @property
     @abstractmethod

@@ -257,10 +257,10 @@ class EfficientNetBuilder(nn.Module):
 
 
 class EfficientNet(BackboneBase):
-    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
+    def __init__(self, name, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=32, fix_stem=False, num_features=None, fix_block_first_last=False,
                  norm_layer=None, norm_kwargs=None, default_config=None):
-        super(EfficientNet, self).__init__(default_config)
+        super(EfficientNet, self).__init__(name, default_config)
         assert isinstance(global_params, dict)
 
         if norm_layer is None:
@@ -445,7 +445,7 @@ def _create_model(variant, block_def, global_params, arch_params, num_classes,
     if not pretrained:
         kwargs['num_classes'] = num_classes
 
-    model = EfficientNet(block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
+    model = EfficientNet(variant, block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
     if pretrained:
         state_dict = load_state_dict_from_url(default_cfgs[variant].pretrained_url, progress=progress)
         model.load_state_dict(state_dict, strict=True)

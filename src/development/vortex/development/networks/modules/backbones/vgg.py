@@ -27,8 +27,8 @@ default_cfgs = {
 
 class VGG(BackboneBase):
 
-    def __init__(self, features, num_classes=1000, init_weights=True, norm_layer=None, norm_kwargs=None, default_config=None):
-        super(VGG, self).__init__(default_config)
+    def __init__(self, name, features, num_classes=1000, init_weights=True, norm_layer=None, norm_kwargs=None, default_config=None):
+        super(VGG, self).__init__(name, default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -158,7 +158,7 @@ def _vgg(arch, batch_norm, pretrained, progress, **kwargs):
     features = make_layers(model_cfgs[arch_stripped], batch_norm=batch_norm, 
         norm_layer=norm_layer, norm_kwargs=norm_kwargs)
 
-    model = VGG(features, default_config=default_cfgs[arch], **kwargs)
+    model = VGG(arch, features, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="features.0", progress=progress)

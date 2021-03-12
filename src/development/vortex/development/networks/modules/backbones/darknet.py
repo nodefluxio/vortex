@@ -79,10 +79,10 @@ class Bottleneck(nn.Module):
 
 
 class DarkNet(BackboneBase):
-    def __init__(self, block, layers, num_classes=1000, in_channel=3,
+    def __init__(self, name, block, layers, num_classes=1000, in_channel=3,
                  norm_layer=nn.BatchNorm2d, norm_kwargs=None, 
                  inplane_extra_conv=False, default_config=None):
-        super(DarkNet, self).__init__(default_config)
+        super(DarkNet, self).__init__(name, default_config)
         norm_kwargs = norm_kwargs or {}
         self._extra_conv = inplane_extra_conv
         self.inplanes = 32 if not self._extra_conv else 16
@@ -222,7 +222,7 @@ def _darknet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = DarkNet(block, layers, default_config=default_cfgs[arch], **kwargs)
+    model = DarkNet(arch, block, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         if default_cfgs[arch].pretrained_url is not None:
             load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 

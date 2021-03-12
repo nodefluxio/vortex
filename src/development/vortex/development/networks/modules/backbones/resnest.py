@@ -215,7 +215,7 @@ class ResNest(BackboneBase):
         - Yu, Fisher, and Vladlen Koltun. "Multi-scale context aggregation by dilated convolutions."
     """
 
-    def __init__(self, block, layers, num_classes=1000, radix=1, cardinality=1, bottleneck_width=64,
+    def __init__(self, name, block, layers, num_classes=1000, radix=1, cardinality=1, bottleneck_width=64,
                  dilated=False, dilation=1, deep_stem=False, stem_width=64, avg_down=False,
                  avd=False, avd_first=False, final_drop=0.0, dropblock_prob=0, 
                  zero_init_last_bn=False, norm_layer=nn.BatchNorm2d, norm_kwargs=None, default_config=None):
@@ -234,7 +234,7 @@ class ResNest(BackboneBase):
 
         self.block_expansion = block.expansion
 
-        super(ResNest, self).__init__(default_config)
+        super(ResNest, self).__init__(name, default_config)
         if deep_stem:
             self.conv1 = nn.Sequential(
                 nn.Conv2d(3, stem_width, kernel_size=3, stride=2, padding=1, bias=False),
@@ -399,7 +399,7 @@ def _resnest(arch, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ResNest(ResNestBottleneck, layers, default_config=default_cfgs[arch], **kwargs)
+    model = ResNest(arch, ResNestBottleneck, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="conv1", classifier_name="fc", progress=progress)

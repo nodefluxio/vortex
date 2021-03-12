@@ -65,10 +65,10 @@ class MobileNetV3(BackboneBase):
     Paper: https://arxiv.org/abs/1905.02244
     """
 
-    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
+    def __init__(self, name, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=16, num_features=1280, head_bias=True, dropout_rate=0., 
                  norm_layer=None, norm_kwargs=None, default_config=None):
-        super(MobileNetV3, self).__init__(default_config)
+        super(MobileNetV3, self).__init__(name, default_config)
 
         if norm_layer is None:
             if 'norm_layer' in global_params:
@@ -205,7 +205,7 @@ def _create_model(variant, block_def, global_params, num_classes, channel_multip
     if 'drop_path_rate' in kwargs:
         global_params['drop_path_rate'] = kwargs.pop('drop_path_rate')
     arch_params = (channel_multiplier, 1.0, drop_rate, 224)
-    model = MobileNetV3(block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
+    model = MobileNetV3(variant, block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
     if pretrained:
         state_dict = load_state_dict_from_url(default_cfgs[variant].pretrained_url, progress=progress)
         model.load_state_dict(state_dict, strict=True)

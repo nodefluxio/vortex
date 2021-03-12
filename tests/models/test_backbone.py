@@ -46,11 +46,17 @@ def test_backbone(module):
         assert all(not isinstance(m, torch.nn.BatchNorm2d) for m in network.modules())
         assert isinstance(network, backbones.BackboneBase)
         assert network.default_config == cfg
+        assert network.name == name
 
         network = backbones.get_backbone(name, pretrained=pretrained, n_classes=2)
 
         stages = network.get_stages()
+        assert len(stages) == 5
+        assert isinstance(stages, (nn.Sequential, nn.ModuleList))
+
         classifier = network.get_classifier()
+        assert isinstance(classifier, nn.Module)
+
         x = torch.rand(2, 3, 224, 224)
         out_run = []
         with torch.no_grad():

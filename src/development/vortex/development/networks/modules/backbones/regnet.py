@@ -234,9 +234,9 @@ class RegNet(BackboneBase):
     Original Impl: https://github.com/facebookresearch/pycls/blob/master/pycls/models/regnet.py
     """
 
-    def __init__(self, cfg, in_chans=3, num_classes=1000, output_stride=32, drop_path_rate=0.,
+    def __init__(self, name, cfg, in_chans=3, num_classes=1000, output_stride=32, drop_path_rate=0.,
                  drop_rate=0., zero_init_last_bn=True, norm_layer=None, norm_kwargs=None, default_config=None):
-        super().__init__(default_config)
+        super().__init__(name, default_config)
         norm_layer = norm_layer or nn.BatchNorm2d
         norm_kwargs = norm_kwargs or {}
 
@@ -368,7 +368,7 @@ def _regnet(arch, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = RegNet(model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
+    model = RegNet(arch, model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv", classifier_name="head.fc", progress=progress)

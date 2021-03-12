@@ -61,7 +61,7 @@ class InvertedResidual(nn.Module):
 
 
 class MobileNetV2(BackboneBase):
-    def __init__(self, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, 
+    def __init__(self, name, num_classes=1000, width_mult=1.0, inverted_residual_setting=None, 
                  round_nearest=8, in_channel=3, norm_layer=None, norm_kwargs=None, default_config=None):
         """
         MobileNet V2 main class
@@ -72,7 +72,7 @@ class MobileNetV2(BackboneBase):
             round_nearest (int): Round the number of channels in each layer to be a multiple of this number
             Set to 1 to turn off rounding
         """
-        super(MobileNetV2, self).__init__(default_config)
+        super(MobileNetV2, self).__init__(name, default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -205,7 +205,7 @@ def mobilenet_v2(pretrained=False, progress=True, num_classes=1000, **kwargs):
     if not pretrained:
         kwargs['num_classes'] = num_classes
 
-    model = MobileNetV2(default_config=default_cfgs["mobilenet_v2"], **kwargs)
+    model = MobileNetV2("mobilenet_v2", default_config=default_cfgs["mobilenet_v2"], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs["mobilenet_v2"].pretrained_url, num_classes=num_classes, 
             first_conv_name="features.0.0", progress=progress)

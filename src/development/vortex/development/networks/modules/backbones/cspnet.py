@@ -227,10 +227,10 @@ class CSPNet(BackboneBase):
     darknet impl. I did it this way for simplicity and less special cases.
     """
 
-    def __init__(self, cfg, in_channel=3, num_classes=1000, output_stride=32, drop_rate=0.,
+    def __init__(self, name, cfg, in_channel=3, num_classes=1000, output_stride=32, drop_rate=0.,
                  act_layer=nn.LeakyReLU, block_fn=ResBottleneck, aa_layer=None, drop_path_rate=0.,
                  zero_init_last_bn=True, norm_layer=nn.BatchNorm2d, norm_kwargs=None, default_config=None):
-        super().__init__(default_config)
+        super().__init__(name, default_config)
         norm_kwargs = norm_kwargs or {}
         self._num_classes = num_classes
         self.drop_rate = drop_rate
@@ -366,7 +366,7 @@ def _cspnet(arch, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = CSPNet(model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
+    model = CSPNet(arch, model_cfgs[arch], default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv1", classifier_name="head.fc", progress=progress)

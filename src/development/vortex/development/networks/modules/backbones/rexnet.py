@@ -113,10 +113,10 @@ class ReXNetV1(BackboneBase):
     NOTE: ReXNet variant can't be trained with single batch data using BatchNorm2d,
         use different batch normalization layer if you need to, e.g. InstanceNorm2d.
     """
-    def __init__(self, in_channel=3, num_classes=1000, output_stride=32, norm_layer=None, norm_kwargs=None,
+    def __init__(self, name, in_channel=3, num_classes=1000, output_stride=32, norm_layer=None, norm_kwargs=None,
                  initial_chs=16, final_chs=180, width_mult=1.0, depth_mult=1.0, use_se=True,
                  se_rd=12, ch_div=1, drop_rate=0.2, default_config=None):
-        super(ReXNetV1, self).__init__(default_config)
+        super(ReXNetV1, self).__init__(name, default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -233,7 +233,7 @@ def _rexnet(arch, pretrained, progress, **kwargs):
     if pretrained and "num_classes" in kwargs:
         num_classes = kwargs.pop("num_classes")
 
-    model = ReXNetV1(default_config=default_cfgs[arch], **kwargs)
+    model = ReXNetV1(arch, default_config=default_cfgs[arch], **kwargs)
     if pretrained and default_cfgs[arch].pretrained_url is not None:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="stem.conv", classifier_name="head.fc", progress=progress)

@@ -37,7 +37,7 @@ def register_module(module):
 def get_backbone(model_name: str, pretrained: bool = False, feature_type=None, n_classes: int = 1000, **kwargs):
     if feature_type is not None:
         warnings.warn("'feature_type' in 'get_backbone' is now deprecated and not used here, please use "
-            "'vortex.development.networks.Backbone' to specify stages output", DeprecationWarning)
+            "'vortex.development.networks.Backbone(stages_output=feature_type)' to the feature type", DeprecationWarning)
     if not model_name in BACKBONES:
         raise KeyError("backbones '{}' is not supported, available: {}".format(model_name, all_models))
 

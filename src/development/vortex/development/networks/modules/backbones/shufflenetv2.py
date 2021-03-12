@@ -107,9 +107,9 @@ class ShuffleNetV2Classifier(nn.Module):
 
 
 class ShuffleNetV2(BackboneBase):
-    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, 
+    def __init__(self, name, stages_repeats, stages_out_channels, num_classes=1000, 
                  in_channel=3, norm_layer=None, norm_kwargs=None, default_config=None):
-        super(ShuffleNetV2, self).__init__(default_config)
+        super(ShuffleNetV2, self).__init__(name, default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
@@ -214,7 +214,7 @@ def _shufflenetv2(arch, pretrained, progress, *args, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ShuffleNetV2(default_config=default_cfgs[arch], *args, **kwargs)
+    model = ShuffleNetV2(arch, default_config=default_cfgs[arch], *args, **kwargs)
     if pretrained:
         model_url = default_cfgs[arch].pretrained_url
         if model_url is None:

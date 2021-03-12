@@ -265,10 +265,10 @@ class Bottleneck(nn.Module):
 
 
 class TResNet(BackboneBase):
-    def __init__(self, layers, in_channel=3, num_classes=1000, width_factor=1.0, 
+    def __init__(self, name, layers, in_channel=3, num_classes=1000, width_factor=1.0, 
                  no_aa_jit=False, drop_rate=0., norm_layer=None, norm_kwargs=None,
                  default_config=None):
-        super(TResNet, self).__init__(default_config)
+        super(TResNet, self).__init__(name, default_config)
         if norm_layer or norm_kwargs:
             import warnings
             warnings.warn("Can not change norm_layer for TResNet variant models, "
@@ -400,7 +400,7 @@ def _tresnet(arch, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = TResNet(layers, default_config=default_cfgs[arch], **kwargs)
+    model = TResNet(arch, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="body.conv1", classifier_name="head.fc", progress=progress)

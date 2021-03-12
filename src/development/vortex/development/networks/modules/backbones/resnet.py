@@ -133,10 +133,10 @@ class Bottleneck(nn.Module):
 
 class ResNet(BackboneBase):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, name, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
                  norm_layer=None, norm_kwargs=None, in_channel=3, default_config=None):
-        super(ResNet, self).__init__(default_config)
+        super(ResNet, self).__init__(name, default_config)
         self._norm_layer = norm_layer or nn.BatchNorm2d
         self._norm_kwargs = norm_kwargs or {}
 
@@ -278,7 +278,7 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ResNet(block, layers, default_config=default_cfgs[arch], **kwargs)
+    model = ResNet(arch, block, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
         load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="conv1", classifier_name="fc", progress=progress)
