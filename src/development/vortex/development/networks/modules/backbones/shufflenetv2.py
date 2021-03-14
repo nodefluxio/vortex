@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from .base_backbone import BackboneConfig, BackboneBase
+from .registry import register_backbone
 from ..utils.arch_utils import load_pretrained
 
 
@@ -278,3 +279,10 @@ def shufflenetv2_x2_0(pretrained=False, progress=True, *args, **kwargs):
     model = _shufflenetv2('shufflenetv2_x2_0', pretrained, progress,
                           [4, 8, 4], [24, 244, 488, 976, 2048], *args, **kwargs)
     return model
+
+
+## backward compatibility
+register_backbone(shufflenetv2_x0_5, 'shufflenetv2_x0.5')
+register_backbone(shufflenetv2_x1_0, 'shufflenetv2_x1.0')
+register_backbone(shufflenetv2_x1_5, 'shufflenetv2_x1.5')
+register_backbone(shufflenetv2_x2_0, 'shufflenetv2_x2.0')
