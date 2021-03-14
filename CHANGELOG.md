@@ -15,11 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add 'config.trainer.logger' field with same functionality as 'config.logging'
 - add 'config.dataloader.train' and 'config.dataloader.eval' field to support different args for train and val dataloader
 - support for bool value for logger config, with default logger use tensorboard logger
+- backbone base class
+- backbone class for main models
 
 ### Changed
 - `model_components` is removed, and changed with model base class
 - deprecating 'config.seed', and move to 'config.trainer.seed'
 - deprecating `stage` argument in `create_model`
+- all defined backbones use backbone base class
 
 ### Fixed
 
