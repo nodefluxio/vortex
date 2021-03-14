@@ -1,13 +1,12 @@
 import warnings
-from vortex.development.utils.registry import Registry
 
 from .base_backbone import BackboneBase, BackboneConfig
+from .registry import BACKBONES, register_backbone, remove_backbone
 from . import (
     cspnet, darknet, efficientnet, mobilenetv2, mobilenetv3,
     regnet, resnest, resnet, rexnet, shufflenetv2, tresnet, vgg
 )
 
-BACKBONES = Registry("Backbones")
 
 supported_models = {}
 all_models = []
@@ -15,9 +14,6 @@ all_models = []
 _REQUIRED_ATTRIBUTES = [
     'supported_models'
 ]
-
-register_backbone = BACKBONES.register
-remove_backbone = BACKBONES.pop
 
 
 def register_module(module):
