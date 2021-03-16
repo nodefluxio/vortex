@@ -198,7 +198,7 @@ def train():
         pl.loggers.TensorBoardLogger('logs/'),
     ]
     trainer = pl.Trainer(
-        max_epochs=50, gpus=1, logger=loggers
+        max_epochs=200, gpus=1, logger=loggers
     )
     model = Model(10)
     trainer.fit(model, dataset)
