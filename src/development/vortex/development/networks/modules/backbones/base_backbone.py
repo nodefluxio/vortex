@@ -1,7 +1,90 @@
 import torch
 import torch.nn as nn
 
-from typing import Tuple, Sequence, Type, Union
+from typing import Tuple, Sequence, Type, Union, NamedTuple
+from abc import ABC, abstractmethod
+
+from ..utils.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+
+
+class BackboneConfig(NamedTuple):
+    pretrained_url: str = None
+    normalize_mean: tuple = IMAGENET_DEFAULT_MEAN
+    normalize_std: tuple = IMAGENET_DEFAULT_STD
+    input_size: tuple = (3, 224, 224)
+    channel_order: str = 'rgb'  # 'rgb', 'bgr'
+    resize: str = 'stretch'     # 'stretch', 'pad', 'scale'
+    num_classes: int = 1000
+
+
+class BackboneBase(ABC, nn.Module):
+    def __init__(self, name: str, default_config: BackboneConfig = None):
+        super().__init__()
+
+        if default_config is None:
+            default_config = BackboneConfig()
+        elif not isinstance(default_config, BackboneConfig):
+            raise TypeError("'default_config' argument is expected to have 'BackboneConfig' type, "
+                "got {}.".format(type(default_config)))
+        self._default_cfg = default_config
+
+        if not isinstance(name, str):
+            raise RuntimeError("'name' argument is expected to have 'str' type, got {}".format(type(name)))
+        self._name = name
+
+        self._inferred_channels = None
+
+    @abstractmethod
+    def get_stages(self) -> Union[nn.Sequential, nn.ModuleList]:
+        pass
+
+    @property
+    def stages_channel(self) -> Tuple:
+        if self._inferred_channels is None:
+            self._inferred_channels = infer_channels(self.get_stages())
+        return self._inferred_channels
+
+    @abstractmethod
+    def get_classifier(self) -> nn.Module:
+        pass
+
+    @abstractmethod
+    def reset_classifier(self, num_classes: int, classifier: nn.Module = None):
+        """Resets the classifier layer
+        normally used to change number of classes in transfer learning.
+
+        Args:
+            num_classes (int): number of classes for the classifier to be reset to.
+            classifier (Union[int, nn.Module]): override classifier layer with this layer.
+        """
+        pass
+
+    @property
+    def default_config(self) -> BackboneConfig:
+        return self._default_cfg
+
+    @default_config.setter
+    def default_config(self, val):
+        self._default_cfg = val
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, val):
+        self._name = val
+
+    @property
+    @abstractmethod
+    def num_classes(self) -> int:
+        pass
+
+    @property
+    @abstractmethod
+    def num_classifer_feature(self) -> int:
+        pass
+
 
 supported_feature_type = ['tri_stage_fpn', 'classifier']
 
@@ -82,5 +165,4 @@ def infer_channels(stages: nn.Sequential, test_size=(1,3,224,224)):
         for stage in stages:
             x = stage(x)
             channels.append(x.shape)
-    channels = list(map(lambda x: x[1], channels))
-    return channels
+    return tuple(map(lambda x: x[1], channels))

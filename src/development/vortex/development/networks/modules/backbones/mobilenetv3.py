@@ -18,25 +18,44 @@ from ..utils.layers import resolve_act_layer, resolve_norm_args, resolve_norm_la
 from ..utils.arch_utils import round_channels
 from ..utils.conv2d import create_conv2d
 from ..utils.activations import get_act_fn
-from .base_backbone import Backbone, ClassifierFeature
+from ..utils.constants import IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
+from .base_backbone import BackboneConfig, BackboneBase
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/' + x
-model_urls = {
-    'mobilenetv3_large_075': _complete_url('tf_mobilenetv3_large_075-150ee8b0.pth'),
-    'mobilenetv3_large_100': _complete_url('mobilenetv3_large_100_ra-f55367f5.pth'),
-    'mobilenetv3_large_minimal_100': _complete_url('tf_mobilenetv3_large_minimal_100-8596ae28.pth'),
-    'mobilenetv3_small_075': _complete_url('tf_mobilenetv3_small_075-da427f52.pth'),
-    'mobilenetv3_small_100': _complete_url('tf_mobilenetv3_small_100-37f49e2b.pth'),
-    'mobilenetv3_small_minimal_100': _complete_url('tf_mobilenetv3_small_minimal_100-922a7843.pth'),
-    'mobilenetv3_rw': _complete_url('mobilenetv3_100-35495452.pth'),
+default_cfgs = {
+    'mobilenetv3_large_075': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_large_075-150ee8b0.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_large_100': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_large_100-427764d5.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_large_minimal_100': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_large_minimal_100-8596ae28.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_small_075': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_small_075-da427f52.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_small_100': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_small_100-37f49e2b.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_small_minimal_100': BackboneConfig(
+        pretrained_url=_complete_url('tf_mobilenetv3_small_minimal_100-922a7843.pth'),
+        normalize_mean=IMAGENET_INCEPTION_MEAN, normalize_std=IMAGENET_INCEPTION_STD
+    ),
+    'mobilenetv3_rw': BackboneConfig(pretrained_url=_complete_url('mobilenetv3_100-35495452.pth')),
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 TF_BN_MOMENTUM = 1 - 0.99
 TF_BN_EPSILON = 1e-3
 
 
-class MobileNetV3(nn.Module):
+class MobileNetV3(BackboneBase):
     """ MobiletNet-V3
 
     Based on my EfficientNet implementation and building blocks, this model utilizes the MobileNet-v3 specific
@@ -46,10 +65,10 @@ class MobileNetV3(nn.Module):
     Paper: https://arxiv.org/abs/1905.02244
     """
 
-    def __init__(self, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
+    def __init__(self, name, block_def, arch_params, global_params, num_classes=1000, in_channel=3,
                  stem_size=16, num_features=1280, head_bias=True, dropout_rate=0., 
-                 norm_layer=None, norm_kwargs=None, **kwargs):
-        super(MobileNetV3, self).__init__()
+                 norm_layer=None, norm_kwargs=None, default_config=None):
+        super(MobileNetV3, self).__init__(name, default_config)
 
         if norm_layer is None:
             if 'norm_layer' in global_params:
@@ -64,7 +83,7 @@ class MobileNetV3(nn.Module):
                 global_params['norm_kwargs'] = {}
                 norm_kwargs = {}
 
-        self.num_classes = num_classes
+        self._num_classes = num_classes
         self.num_features = num_features
         self.block_def = block_def
         self.arch_params = arch_params
@@ -93,14 +112,15 @@ class MobileNetV3(nn.Module):
         self.dropout = nn.Dropout(p=dropout_rate) if dropout_rate > 0 else nn.Identity()
         self.classifier = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
 
+        block_def_stages = [0,1,2,4,6] if len(self.block_def) == 6 else [1,2,3,5,7]
+        self._stages_channel = tuple(np.array(self.out_channels)[block_def_stages])
+
         self.out_channels.extend([self.num_features, num_classes])
         effnet_init_weights(self)
 
     def get_stages(self):
-        out_channels = np.array(self.out_channels[:-2])
         layers = None
         if len(self.block_def) == 6:
-            out_channels = out_channels[[0,1,2,4,6]]
             layers = [
                 nn.Sequential(self.conv_stem, self.bn1, self.act1),
                 self.blocks[0],
@@ -109,7 +129,6 @@ class MobileNetV3(nn.Module):
                 nn.Sequential(self.blocks[4], self.blocks[5])
             ]
         elif len(self.block_def) == 7:
-            out_channels = out_channels[[1,2,3,5,7]]
             layers = [
                 nn.Sequential(self.conv_stem, self.bn1, self.act1, self.blocks[0]),
                 self.blocks[1],
@@ -120,7 +139,7 @@ class MobileNetV3(nn.Module):
         else:
             raise RuntimeError("Unknown MobileNetV3 block definition, the number of block "
                 "definition should be 6 or 7, got {}".format(len(self.block_def)))
-        return nn.Sequential(*layers), out_channels
+        return nn.Sequential(*layers)
 
     def get_classifier(self):
         classifier = [
@@ -129,9 +148,28 @@ class MobileNetV3(nn.Module):
         ]
         return nn.Sequential(*classifier)
 
-    def reset_classifier(self, num_classes):
-        self.num_classes = num_classes
-        self.classifier = nn.Linear(self.num_features, num_classes) if num_classes > 0 else nn.Identity()
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self.num_features
+
+    def reset_classifier(self, num_classes, classifier = None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_features, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.classifier = classifier
 
     def forward_features(self, x):
         x = self.conv_stem(x)
@@ -167,9 +205,9 @@ def _create_model(variant, block_def, global_params, num_classes, channel_multip
     if 'drop_path_rate' in kwargs:
         global_params['drop_path_rate'] = kwargs.pop('drop_path_rate')
     arch_params = (channel_multiplier, 1.0, drop_rate, 224)
-    model = MobileNetV3(block_def, arch_params, global_params, **kwargs)
+    model = MobileNetV3(variant, block_def, arch_params, global_params, default_config=default_cfgs[variant], **kwargs)
     if pretrained:
-        state_dict = load_state_dict_from_url(model_urls[variant], progress=progress)
+        state_dict = load_state_dict_from_url(default_cfgs[variant].pretrained_url, progress=progress)
         model.load_state_dict(state_dict, strict=True)
         if num_classes != 1000:
             model.reset_classifier(num_classes)
@@ -309,6 +347,9 @@ def mobilenetv3_large_100(pretrained=False, progress=True, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
+    if pretrained:
+        kwargs['bn_eps'] = TF_BN_EPSILON
+        kwargs['pad_type'] = 'same'
     model = _mobilenet_v3('mobilenetv3_large_100', channel_multiplier=1.00, 
         pretrained=pretrained, progress=progress, **kwargs)
     return model
@@ -386,23 +427,3 @@ def mobilenetv3_small_minimal_100(pretrained=False, progress=True, **kwargs):
     model = _mobilenet_v3('mobilenetv3_small_minimal_100', channel_multiplier=1.0, 
         pretrained=pretrained, progress=progress, **kwargs)
     return model
-
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, available : %s" %(model_name, supported_models))
-
-    kwargs['override_params'] = {
-        'drop_path_rate': 0.0
-    }
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

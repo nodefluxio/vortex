@@ -5,6 +5,7 @@ import pytorch_lightning as pl
 from .registry import register_model
 from .model import ModelBase
 from .base_connector import BackbonePoolConnector
+from .backbone import Backbone
 from ..modules.losses.classification import ClassificationLoss
 from ..modules.postprocess.base_postprocess import SoftmaxPostProcess
 from ..modules.preprocess import get_preprocess
@@ -157,11 +158,11 @@ class Softmax(ClassificationModel):
         num_classes = network_args['n_classes']
         super().__init__(num_classes)
 
-        self.backbone = get_backbone(
+        self.backbone = Backbone(
             network_args['backbone'],
+            stages_output="classifier",
             n_classes=num_classes,
-            pretrained=network_args.get('pretrained_backbone', True),
-            feature_type="classifier"
+            pretrained=network_args.get('pretrained_backbone', True)
         )
 
         self.preprocess = get_preprocess('normalizer', **preprocess_args)
@@ -169,13 +170,13 @@ class Softmax(ClassificationModel):
         self.criterion = ClassificationLoss(**loss_args)
 
     def forward(self, x):
-        x = self.backbone(x)
+        x = self.backbone(x)[0]
         return x
 
     @torch.no_grad()
     def predict(self, x):
         x = self.preprocess(x)
-        x = self.backbone(x)
+        x = self.backbone(x)[0]
         x = self.postproces(x)
         return x
 

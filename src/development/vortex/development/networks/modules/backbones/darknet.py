@@ -3,22 +3,25 @@ import torch
 import torch.nn as nn
 
 from collections import OrderedDict
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.darknet import load_darknet_weight
 from ..utils.arch_utils import load_pretrained
 
 
 _dropbox_url = lambda sh, fname: "https://www.dropbox.com/s/{}/{}?dl=1".format(sh, fname)
 
-model_urls = {
+default_cfgs = {
     ## note that darknet7 model only has backbone weight (without classifier)
-    'darknet7': _dropbox_url("7xhyjjm53trg6wv", "darknet7-11acc66c.pth"),       # pytorch trained
-    'darknet19': _dropbox_url("7kmapol5nferyka", "darknet19-ad075691.pth"),     # from darknet
-    'darknet21': _dropbox_url("3cajnh7txm1drkl", "darknet21-1b30244d.pth"),     # pytorch trained
-    'darknet53': _dropbox_url("2hqdzzur00p3uhr", "darknet53-6229eb9e.pth"),     # from darknet
+    'darknet7': BackboneConfig(pretrained_url=_dropbox_url("7xhyjjm53trg6wv", "darknet7-11acc66c.pth")),    # pytorch trained
+    'darknet19': BackboneConfig(pretrained_url=_dropbox_url("7kmapol5nferyka", "darknet19-ad075691.pth"),    # from darknet
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
+    'darknet21': BackboneConfig(pretrained_url=_dropbox_url("3cajnh7txm1drkl", "darknet21-1b30244d.pth")),   # pytorch trained
+    'darknet53': BackboneConfig(pretrained_url=_dropbox_url("2hqdzzur00p3uhr", "darknet53-6229eb9e.pth"),    # from darknet
+        normalize_mean=(0, 0, 0), normalize_std=(1, 1, 1)
+    ),
 }
-
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 class BasicBlock(nn.Module):
@@ -75,15 +78,15 @@ class Bottleneck(nn.Module):
         return out
 
 
-class DarkNet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000, in_channel=3,
+class DarkNet(BackboneBase):
+    def __init__(self, name, block, layers, num_classes=1000, in_channel=3,
                  norm_layer=nn.BatchNorm2d, norm_kwargs=None, 
-                 inplane_extra_conv=False):
-        super(DarkNet, self).__init__()
+                 inplane_extra_conv=False, default_config=None):
+        super(DarkNet, self).__init__(name, default_config)
         norm_kwargs = norm_kwargs or {}
         self._extra_conv = inplane_extra_conv
         self.inplanes = 32 if not self._extra_conv else 16
-        self.num_classes = num_classes
+        self._num_classes = num_classes
 
         self.conv1 = nn.Conv2d(in_channel, self.inplanes, kernel_size=3, 
                                stride=1, padding=1, bias=False)
@@ -102,6 +105,7 @@ class DarkNet(nn.Module):
         self.fc = nn.Linear(1024, num_classes)
 
         self.out_channels = [self.inplanes, 64, 128, 256, 512, 1024, num_classes]
+        self._stages_channel = tuple(self.out_channels[1:-1].copy())
         if self._extra_conv:
             self.out_channels.insert(1, 32)
 
@@ -151,9 +155,7 @@ class DarkNet(nn.Module):
         return nn.Sequential(OrderedDict(layers))
 
     def get_stages(self):
-        out_channels = self.out_channels[1:-1].copy()
         if self._extra_conv:
-            out_channels.pop(0)
             first_stage = nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer0, self.layer1)
         else:
             first_stage = nn.Sequential(self.conv1, self.bn1, self.relu1, self.layer1)
@@ -164,7 +166,19 @@ class DarkNet(nn.Module):
             self.layer4,
             self.layer5
         ]
-        return nn.Sequential(*stages), out_channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return 1024
 
     def get_classifier(self):
         return nn.Sequential(
@@ -173,8 +187,16 @@ class DarkNet(nn.Module):
             self.fc
         )
 
-    def reset_classifier(self, num_classes):
-        self.fc = nn.Linear(1024, num_classes)
+    def reset_classifier(self, num_classes, classifier = None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(1024, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.fc = classifier
 
     def forward(self, x):
         x = self.conv1(x)
@@ -200,10 +222,10 @@ def _darknet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = DarkNet(block, layers, **kwargs)
+    model = DarkNet(arch, block, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        if model_urls[arch] is not None:
-            load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        if default_cfgs[arch].pretrained_url is not None:
+            load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
                 first_conv_name="conv1", classifier_name="fc", progress=progress)
         elif isinstance(pretrained, str):
             if pretrained.endswith('.pth'):
@@ -244,21 +266,3 @@ def darknet53(pretrained=False, progress=True, **kwargs):
     `"YOLOv3: An Incremental Improvement" <http://arxiv.org/abs/1804.02767>`_
     """
     return _darknet("darknet53", Bottleneck, [1, 2, 8, 8, 4], pretrained, progress, **kwargs)
-
-
-def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported, available: %s" %(model_name, supported_models))
-
-    model = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = model.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, model.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

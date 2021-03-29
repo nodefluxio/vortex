@@ -1,15 +1,10 @@
 import torch
 import torch.nn as nn
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
+from .registry import register_backbone
 from ..utils.arch_utils import load_pretrained
 
-supported_models = [
-    'shufflenetv2_x0.5',
-    'shufflenetv2_x1.0',
-    'shufflenetv2_x1.5',
-    'shufflenetv2_x2.0',
-]
 
 __all__ = [
     'ShuffleNetV2',
@@ -19,13 +14,14 @@ __all__ = [
     'shufflenetv2_x2_0'
 ]
 
-model_urls = {
-    'shufflenetv2_x0.5': 'https://download.pytorch.org/models/shufflenetv2_x0.5-f707e7126e.pth',
-    'shufflenetv2_x1.0': 'https://download.pytorch.org/models/shufflenetv2_x1-5666bf0f80.pth',
-    'shufflenetv2_x1.5': None,
-    'shufflenetv2_x2.0': None,
+_complete_url = lambda x: 'https://download.pytorch.org/models/' + x
+default_cfgs = {
+    'shufflenetv2_x0_5': BackboneConfig(pretrained_url=_complete_url('shufflenetv2_x0.5-f707e7126e.pth')),
+    'shufflenetv2_x1_0': BackboneConfig(pretrained_url=_complete_url('shufflenetv2_x1-5666bf0f80.pth')),
+    'shufflenetv2_x1_5': BackboneConfig(),
+    'shufflenetv2_x2_0': BackboneConfig(),
 }
-
+supported_models = list(default_cfgs)
 
 def channel_shuffle(x, groups):
     # type: (torch.Tensor, int) -> torch.Tensor
@@ -111,21 +107,19 @@ class ShuffleNetV2Classifier(nn.Module):
         return x
 
 
-class ShuffleNetV2(nn.Module):
-    def __init__(self, stages_repeats, stages_out_channels, num_classes=1000, 
-                 in_channel=3, norm_layer=None, norm_kwargs=None):
-        super(ShuffleNetV2, self).__init__()
+class ShuffleNetV2(BackboneBase):
+    def __init__(self, name, stages_repeats, stages_out_channels, num_classes=1000, 
+                 in_channel=3, norm_layer=None, norm_kwargs=None, default_config=None):
+        super(ShuffleNetV2, self).__init__(name, default_config)
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
         if norm_kwargs is None:
             norm_kwargs = {}
 
         if len(stages_repeats) != 3:
-            raise ValueError(
-                'expected stages_repeats as list of 3 positive ints')
+            raise ValueError('expected stages_repeats as list of 3 positive ints')
         if len(stages_out_channels) != 5:
-            raise ValueError(
-                'expected stages_out_channels as list of 5 positive ints')
+            raise ValueError('expected stages_out_channels as list of 5 positive ints')
         self._stage_out_channels = stages_out_channels
 
         input_channels = in_channel
@@ -157,7 +151,12 @@ class ShuffleNetV2(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.fc = nn.Linear(output_channels, num_classes)
-        self.num_classes = num_classes
+        self._num_classes = num_classes
+
+        stages_channel = self._stage_out_channels.copy()[:4]
+        stages_channel.insert(0, stages_channel[0])
+        self._stages_channel = tuple(stages_channel)
+
 
     def forward(self, x):
         x = self.conv1(x)
@@ -171,16 +170,25 @@ class ShuffleNetV2(nn.Module):
         return x
 
     def get_stages(self):
-        channels = self._stage_out_channels.copy()[:4]
-        channels.insert(0, channels[0])
-        stages = [
+        return nn.Sequential(
             self.conv1,
             self.maxpool,
             self.stage2,
             self.stage3,
             self.stage4
-        ]
-        return nn.Sequential(*stages), channels
+        )
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return self._stage_out_channels[-1]
 
     def get_classifier(self):
         return nn.Sequential(
@@ -190,10 +198,16 @@ class ShuffleNetV2(nn.Module):
             self.fc
         )
 
-    def reset_classifier(self, num_classes):
-        self.num_classes = num_classes
-        in_channel = self._stage_out_channels[-1]
-        self.fc = nn.Linear(in_channel, num_classes)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self._stage_out_channels[-1], num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.fc = classifier
 
 
 def _shufflenetv2(arch, pretrained, progress, *args, **kwargs):
@@ -201,13 +215,11 @@ def _shufflenetv2(arch, pretrained, progress, *args, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ShuffleNetV2(*args, **kwargs)
-
+    model = ShuffleNetV2(arch, default_config=default_cfgs[arch], *args, **kwargs)
     if pretrained:
-        model_url = model_urls[arch]
+        model_url = default_cfgs[arch].pretrained_url
         if model_url is None:
-            raise NotImplementedError(
-                'pretrained {} is not supported as of now'.format(arch))
+            raise NotImplementedError("pretrained model for '{}' is not available".format(arch))
         load_pretrained(model, model_url, num_classes=num_classes, 
             first_conv_name="conv1", classifier_name="fc", progress=progress)
     return model
@@ -222,7 +234,7 @@ def shufflenetv2_x0_5(pretrained=False, progress=True, *args, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _shufflenetv2('shufflenetv2_x0.5', pretrained, progress,
+    model = _shufflenetv2('shufflenetv2_x0_5', pretrained, progress,
                           [4, 8, 4], [24, 48, 96, 192, 1024], *args, **kwargs)
     return model
 
@@ -236,7 +248,7 @@ def shufflenetv2_x1_0(pretrained=False, progress=True, *args, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _shufflenetv2('shufflenetv2_x1.0', pretrained, progress,
+    model = _shufflenetv2('shufflenetv2_x1_0', pretrained, progress,
                           [4, 8, 4], [24, 116, 232, 464, 1024], *args, **kwargs)
     return model
 
@@ -250,7 +262,7 @@ def shufflenetv2_x1_5(pretrained=False, progress=True, *args, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _shufflenetv2('shufflenetv2_x1.5', pretrained, progress,
+    model = _shufflenetv2('shufflenetv2_x1_5', pretrained, progress,
                           [4, 8, 4], [24, 176, 352, 704, 1024], *args, **kwargs)
     return model
 
@@ -264,26 +276,13 @@ def shufflenetv2_x2_0(pretrained=False, progress=True, *args, **kwargs):
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
     """
-    model = _shufflenetv2('shufflenetv2_x2.0', pretrained, progress,
+    model = _shufflenetv2('shufflenetv2_x2_0', pretrained, progress,
                           [4, 8, 4], [24, 244, 488, 976, 2048], *args, **kwargs)
     return model
 
 
-def get_backbone(model_name: str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, "\
-            "available : %s" % (model_name, supported_models))
-
-    model_name = model_name.replace('.', '_')
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, *args, **kwargs)'.format(model_name))
-    stages, n_channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, n_channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone
+## backward compatibility
+register_backbone(shufflenetv2_x0_5, 'shufflenetv2_x0.5')
+register_backbone(shufflenetv2_x1_0, 'shufflenetv2_x1.0')
+register_backbone(shufflenetv2_x1_5, 'shufflenetv2_x1.5')
+register_backbone(shufflenetv2_x2_0, 'shufflenetv2_x2.0')

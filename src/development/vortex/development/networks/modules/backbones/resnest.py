@@ -12,21 +12,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ..utils.arch_utils import load_pretrained
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 
 _complete_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-resnest/' + x
 _gluon_url = lambda x: 'https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/' + x
-model_urls = {
-    'resnest14': _gluon_url('gluon_resnest14-9c8fe254.pth'),
-    'resnest26': _gluon_url('gluon_resnest26-50eb607c.pth'),
-    'resnest50': _complete_url('resnest50-528c19ca.pth'),
-    'resnest101': _complete_url('resnest101-22405ba7.pth'),
-    'resnest200': _complete_url('resnest200-75117900.pth'),
-    'resnest269': _complete_url('resnest269-0cc87c48.pth'),
-    'resnest50d_4s2x40d': _complete_url('resnest50_fast_4s2x40d-41d14ed0.pth'),
-    'resnest50d_1s4x24d': _complete_url('resnest50_fast_1s4x24d-d4a4f76f.pth')
+default_cfgs = {
+    'resnest14': BackboneConfig(pretrained_url=_gluon_url('gluon_resnest14-9c8fe254.pth')),
+    'resnest26': BackboneConfig(pretrained_url=_gluon_url('gluon_resnest26-50eb607c.pth')),
+    'resnest50': BackboneConfig(pretrained_url=_complete_url('resnest50-528c19ca.pth')),
+    'resnest101': BackboneConfig(
+        pretrained_url=_complete_url('resnest101-22405ba7.pth'), input_size=(3, 256, 256)
+    ),
+    'resnest200': BackboneConfig(
+        pretrained_url=_complete_url('resnest200-75117900.pth'), input_size=(3, 320, 320)
+    ),
+    'resnest269': BackboneConfig(
+        pretrained_url=_complete_url('resnest269-0cc87c48.pth'), input_size=(3, 416, 416)
+    ),
+    'resnest50d_4s2x40d': BackboneConfig(pretrained_url=_complete_url('resnest50_fast_4s2x40d-41d14ed0.pth')),
+    'resnest50d_1s4x24d': BackboneConfig(pretrained_url=_complete_url('resnest50_fast_1s4x24d-d4a4f76f.pth'))
 }
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 class rSoftMax(nn.Module):
@@ -184,7 +190,7 @@ class ResNestBottleneck(nn.Module):
         return out
 
 
-class ResNest(nn.Module):
+class ResNest(BackboneBase):
     """ResNest Variants
 
     NOTE: ResNest variant can't be trained with single batch data using BatchNorm2d,
@@ -209,10 +215,10 @@ class ResNest(nn.Module):
         - Yu, Fisher, and Vladlen Koltun. "Multi-scale context aggregation by dilated convolutions."
     """
 
-    def __init__(self, block, layers, num_classes=1000, radix=1, cardinality=1, bottleneck_width=64,
+    def __init__(self, name, block, layers, num_classes=1000, radix=1, cardinality=1, bottleneck_width=64,
                  dilated=False, dilation=1, deep_stem=False, stem_width=64, avg_down=False,
                  avd=False, avd_first=False, final_drop=0.0, dropblock_prob=0, 
-                 zero_init_last_bn=False, norm_layer=nn.BatchNorm2d, norm_kwargs=None):
+                 zero_init_last_bn=False, norm_layer=nn.BatchNorm2d, norm_kwargs=None, default_config=None):
         norm_kwargs = norm_kwargs or {}
         self.cardinality = cardinality
         self.bottleneck_width = bottleneck_width
@@ -228,7 +234,7 @@ class ResNest(nn.Module):
 
         self.block_expansion = block.expansion
 
-        super(ResNest, self).__init__()
+        super(ResNest, self).__init__(name, default_config)
         if deep_stem:
             self.conv1 = nn.Sequential(
                 nn.Conv2d(3, stem_width, kernel_size=3, stride=2, padding=1, bias=False),
@@ -264,6 +270,10 @@ class ResNest(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d(1)
         self.drop = nn.Dropout(final_drop) if final_drop > 0.0 else None
         self.fc = nn.Linear(512 * self.block_expansion, num_classes)
+
+        stages_channel = [self.stem_channel] + [x * self.block_expansion for x in [64, 128, 256, 512]]
+        self._stages_channel = tuple(stages_channel)
+        self._num_classes = num_classes
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -326,15 +336,25 @@ class ResNest(nn.Module):
         return nn.Sequential(*layers)
 
     def get_stages(self):
-        out_channels = [self.stem_channel] + [x * self.block_expansion for x in [64, 128, 256, 512]]
-        stages = [
+        return nn.Sequential(
             nn.Sequential(self.conv1, self.bn1, self.relu, self.maxpool),
             self.layer1,
             self.layer2,
             self.layer3,
             self.layer4
-        ]
-        return nn.Sequential(*stages), out_channels
+        )
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return 512*self.block_expansion
 
     def get_classifier(self):
         return nn.Sequential(
@@ -343,8 +363,16 @@ class ResNest(nn.Module):
             self.fc
         )
 
-    def reset_classifier(self, num_classes):
-        self.fc = nn.Linear(512 * self.block_expansion, num_classes)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_classifer_feature, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.fc = classifier
 
     def forward(self, x):
         x = self.conv1(x)
@@ -371,9 +399,9 @@ def _resnest(arch, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ResNest(ResNestBottleneck, layers, **kwargs)
+    model = ResNest(arch, ResNestBottleneck, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="conv1", classifier_name="fc", progress=progress)
     return model
 
@@ -433,23 +461,3 @@ def resnest50d_1s4x24d(pretrained=False, progress=True, **kwargs):
     return _resnest('resnest50d_1s4x24d', [3, 4, 6, 3], pretrained, progress, deep_stem=True, 
         stem_width=32, avg_down=True, bottleneck_width=24, cardinality=4, radix=1,
         avd=True, avd_first=True, **kwargs)
-
-
-def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, available : %s" %(model_name, supported_models))
-    if len(args) != 0:
-        import warnings
-        warnings.warn("unused argument(s) in 'get_backbone': %s" % args)
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone

@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from .base_backbone import Backbone, ClassifierFeature
+from .base_backbone import BackboneConfig, BackboneBase
 from ..utils.arch_utils import load_pretrained
 
 
@@ -9,19 +9,20 @@ __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
            'wide_resnet50_2', 'wide_resnet101_2']
 
 
-model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
-    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
-    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
-    'resnext50_32x4d': 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth',
-    'resnext101_32x8d': 'https://download.pytorch.org/models/resnext101_32x8d-8ba56ff5.pth',
-    'wide_resnet50_2': 'https://download.pytorch.org/models/wide_resnet50_2-95faca4d.pth',
-    'wide_resnet101_2': 'https://download.pytorch.org/models/wide_resnet101_2-32ee1156.pth',
+_complete_url = lambda x: 'https://download.pytorch.org/models/' + x
+default_cfgs = {
+    'resnet18': BackboneConfig(pretrained_url=_complete_url('resnet18-5c106cde.pth')),
+    'resnet34': BackboneConfig(pretrained_url=_complete_url('resnet34-333f7ec4.pth')),
+    'resnet50': BackboneConfig(pretrained_url=_complete_url('resnet50-19c8e357.pth')),
+    'resnet101': BackboneConfig(pretrained_url=_complete_url('resnet101-5d3b4d8f.pth')),
+    'resnet152': BackboneConfig(pretrained_url=_complete_url('resnet152-b121ed2d.pth')),
+    'resnext50_32x4d': BackboneConfig(pretrained_url=_complete_url('resnext50_32x4d-7cdf4587.pth')),
+    'resnext101_32x8d': BackboneConfig(pretrained_url=_complete_url('resnext101_32x8d-8ba56ff5.pth')),
+    'wide_resnet50_2': BackboneConfig(pretrained_url=_complete_url('wide_resnet50_2-95faca4d.pth')),
+    'wide_resnet101_2': BackboneConfig(pretrained_url=_complete_url('wide_resnet101_2-32ee1156.pth')),
 }
 
-supported_models = list(model_urls.keys())
+supported_models = list(default_cfgs.keys())
 
 
 def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
@@ -130,18 +131,14 @@ class Bottleneck(nn.Module):
         return out
 
 
-class ResNet(nn.Module):
+class ResNet(BackboneBase):
 
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False,
+    def __init__(self, name, block, layers, num_classes=1000, zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, norm_kwargs=None, in_channel=3):
-        super(ResNet, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        if norm_kwargs is None:
-            norm_kwargs = {}
-        self._norm_layer = norm_layer
-        self._norm_kwargs = norm_kwargs
+                 norm_layer=None, norm_kwargs=None, in_channel=3, default_config=None):
+        super(ResNet, self).__init__(name, default_config)
+        self._norm_layer = norm_layer or nn.BatchNorm2d
+        self._norm_kwargs = norm_kwargs or {}
 
         self.inplanes = 64
         self.dilation = 1
@@ -156,7 +153,7 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
         self.conv1 = nn.Conv2d(in_channel, self.inplanes, kernel_size=7, stride=2, 
                                padding=3, bias=False)
-        self.bn1 = norm_layer(self.inplanes, **norm_kwargs)
+        self.bn1 = self._norm_layer(self.inplanes, **self._norm_kwargs)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, layers[0])
@@ -170,7 +167,9 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.flatten = nn.Flatten(start_dim=1)
         self.fc = nn.Linear(512 * block.expansion, num_classes)
-        self.num_classes = num_classes
+
+        self._num_classes = num_classes
+        self._stages_channel = tuple([64] + [x*block.expansion for x in [64, 128, 256, 512]])
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -234,21 +233,26 @@ class ResNet(nn.Module):
         return self._forward_impl(x)
 
     def get_stages(self):
-        if isinstance(self.layer1[0], Bottleneck):
-            channels = [64, 256, 512, 1024, 2048]
-        else:
-            channels = [64, 64, 128, 256, 512]
         stages = [
-            nn.Sequential(
-                self.conv1, self.bn1,
-                self.relu, self.maxpool
-            ),
+            nn.Sequential(self.conv1, self.bn1, self.relu, self.maxpool),
             self.layer1,
             self.layer2,
             self.layer3,
             self.layer4
         ]
-        return nn.Sequential(*stages), channels
+        return nn.Sequential(*stages)
+
+    @property
+    def stages_channel(self):
+        return self._stages_channel
+
+    @property
+    def num_classes(self):
+        return self._num_classes
+
+    @property
+    def num_classifer_feature(self):
+        return 512*self.layer1[0].expansion
 
     def get_classifier(self):
         return nn.Sequential(
@@ -257,10 +261,16 @@ class ResNet(nn.Module):
             self.fc
         )
 
-    def reset_classifier(self, num_classes):
-        self.num_classes = num_classes
-        expansion = self.layer1[0].expansion
-        self.fc = nn.Linear(512*expansion, num_classes)
+    def reset_classifier(self, num_classes, classifier=None):
+        self._num_classes = num_classes
+        if num_classes < 0:
+            classifier = nn.Identity()
+        elif classifier is None:
+            classifier = nn.Linear(self.num_classifer_feature, num_classes)
+        if not isinstance(classifier, nn.Module):
+            raise TypeError("'classifier' argument is required to have type of 'int' or 'nn.Module', "
+                "got {}".format(type(classifier)))
+        self.fc = classifier
 
 
 def _resnet(arch, block, layers, pretrained, progress, **kwargs):
@@ -268,9 +278,9 @@ def _resnet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained and kwargs.get("num_classes", False):
         num_classes = kwargs.pop("num_classes")
 
-    model = ResNet(block, layers, **kwargs)
+    model = ResNet(arch, block, layers, default_config=default_cfgs[arch], **kwargs)
     if pretrained:
-        load_pretrained(model, model_urls[arch], num_classes=num_classes, 
+        load_pretrained(model, default_cfgs[arch].pretrained_url, num_classes=num_classes, 
             first_conv_name="conv1", classifier_name="fc", progress=progress)
     return model
 
@@ -386,23 +396,3 @@ def wide_resnet101_2(pretrained=False, progress=True, **kwargs):
     kwargs['width_per_group'] = 64 * 2
     return _resnet('wide_resnet101_2', Bottleneck, [3, 4, 23, 3],
                    pretrained, progress, **kwargs)
-
-
-def get_backbone(model_name : str, pretrained: bool = False, feature_type: str = "tri_stage_fpn", 
-                 n_classes: int = 1000, *args, **kwargs):
-    if not model_name in supported_models:
-        raise RuntimeError("model %s is not supported yet, available : %s" %(model_name, supported_models))
-    if len(args) != 0:
-        import warnings
-        warnings.warn("unused argument(s) in 'get_backbone': %s" % args)
-    network = eval('{}(pretrained=pretrained, num_classes=n_classes, **kwargs)'.format(model_name))
-    stages, channels = network.get_stages()
-
-    if feature_type == "tri_stage_fpn":
-        backbone = Backbone(stages, channels)
-    elif feature_type == "classifier":
-        backbone = ClassifierFeature(stages, network.get_classifier(), n_classes)
-    else:
-        raise NotImplementedError("'feature_type' for other than 'tri_stage_fpn' and 'classifier'"\
-            "is not currently implemented, got %s" % (feature_type))
-    return backbone
