@@ -1,15 +1,18 @@
 """
 Integrating Custom Classification Model to Vortex
 =================================================
-This tutorial shows how to develop your own model and integrate it to `vortex`.
+This tutorial shows how to develop your own model and integrate it to ``vortex``.
 The tutorial consists of 5 steps:
 
 1. Define model architecture
 2. Create post-process module
 3. Define loss function
 4. Register model's *builder function*
-5. Integration with `vortex` CLI
+5. Integration with ``vortex`` CLI
+
 """
+
+#%%
 
 import torch
 import torch.nn as nn
@@ -19,44 +22,46 @@ import vortex.development
 import vortex.development.networks as networks
 import vortex.development.networks.modules as vortex_modules
 
-######################################################################
+#%%
 # 1. Model Architecture
 # ---------------------
 # 
 # We first define our model, in this case we will define AlexNet model
-# that can be integrated to `vortex`. In order to do that, our model needs
-# only to have `task` and `output_format` member variables.
+# that can be integrated to ``vortex``. In order to do that, our model needs
+# only to have ``task`` and ``output_format`` member variables.
 #
-# For the sake of simplicity, we will reuse `AlexNet` from `torchvision` by
-# instantiate `torchvision`'s `AlexNet` and add the required member variable
-# `task` and `output_format`. `output_format` will be used to slice tensor
+# For the sake of simplicity, we will reuse ``AlexNet`` from ``torchvision`` by
+# instantiate ``torchvision``'s ``AlexNet`` and add the required member variable
+# ``task`` and ``output_format``. ``output_format`` will be used to slice tensor
 # output from post-process module. 
 #
-# `output_format` is a nested `dict`, with signature of `Dict[str,dict]`,
-# with inner `dict` with signature of `Dict[str,Union[list,int]]`.  The inner
+# ``output_format`` is a nested ``dict``, with signature of ``Dict[str,dict]``,
+# with inner ``dict`` with signature of ``Dict[str,Union[list,int]]``.  The inner
 # dictionary is a mapping from output name to arguments that will be used for tensor slicing.
-# The tensor slicing operation will be performed using `np.take`, `Onnx.Gather`, or
-# `torch.index_select`; the arguments' naming use numpy's take, that is `indices` and `axis`;
+# The tensor slicing operation will be performed using ``np.take``, ``Onnx.Gather``, or
+# ``torch.index_select``; the arguments' naming use numpy's take, that is ``indices`` and ``axis``;
 # check numpy, onnx, or torch docs for more details.
 #
-# For classification models, we need `class_label` and `class_confidence`.
-# Note that this `output_format` will be used for single sample.
+# For classification models, we need ``class_label`` and ``class_confidence``.
+# Note that this ``output_format`` will be used for single sample.
 #
 # The code will looks like:
-# ```
-#        alexnet = vision.models.alexnet(...)
-#        alexnet.task = "classification"
-#        alexnet.output_format = dict(
-#            class_label=dict(
-#                indices=[0], axis=0
-#            ),
-#            class_confidence=dict(
-#                indices=[1], axis=0
-#            )
-#        )
-# ```
+# 
+# .. code-block:: python
+#
+#     alexnet = vision.models.alexnet(...)
+#     alexnet.task = "classification"
+#     alexnet.output_format = dict(
+#         class_label=dict(
+#             indices=[0], axis=0
+#         ),
+#         class_confidence=dict(
+#             indices=[1], axis=0
+#         )
+#     )
+# 
 
-######################################################################
+#%%
 # 2. Create PostProcess module
 # ----------------------------
 # 
@@ -78,14 +83,14 @@ class AlexNetPostProcess(nn.Module):
         conf_label, cls_label = input.max(dim=1, keepdim=False)
         return torch.stack((cls_label.float(), conf_label), dim=1)
 
-######################################################################
+#%%
 # 3. Defining Loss Function
 # -------------------------
 #
 # Since we do not include softmax to our model (performed in post-process instead), 
 # we will use cross entropy loss.
 # 
-# Note that the function signature for loss function is `forward(input,target) -> Tensor`.
+# Note that the function signature for loss function is ``forward(input,target) -> Tensor``.
 # Additional arguments may be supplied as attributes via initializer.
 
 class ClassificationLoss(nn.Module):
@@ -99,7 +104,7 @@ class ClassificationLoss(nn.Module):
             target = target.unsqueeze(0)
         return self.loss_fn(input, target)
 
-######################################################################
+#%%
 # 4. Registering our model to vortex
 # ----------------------------------
 #
@@ -111,29 +116,35 @@ class ClassificationLoss(nn.Module):
 # and post-process, and optionally preprocess and dataset collater. For example, you
 # need to reuse parameter from networks to postprocess, you can do it here.
 # 
-# The required components are `preprocess`, `network`, and `postprocess`.
-# For training, we need additional components, `loss` and optional `collate_fn`.
-# For preprocess, it is recommended to use modules from `vortex_modules.preprocess` to 
+# The required components are ``preprocess``, ``network``, and ``postprocess``.
+# For training, we need additional components, ``loss`` and optional ``collate_fn``.
+# For preprocess, it is recommended to use modules from ``vortex_modules.preprocess`` to 
 # make sure it is exportable.
 #
-# note that the function signature is 
-# ```
-# create_model_components(model_name, preprocess_args, network_args, loss_args, postprocess_args, stage) -> dict
-# ```
-# where model_name is a `str` holds the model name (`'alexnet'` in this case), `preprocess_args`,
-# `network_args`, `loss_args`, `postprocess_args` are mapping (`dict`) containing parameters from
-# configuration file, while `stage` is a string containing experiment stage (either `'train'` or `'validate'`)
-# given by vortex driver. Note that we simply *unpack argument mapping*  using `**` operator.
+# note that the function signature is:
+# 
+# .. code-block:: python
+# 
+#     create_model_components(model_name, preprocess_args, network_args, loss_args, postprocess_args, stage) -> dict
+# 
+# where model_name is a ``str`` holds the model name (``'alexnet'`` in this case), ``preprocess_args``,
+# ``network_args``, ``loss_args``, ``postprocess_args`` are mapping (``dict``) containing parameters from
+# configuration file, while ``stage`` is a string containing experiment stage (either ``'train'`` or ``'validate'``)
+# given by vortex driver. Note that we simply *unpack argument mapping*  using ``**`` operator.
 #
-# There are two ways of registering *builder* function, using decorator `register_model`
-# ```
-# @vortex.development.networks.models.register_model(model_name='my_model_name')
-# def create_model_components(...):
-# ```
-# or by directly calling `register_model_`
-# ```
-# vortex.development.networks.models.register_model_('my_model_name',create_model_components)
-# ```
+# There are two ways of registering *builder* function, using decorator ``register_model``
+# 
+# .. code-block:: python
+# 
+#     @vortex.development.networks.models.register_model(model_name='my_model_name')
+#     def create_model_components(...):
+# 
+# or by directly calling ``register_model_``
+# 
+# .. code-block:: python
+# 
+#     vortex.development.networks.models.register_model_('my_model_name',create_model_components)
+# 
 
 @networks.models.register_model(model_name='alexnet')
 def create_model_components(
@@ -182,12 +193,12 @@ def create_model_components(
     
     return components
 
-######################################################################
+#%%
 # 5. Integration with vortex CLI
-# ----------------------------
+# ------------------------------
 #
 # Finally, we make this module as entry-point for our next experiments
-# to get more vortex' features in a *configurable* way:  
+# to get more 'vortex' features in a *configurable* way:  
 # 
 # - hyperparameter optimization  
 # - training  
@@ -200,15 +211,18 @@ if __name__=='__main__':
     ## this will be our entrypoint to supported experiments
     vortex.development.vortex_cli.main()
 
-######################################################################
+#%%
 # Note that since our custom model is added outside the vortex distribution,
 # it is unavailable from `vortex` command-line, to properly run experiments
-# with our custom model registered we need to invoke python, for example
-# ```Shell
-# # run hyperparam optimization experiment
-# python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
-# ```
-# ```Shell
-# # run training experiment
-# python3 alexnet.py train --config cifar10.yml
-# ```
+# with our custom model registered we need to invoke python, for example:
+# 
+# .. code-block:: bash
+#
+#     # run hyperparam optimization experiment
+#     python3 alexnet.py hypopt --config cifar10.yml --optconfig hyperparam.yml
+# 
+# .. code-block:: bash
+#
+#     # run training experiment
+#     python3 alexnet.py train --config cifar10.yml
+#
