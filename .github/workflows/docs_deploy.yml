@@ -1,14 +1,16 @@
 name : Docs Deploy
 
-on:
-  ## TODO: support for docs versioning, with mike (?)
+on: 
+  ## TODO: support docs versioning
   push:
-    branches: ["release/v*"]
+    branches: [master, "release/v*"]
+  pull_request:
+    branches: [master]
   release:
     types: [published, edited]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -16,11 +18,24 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.x
+          python-version: 3.6
       - name: Setup Environment
         run: |
+          sudo apt-get update && sudo apt-get install -y git
           python -m pip install --upgrade pip
-          python -m pip install mkdocs
-      - name: Deploy
+          pip install "./src/development[test]" "./src/runtime[all]"
+          python -m pip install -r docs/requirements.txt
+      - name: Build Docs
         run: |
-          mkdocs gh-deploy --force
+          make -C docs clean
+          make -C docs html
+      - name: Deploy Docs
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@users.noreply.github.com"
+          rm -rf /tmp/gh-pages && cp -r docs/_build/html /tmp/gh-pages
+          git fetch && git checkout gh-pages
+          rm -rf * && cp -r /tmp/gh-pages/* ./ && rm -rf /tmp/gh-pages
+          touch README.md && echo "built from ${GITHUB_SHA}" >> README.md
+          git add . && git commit -m "Updated gh-pages" && git push && git checkout master
