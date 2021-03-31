@@ -6,7 +6,6 @@ matplotlib
 enlighten
 future
 Pillow
-enforce
 onnx==1.6.0
 mypy
 pyyaml

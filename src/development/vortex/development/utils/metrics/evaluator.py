@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 import multipledispatch
 import warnings
-import enforce
 
 __all__ = [
     'BoundingBoxes',
@@ -22,7 +21,6 @@ __all__ = [
 ]
 
 
-@enforce.runtime_validation
 def unmarked(bboxes: List[BoundingBox]) -> List[BoundingBox]:
     return [box for box in bboxes if box.unmarked()]
 
