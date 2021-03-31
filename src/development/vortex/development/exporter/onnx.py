@@ -1,6 +1,5 @@
 import onnx
 import torch
-import enforce
 import sys
 
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
@@ -14,7 +13,6 @@ __all__ = [
     'export',
 ]
 
-@enforce.runtime_validation
 def export(model : Any, example_input : Union[Tuple[torch.Tensor,...],torch.Tensor], filename : str, input_names : List[str], output_names : List[str], opset_version : int = 9, *args, **kwargs) :
     torch.onnx.export(model, example_input, filename, input_names=input_names, output_names=output_names, opset_version=opset_version, *args, **kwargs)
     return Path(filename).exists()

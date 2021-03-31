@@ -1,4 +1,4 @@
-import enforce
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -103,7 +103,6 @@ def activation_fn(act: str, *args, **kwargs):
     return eval('%s(*args,*kwargs)' % act)
 
 
-@enforce.runtime_validation
 def darknet_maxpool(kernel_size: int, stride: int):
     maxpool = nn.MaxPool2d(kernel_size=kernel_size,
                            stride=stride, padding=int((kernel_size - 1) // 2))
@@ -116,7 +115,6 @@ def darknet_maxpool(kernel_size: int, stride: int):
         return maxpool
 
 
-@enforce.runtime_validation
 def darknet_conv(in_channels: int, filters: int, bn: bool, kernel_size: int, pad: bool, activation: str, stride: int):
     return nn.Sequential(
         nn.Conv2d(
@@ -135,7 +133,6 @@ def darknet_conv(in_channels: int, filters: int, bn: bool, kernel_size: int, pad
     )
 
 
-@enforce.runtime_validation
 def yolo_feature_maps(input_size: int, backbone_stages: Tuple[int, int, int] = (3,4,5)) -> List[Tuple[int, int]]:
     assert len(backbone_stages) == 3, "'backbone_stages' ({}) should have length of 3, got".format(backbone_stages)
     s3, s4, s5 = (2**x for x in backbone_stages)
