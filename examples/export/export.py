@@ -1,8 +1,11 @@
-# Export and inference example
-# ============================
-# This example shows you how to use vortex runtime.
-# We'll use pretrained DETR COCO from facebookai.
+"""
+Export and inference example
+============================
+This example shows you how to use vortex runtime.
+We'll use pretrained DETR COCO from facebookai.
+"""
 
+# %%
 from PIL import Image
 import requests
 import matplotlib.pyplot as plt
@@ -16,9 +19,10 @@ torch.set_grad_enabled(False)
 import numpy as np
 import urllib
 
-# Model Preparation
-# =================
-
+# %%
+# 1. Model Preparation
+# --------------------
+# 
 # The following model is taken from
 # https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb
 # We will use this model to export to onnx before using vortex runtime
@@ -197,9 +201,10 @@ def demo():
         
     plot_results(im, scores, boxes)
 
-# Preprocess and Postprocess
-# ==========================
-
+# %%
+# 2. Preprocess and Postprocess
+# -----------------------------
+# 
 # Here, we'll prepare some preprocess and postprocess for this specific model.
 # This is not really required, but note that vortex runtime doesn't provide
 # preprocess and postprocess, and in general it is nice to include preprocess
@@ -207,7 +212,7 @@ def demo():
 # Furthermore, the preprocess and postprocess don't have to implemented as separate
 # nn.Module, but for the sake of clarity and modularity, we'll implement it as
 # separate modules and then compose them in another nn.Module
-
+# 
 # Note that by default vortex use BGR channel order and expect NHWC layout,
 # this behaviour can be adjusted by subclassing but we'll stick to default for now.
 
@@ -287,9 +292,10 @@ class DETR(DETRdemo):
 filename = "detr.onnx"
 import cv2
 
-# Export
-# ======
-
+# %%
+# 3. Export
+# ---------
+# 
 # Here we will actually export the model.
 # We'll use `torch.onnx` to export the model and add additional properties to
 # model using helper function from vortex.
@@ -367,9 +373,10 @@ def export():
     model = f(model)
     onnx.save(model,filename)
 
-# Inference
-# =========
-
+# %%
+# 4. Inference
+# ------------
+# 
 # Now we will run the exported model using vortex runtime
 # There is helper class InferenceHelper that is simple wrapper
 # for visualization and actual runtime model.
