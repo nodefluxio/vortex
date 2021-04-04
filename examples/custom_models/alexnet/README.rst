@@ -1,2 +1,0 @@
-Vortex Example
-==============
