@@ -6,7 +6,6 @@ from typing import Tuple, Union, List, Dict, Sequence
 
 import vortex.runtime as vrt
 
-# TODO: move this to another directory
 class Visual:
     """Helper class for various drawing routine accepting formated result
     """
@@ -106,7 +105,7 @@ class Visual:
         return vis
 
     @classmethod
-    def draw_labels(cls, vis, obj_classes, confidences, bls : Sequence[Tuple[int,int]], color_map=colors, class_names=None) :
+    def draw_labels(cls, vis, obj_classes, confidences, bls : Sequence[Tuple[int,int]], color_map=None, class_names=None) :
         """draw multiple labels on `vis`
 
         Args:
@@ -120,13 +119,15 @@ class Visual:
         Returns:
             np.ndarray: array with visualiazation
         """        
+        if color_map is None:
+            color_map = cls.colors
         for obj_class, confidence, bl in zip(obj_classes, confidences, bls) :
             color = color_map[int(obj_class)]
             vis = cls.draw_label(vis, obj_class, confidence, bl, color, class_names=class_names)
         return vis
     
     @classmethod
-    def draw(cls, result: dict, vis: np.ndarray, class_names=None, color_map=colors):
+    def draw(cls, result: dict, vis: np.ndarray, class_names=None, color_map=None):
         """draw single prediction result on `vis`
 
         Args:
@@ -138,6 +139,8 @@ class Visual:
         Returns:
             np.ndarray: array with visualiazation
         """        
+        if color_map is None:
+            color_map = cls.colors
         class_label = None
         if 'class_label' in result:
             class_label = result['class_label']
@@ -164,7 +167,7 @@ class Visual:
         return vis
 
     @classmethod
-    def visualize_result(cls, vis: np.ndarray, results: List[Dict[str,np.ndarray]] , class_names=None, color_map=colors):
+    def visualize_result(cls, vis: np.ndarray, results: List[Dict[str,np.ndarray]] , class_names=None, color_map=None):
         """draw single-batch prediction result on `vis`
 
         Args:
@@ -176,6 +179,8 @@ class Visual:
         Returns:
             np.ndarray: array with visualiazation
         """
+        if color_map is None:
+            color_map = cls.colors
         for result in results:
             vis = cls.draw(result, vis, class_names=class_names, color_map=color_map)
         return vis
@@ -399,4 +404,9 @@ class InferenceHelper:
         return results
     
     def __call__(self, *args, **kwargs):
+        """Run and visualize
+
+        Returns:
+            dict: dictionary containing 'prediction' and optionally 'visualization'
+        """
         return self.run_and_visualize(self.model, class_names=self.class_names, *args, **kwargs)

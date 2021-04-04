@@ -150,7 +150,17 @@ class ModelWrapper(torch.nn.Module):
         return self.model.predict(*args,**kwargs)
 
 class ONNXExporter():
+    """Vortex onnx example, handle onnx export for `vortex.development.networks.models.ModelBase`
+    """
     def __init__(self, dataset=None, batch_size=1, shape_inference=True, opset_version: int=11):
+        """Create ONNXExporter instance
+
+        Args:
+            dataset (Any, optional): optional dataset that will be passed on `on_export_start`. Defaults to None.
+            batch_size (int, optional): batch size for this export session, it is up to model to use it or not. Defaults to 1.
+            shape_inference (bool, optional): if enabled, will perform shape inference. Defaults to True.
+            opset_version (int, optional): onnx opset version passed to `torch.onnx.export`. Defaults to 11.
+        """
         self.dataset = dataset
         self.shape_inference = shape_inference
         self.batch_size = batch_size
@@ -204,6 +214,16 @@ class ONNXExporter():
                     value_t=torch.tensor([0], dtype=scalar_type_to_pytorch_type[dtype]))
 
     def export(self, model, filename, **kwargs):
+        """First part of exporter calls, will do the following:
+        set model on eval mode,
+        calls model's `on_export_start`,
+        read `input_names` and `output_names` from model,
+        export the model,
+
+        Args:
+            model: model to be exported
+            filename (str): [description]
+        """
         # prepare export args
         mode = model.training
         model.eval()
@@ -223,6 +243,13 @@ class ONNXExporter():
         model.train(mode)
 
     def embed_properties(self, model, filename, shape_inference=None):
+        """Second part of export calls, embed required model's properties to exported model
+
+        Args:
+            model: model in question
+            filename (str): exported model filename
+            shape_inference (bool, optional): enable or disable shape inference. Defaults to None.
+        """
         # prepare model properties
         output_format = model.output_format
         class_names   = model.class_names
@@ -260,12 +287,25 @@ class ONNXExporter():
         onnx.save(model, filename)
     
     def finalize_export(self, model, filename):
+        """Final part of export calls, call `model.on_export_end`
+
+        Args:
+            model: model in question
+            filename (str): exported model filename
+        """
         exported = onnx.load(filename)
         exported_ = model.on_export_end(self, exported)
         if exported_ is not None:
             onnx.save(exported_, filename)
     
     def __call__(self, model, filename, shape_inference=None, **kwargs):
+        """Export given model and save to `filename`
+
+        Args:
+            model: model to be exported
+            filename (str): desired output filename
+            shape_inference (bool, optional): enable or disable shape inference. Defaults to None.
+        """
         self.export(model, filename, **kwargs)
         self.embed_properties(model, filename, shape_inference)
         self.finalize_export(model, filename)
