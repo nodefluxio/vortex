@@ -26,6 +26,7 @@ Contents:
    user_guides/index
    modules/index
    api/index
+   examples/index
 
 
 

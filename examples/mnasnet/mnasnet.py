@@ -1,3 +1,22 @@
+"""
+Training Classifier, Export & Benchmark using Vortex
+====================================================
+This tutorial shows you how to use vortex to train
+classification model, then export and benchmark the
+exported model.
+
+We will use CIFAR10 for our example dataset
+and mnasnet from torchvision for example model.
+
+Vortex model base is derived from pytorch lightning,
+so you can treat it just like pytorch lightning module
+Like we'll show you in this example.
+
+Then you can export the trained model to onnx and
+benchmark it using vortex.
+"""
+
+# %%
 import numpy as np
 import torch
 import torch.nn as nn
@@ -14,6 +33,15 @@ from vortex.development.networks.models import ModelBase
 from vortex.development.utils.profiler.lightning import Profiler
 from abc import abstractmethod
 
+# %%
+# 1. Preparing Dataset
+# --------------------
+# We will use pytorch lightning's `LightningDataModule`,
+# to load the dataset, we use `torchvision`'s `CIFAR10`.
+# 
+# Note that we will use this dataset module also for benchmark
+# using vortex, and we need to define `test_dataloader` in
+# addition to `train_dataloader` and `test_dataloader`.
 class CIFAR(pl.LightningDataModule):
     def __init__(self, batch_size, img_size, **kwargs):
         super().__init__()
@@ -101,6 +129,52 @@ class MyClassificationMetrics(pl.metrics.Metric):
             results[name] = metric.compute()
         return results
 
+# %%
+# 2. Preparing the Model
+# ----------------------
+# `vortex`'s `ModelBase` is just an extension to `pl.LightningModule`,
+# so we can use it just like any `LightningModule`, like define
+# `training_step`, `validation_step`, `configure_optimizers`, etc.
+# 
+# Additionally, we need to define the following methods:
+# - `input_names` should return a list of string representing the input names
+# - `output_names` should return a list of string representing the output names
+# - `on_export_start` (optional): will be called by vortex onnx exporter at the start of export
+# - `available_metrics` return metric(s) used by this module, if any.
+# - `output_format` should return a nested dictionary representing the structure of the batched output, defined for single batch
+# 
+# The additional methods above will be used for exporting.
+# We can use on_export_start to sample input from dataset for exporting.
+# The structure of `output_format` can be described using the following example:
+# Assume the model return NxE 2D array/tensor where the first axis represent batch index
+# and the second axis represent class label and confidence where class label is located
+# at index 0 and class confidence at index 1, visually:
+# 
+# +-------+-------------+------------------+
+# | batch | class_label | class_confidence |
+# +=======+=============+==================+
+# | 0     | 1           | 0.8              |
+# +-------+-------------+------------------+
+# | 1     | 4           | 0.9              |
+# +-------+-------------+------------------+
+# 
+# then the output_format should be:
+# `{'class_label': {'indices':[0], 'axis': 0}, 'class_confidence': {'indices':[1], 'axis': 0}}`
+# Note that field 'indices' and 'axis' from inner dict are reserved, this arguments is acually
+# the argument for `np.take` which is used to slice output for single output.
+# 
+# Roughly, the following pseudocode illustrates how we slice batched output:
+# 
+# .. code-block:: python
+# 
+#     n = ouputs.shape[0]
+#     results = []
+#     for i in range(n):
+#         result = {}
+#         for field_name, args in output_format.items():
+#             result[field_name] = np.take(outputs[i],**args)
+#         results.append(result)
+# 
 class Model(ModelBase):
     def __init__(self, num_classes):
         super().__init__()
@@ -189,6 +263,15 @@ from vortex.development.exporter.onnx import ONNXExporter
 from vortex.development.utils.runtime_wrapper import RuntimeWrapper
 
 export_path = 'export_test.onnx'
+
+# %%
+# 3. Train and Evaluate
+# ---------------------
+# To train the model, we will use pytorch lightning's Trainer,
+# to export to onnx, we will use vortex' ONNXExporter.
+# 
+# We will also use pytorch lightning's trainer
+# to benchmark the exported model, wrapped in vortex' `RuntimeWrapper`.
 
 def train():
     dataset = CIFAR(128, img_size=32)

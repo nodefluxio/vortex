@@ -1,8 +1,11 @@
-# Training Example
-# ================
-# This example will shows you how to train DETR model using pytorch lightning
-# We will use DETR model from https://github.com/facebookresearch/detr.
+"""
+Training Object Detection Example
+=================================
+This example will shows you how to train DETR model using pytorch lightning
+We will use DETR model from https://github.com/facebookresearch/detr.
+"""
 
+# %%
 import numpy as np
 import torch
 import torch.nn as nn
@@ -18,16 +21,18 @@ from vortex.development.networks.models import ModelBase
 from vortex.development.utils.profiler.lightning import Profiler
 from abc import abstractmethod
 
-from model import build_model
-from dataset import build_dataset, BetterCOCO, COCODetection, VOCDetection, CocoEvaluator
-from utils import collate_fn
 from easydict import EasyDict
 from copy import copy
 from pathlib import Path
 
+from module.model import build_model
+from module.dataset import build_dataset, BetterCOCO, COCODetection, VOCDetection, CocoEvaluator
+from module.utils import collate_fn
 
-# Preparing Dataset
-# =================
+
+# %%
+# 1. Preparing Dataset
+# --------------------
 # We'll use pytorch lightning's DataModule interface to define our data module.
 # Also we will use yaml to store hyperparameter and training config.
 
@@ -103,8 +108,9 @@ class SuppressedPrints:
         sys.stdout.close()
         sys.stdout = self._original_stdout
 
-# Model Definition
-# ================
+# %%
+# 2. Model Definition
+# -------------------
 # Here we define our model, training and validation step, as well as what value to be logged.
 # We use vortex `ModelBase` which is derived from pytorch lightning module, with additional
 # functionality such as available_metrics, output_format, predict, those extensions
