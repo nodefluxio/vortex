@@ -201,6 +201,7 @@ class Visual:
 
 # TODO: move this to another directory
 class InferenceHelper:
+    Visual = Visual
     """Helper class for to load images, inference, and visualization for convinience
     """
     def __init__(self, model):
@@ -340,6 +341,7 @@ class InferenceHelper:
             dump_visual: bool=False,
             output_dir: Union[str,Path]='.',
             class_names=None,
+            visual=None,
             **kwargs) -> dict:
         """run inference on model with given images paths
 
@@ -382,9 +384,11 @@ class InferenceHelper:
             runtime=dt,
         )
 
+        visual = visual or cls.Visual
+
         # Visualize prediction
         if visualize:
-            result_vis = Visual.visualize(batch_vis=batch_vis, class_names=class_names, batch_results=results['prediction'])
+            result_vis = visual.visualize(batch_vis=batch_vis, class_names=class_names, batch_results=results['prediction'])
             results['visualization'] = result_vis
             # Dump prediction only support when given image is list of filenames
             if dump_visual and isinstance(images,list):
@@ -396,43 +400,3 @@ class InferenceHelper:
     
     def __call__(self, *args, **kwargs):
         return self.run_and_visualize(self.model, class_names=self.class_names, *args, **kwargs)
-
-def main(args):
-    vrt.check_available_runtime()
-    kwargs = dict(
-        model_path=args.model,
-        runtime=args.runtime,
-    )
-    model = InferenceHelper.create_runtime_model(**kwargs)
-    print(model.model)
-    results = model(args.input,
-        score_threshold=args.score_threshold,
-        iou_threshold=args.iou_threshold,
-        visualize=True, dump_visual=True
-    )
-    print("prediction results\n", results['prediction'])
-
-    if args.show:
-        vis = results['visualization']
-        if len(vis) > 1:
-            # image must be on the same shape before stacking
-            shape = vis[0].shape[-2::-1]
-            vis = list(map(lambda x: cv2.resize(x, shape), vis))
-        # simply stack visualization accross batch
-        vis = np.vstack(vis)
-        cv2.imshow("prediction results", vis)
-        cv2.waitKey()
-
-if __name__=='__main__':
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', type=str, help='path to model')
-    parser.add_argument('--runtime', type=str, help='runtime engine')
-    parser.add_argument('--input', type=str, nargs='+', help='input image')
-    parser.add_argument('--show', action='store_true', help='show prediction results')
-    parser.add_argument("--score_threshold", default=0.9, type=float,
-                        help='score threshold for detection, only used if model is detection, ignored otherwise')
-    parser.add_argument("--iou_threshold", default=0.2, type=float,
-                        help='iou threshold for nms, only used if model is detection, ignored otherwise')
-    args = parser.parse_args()
-    main(args)
