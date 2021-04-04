@@ -48,9 +48,6 @@ import torch
 import torchvision.transforms as T
 import torchvision.transforms.functional as F
 
-from utils import box_xyxy_to_cxcywh
-from utils import interpolate
-
 
 def crop(image, target, region):
     cropped_image = F.crop(image, *region)
@@ -627,7 +624,7 @@ from pycocotools.cocoeval import COCOeval
 from pycocotools.coco import COCO
 import pycocotools.mask as mask_util
 
-from utils import all_gather
+from .utils import all_gather, box_xyxy_to_cxcywh, interpolate
 
 
 class CocoEvaluator(object):

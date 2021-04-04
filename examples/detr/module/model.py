@@ -7,9 +7,10 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from utils import (NestedTensor, nested_tensor_from_tensor_list,
+from .utils import (NestedTensor, nested_tensor_from_tensor_list,
                        accuracy, get_world_size, interpolate,
-                       is_dist_avail_and_initialized, is_main_process)
+                       is_dist_avail_and_initialized, is_main_process,
+                       box_cxcywh_to_xyxy, generalized_box_iou)
 
 
 """
@@ -18,8 +19,6 @@ Various positional encodings for the transformer.
 import math
 import torch
 from torch import nn
-
-from utils import NestedTensor
 
 
 class PositionEmbeddingSine(nn.Module):
@@ -225,8 +224,6 @@ Modules to compute the matching cost and solve the corresponding LSAP.
 import torch
 from scipy.optimize import linear_sum_assignment
 from torch import nn
-
-from utils import box_cxcywh_to_xyxy, generalized_box_iou
 
 
 class HungarianMatcher(nn.Module):
