@@ -4,8 +4,8 @@ import enforce
 import sys
 
 from vortex.development.networks.modules.postprocess.base_postprocess import BasicNMSPostProcess, BatchedNMSPostProcess
-from .utils.onnx.graph_ops import GRAPH_OPS
-from .utils.onnx.graph_ops.helper import get_Ops
+from .utils.onnx.graph_ops import GRAPH_OPS as GRAPH_OPS
+from vortex.runtime.onnx.graph_ops.helper import get_Ops
 
 from typing import Union, List, Tuple, Any
 from pathlib import Path
