@@ -9,5 +9,4 @@ Vortex includes onnx exporter to ease exporting model and embedding model proper
 .. autoclass:: vortex.development.exporter.onnx.ONNXExporter
   :members:
 
-  .. automethod:: __init__
   .. automethod:: __call__
