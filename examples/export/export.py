@@ -297,7 +297,7 @@ import cv2
 # ---------
 # 
 # Here we will actually export the model.
-# We'll use `torch.onnx` to export the model and add additional properties to
+# We'll use ``torch.onnx`` to export the model and add additional properties to
 # model using helper function from vortex.
 # Basically we need to tell vortex about the format of the final output tensor and class names.
 

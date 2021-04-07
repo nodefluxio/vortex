@@ -112,7 +112,7 @@ class SuppressedPrints:
 # 2. Model Definition
 # -------------------
 # Here we define our model, training and validation step, as well as what value to be logged.
-# We use vortex `ModelBase` which is derived from pytorch lightning module, with additional
+# We use vortex ``ModelBase`` which is derived from pytorch lightning module, with additional
 # functionality such as available_metrics, output_format, predict, those extensions
 # are mostly used for exporting, but we'll skip for now.
 

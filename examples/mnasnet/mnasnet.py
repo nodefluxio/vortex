@@ -36,12 +36,12 @@ from abc import abstractmethod
 # %%
 # 1. Preparing Dataset
 # --------------------
-# We will use pytorch lightning's `LightningDataModule`,
-# to load the dataset, we use `torchvision`'s `CIFAR10`.
+# We will use pytorch lightning's ``LightningDataModule``,
+# to load the dataset, we use ``torchvision``'s ``CIFAR10``.
 # 
 # Note that we will use this dataset module also for benchmark
-# using vortex, and we need to define `test_dataloader` in
-# addition to `train_dataloader` and `test_dataloader`.
+# using vortex, and we need to define ``test_dataloader`` in
+# addition to ``train_dataloader`` and ``test_dataloader``.
 class CIFAR(pl.LightningDataModule):
     def __init__(self, batch_size, img_size, **kwargs):
         super().__init__()
@@ -132,20 +132,30 @@ class MyClassificationMetrics(pl.metrics.Metric):
 # %%
 # 2. Preparing the Model
 # ----------------------
-# `vortex`'s `ModelBase` is just an extension to `pl.LightningModule`,
-# so we can use it just like any `LightningModule`, like define
-# `training_step`, `validation_step`, `configure_optimizers`, etc.
+# 
+# ``vortex``'s ``ModelBase`` is just an extension to ``pl.LightningModule``,
+# so we can use it just like any ``LightningModule``, like define
+# ``training_step``, ``validation_step``, ``configure_optimizers``, etc.
 # 
 # Additionally, we need to define the following methods:
-# - `input_names` should return a list of string representing the input names
-# - `output_names` should return a list of string representing the output names
-# - `on_export_start` (optional): will be called by vortex onnx exporter at the start of export
-# - `available_metrics` return metric(s) used by this module, if any.
-# - `output_format` should return a nested dictionary representing the structure of the batched output, defined for single batch
+#
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
+# | Method                | Description                                                                                                       |
+# +=======================+===================================================================================================================+
+# | ``input_names``       | should return a list of string representing the input names                                                       |
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
+# | ``output_names``      | should return a list of string representing the output names                                                      |
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
+# | ``on_export_start``   | (optional) will be called by vortex onnx exporter at the start of export                                          |
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
+# | ``available_metrics`` | return metric(s) used by this module, if any.                                                                     |
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
+# | ``output_format``     | should return a nested dictionary representing the structure of the batched output, defined for single batch      |
+# +-----------------------+-------------------------------------------------------------------------------------------------------------------+
 # 
 # The additional methods above will be used for exporting.
 # We can use on_export_start to sample input from dataset for exporting.
-# The structure of `output_format` can be described using the following example:
+# The structure of ``output_format`` can be described using the following example:
 # Assume the model return NxE 2D array/tensor where the first axis represent batch index
 # and the second axis represent class label and confidence where class label is located
 # at index 0 and class confidence at index 1, visually:
@@ -159,9 +169,9 @@ class MyClassificationMetrics(pl.metrics.Metric):
 # +-------+-------------+------------------+
 # 
 # then the output_format should be:
-# `{'class_label': {'indices':[0], 'axis': 0}, 'class_confidence': {'indices':[1], 'axis': 0}}`
+# ``{'class_label': {'indices':[0], 'axis': 0}, 'class_confidence': {'indices':[1], 'axis': 0}}``
 # Note that field 'indices' and 'axis' from inner dict are reserved, this arguments is acually
-# the argument for `np.take` which is used to slice output for single output.
+# the argument for ``np.take`` which is used to slice output for single output.
 # 
 # Roughly, the following pseudocode illustrates how we slice batched output:
 # 
@@ -271,7 +281,7 @@ export_path = 'export_test.onnx'
 # to export to onnx, we will use vortex' ONNXExporter.
 # 
 # We will also use pytorch lightning's trainer
-# to benchmark the exported model, wrapped in vortex' `RuntimeWrapper`.
+# to benchmark the exported model, wrapped in vortex' ``RuntimeWrapper``.
 
 def train():
     dataset = CIFAR(128, img_size=32)
