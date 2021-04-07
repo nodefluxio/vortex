@@ -1,5 +1,5 @@
 Export pretrained DETR to onnx, and inference using vortex runtime.
-The exporting part use default export from pytorch, `torch.onnx.export`,
+The exporting part use default export from pytorch, ``torch.onnx.export``,
 then additional metadata is embedded to model using vortex' utility :py:mod:`~vortex.runtime.onnx.graph_ops.EmbedModelProperty`.
 Vortex provides inference and visualization helper via :py:mod:`~vortex.runtime.helper.InferenceHelper`.
 

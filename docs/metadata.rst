@@ -108,6 +108,7 @@ which takes onnx model and model property defined as nested dictionary, for exam
     model : onnx.ModelProto = embed_model_property(model,model_props)
 
 
-Note that the model above is already an onnx model, and `embed_model_property` also
+Note that the model above is already an onnx model, and 
+:py:mod:`~vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property` also
 expects onnx model. This may be useful when one wants to use model defined on other framework.
 since most deep learning also support exporting to onnx.
