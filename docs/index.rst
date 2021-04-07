@@ -37,7 +37,6 @@ Contents:
    installing
    quickstart
    user_guides/index
-   modules/index
    api/index
    examples/index
    metadata
