@@ -73,3 +73,6 @@ class EmbedClassNamesMetadata(GraphOpsBase):
 
     def run(self, model: onnx.ModelProto):
         return self.apply(model,**vars(self))
+
+# alias
+embed_class_names_metadata = EmbedClassNamesMetadata.apply

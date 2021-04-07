@@ -58,3 +58,6 @@ class EmbedModelProperty(GraphOpsBase):
             onnx.ModelProto: model
         """
         return self.apply(model,**vars(self))
+
+# alias
+embed_model_property = EmbedModelProperty.apply

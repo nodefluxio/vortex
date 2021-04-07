@@ -112,3 +112,6 @@ class EmbedOutputFormatMetadata(GraphOpsBase):
             onnx.ModelProto: transformed model
         """
         return self.apply(model, **vars(self))
+
+# alias
+embed_output_format_metadata = EmbedOutputFormatMetadata.apply

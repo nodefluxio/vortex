@@ -368,9 +368,8 @@ def export():
     )
 
     # finally apply transformation and save
-    f = g.EmbedModelProperty(model_props)
     model = onnx.load(filename)
-    model = f(model)
+    model = g.embed_model_property(model, model_props)
     onnx.save(model,filename)
 
 # %%
