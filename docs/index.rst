@@ -16,11 +16,11 @@ To deal the such problems, we simply annotate the model with neccessary informat
 about the prediction tensor. Specifically, we unify the way we take the prediction
 tensor using generic operation using numpy.
 
-The project consists of two major parts: `development` and `runtime`. The `development`
+The project consists of two major parts: ``development`` and ``runtime``. The ``development``
 part define our :py:mod:`~vortex.development.networks.models.ModelBase` that enforce
-additional information regarding prediction tensor to be defined. Also, an `onnx` exporter
+additional information regarding prediction tensor to be defined. Also, an ``onnx`` exporter
 for such model is provided at :py:mod:`~vortex.development.exporter.onnx.ONNXExporter`.
-The `runtime` part provides class to perform inference on model with such metadata.
+The ``runtime`` part provides class to perform inference on model with such metadata.
 Our :py:mod:`~vortex.development.networks.models.ModelBase` is derived from PyTorchLightning_,
 so we can easily define scalable model with maximum flexibility, to learn more about PyTorchLightning
 including how to train the model, please refer to https://pytorchlightning.ai/.
