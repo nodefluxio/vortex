@@ -36,8 +36,8 @@ Contents:
 
    installing
    quickstart
-   api/index
    examples/index
+   api/index
    metadata
 
 
