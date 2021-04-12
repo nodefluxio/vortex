@@ -1,5 +1,6 @@
 import logging
 import onnx
+import json
 from typing import Dict, Any
 from .base_ops import GraphOpsBase
 from .embed_metadata import embed_metadata, parse_metadata
@@ -44,7 +45,16 @@ class EmbedModelProperty(GraphOpsBase):
         """
         output_format = parse_output_format_metadata(model)
         class_names = parse_class_names_metadata(model)
-        return dict(output_format=output_format,class_names=class_names)
+        properties = dict(output_format=output_format,class_names=class_names)
+        props = model.metadata_props
+        for prop in model.metadata_props:
+            key = prop.key
+            if 'output_format' in key:
+                continue
+            if 'class_labels' in key:
+                continue
+            properties[key] = json.loads(str(prop.value))
+        return properties
     
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
         """Run transformation
