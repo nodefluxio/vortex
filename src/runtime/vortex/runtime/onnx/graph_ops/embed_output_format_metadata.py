@@ -4,6 +4,7 @@ import json
 from typing import Union, Dict, List
 from .base_ops import GraphOpsBase
 from .embed_metadata import embed_metadata, parse_metadata
+from .helper import make_output_format
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,21 @@ class EmbedOutputFormatMetadata(GraphOpsBase):
         f = lambda x: (x.key.replace(f"{cls.prefix}.",""), json.loads(str(x.value)))
         output_format = dict(map(f, outputs))
         return output_format
+    
+    @classmethod
+    def _deprecated_apply(cls, model : onnx.ModelProto, output_format : Dict[str,Union[List[int],int]]) -> onnx.ModelProto:
+        """
+        embed output_format to model as `Constants`
+        """
+        logger.info("embedding output_format to model")
+        output_format_constants, output_format_value_info = make_output_format(output_format)
+        for output_format_constant, value_info in zip(output_format_constants, output_format_value_info):
+            model.graph.node.append(output_format_constant)
+            model.graph.output.append(value_info)
+        return model
+    
+    def _deprecated_run(self, model: onnx.ModelProto):
+        return self._deprecated_apply(model,**vars(self))
     
     def run(self, model: onnx.ModelProto):
         """run fn, as required by base class

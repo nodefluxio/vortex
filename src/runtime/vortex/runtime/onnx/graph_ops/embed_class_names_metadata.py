@@ -4,7 +4,7 @@ import inspect
 from typing import Union, Dict, List, Callable, Any
 from .base_ops import GraphOpsBase
 from .embed_metadata import EmbedMetadata, embed_metadata, parse_metadata
-from .helper import get_metadata_prop
+from .helper import get_metadata_prop, make_class_names, get_outputs
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,28 @@ class EmbedClassNamesMetadata(GraphOpsBase):
         # but json.loads doesnt convert it back :|
         class_names = {int(k): v for k, v in class_names.items()}
         return class_names
+
+    @classmethod
+    def _deprecated_apply(cls, model : onnx.ModelProto, class_names : Dict[str,int]) -> onnx.ModelProto:
+        """
+        embed class_names to model as `Constants`
+        """
+        logger.info("embedding class_names to model")
+        class_names_constants, class_names_value_info = make_class_names(class_names)
+        for class_names_constant, value_info in zip(class_names_constants, class_names_value_info):
+            model.graph.node.append(class_names_constant)
+            model.graph.output.append(value_info)
+        return model
+    
+    @classmethod
+    def _deprecated_parse(cls, model : onnx.ModelProto, ignore_suffix=['_axis', '_indices', '_label']) -> List[str] :
+        outputs = get_outputs(model)
+        ignored = lambda x : any(suffix in x for suffix in ignore_suffix)
+        output_names = [op.name for op in outputs if not ignored(op.name)]
+        return output_names
+    
+    def _deprecated_run(self, model: onnx.ModelProto):
+        return self._deprecated_apply(model,**vars(self))
 
     def run(self, model: onnx.ModelProto):
         return self.apply(model,**vars(self))
