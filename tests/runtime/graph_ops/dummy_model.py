@@ -30,7 +30,3 @@ def dummy_model():
     # Create the model (ModelProto)
     model_def = helper.make_model(graph_def, producer_name='testing')
     return model_def
-
-if __name__=='__main__':
-    model = dummy_model()
-    onnx.save(model, 'dummy_model.onnx')

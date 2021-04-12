@@ -71,7 +71,3 @@ def test_create_batch_output_sequence():
     assert len(seq_op_inputs) == 2
     assert "output_0" in seq_op_inputs
     assert "output_1" in seq_op_inputs
-
-if __name__=='__main__':
-    model = dummy_model()
-    onnx.save(model, 'testing.onnx')
