@@ -28,7 +28,8 @@ class ModelBase(pl.LightningModule):
         includes preprocess, and postprocess.
         Expected:
             - input -> image in tensor/numpy with dim (NHWC) [N: batch, H: height, W: width, C: channel]
-            - ouput -> list of tensors each member of the list corresponds to prediction of the image, or a tensor of dim (NxP) [N:batch, P: prediction]
+            - output -> list of tensors each member of the list corresponds to prediction of the image,
+              or a tensor of dim (NxP) [N:batch, P: prediction]
         """
         pass
 
