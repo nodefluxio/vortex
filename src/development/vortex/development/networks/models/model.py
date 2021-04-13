@@ -27,9 +27,8 @@ class ModelBase(pl.LightningModule):
         """Predict function, called in inference
         includes preprocess, and postprocess.
         Expected:
-        - input -> image in tensor/numpy with dim (NHWC) [N: batch, H: height, W: width, C: channel]
-        - ouput -> list of tensors each member of the list corresponds
-            to prediction of the image, or a tensor of dim (NxP) [N:batch, P: prediction]
+            - input -> image in tensor/numpy with dim (NHWC) [N: batch, H: height, W: width, C: channel]
+            - ouput -> list of tensors each member of the list corresponds to prediction of the image, or a tensor of dim (NxP) [N:batch, P: prediction]
         """
         pass
 
@@ -97,11 +96,18 @@ class ModelBase(pl.LightningModule):
         else use 'max'.
 
         example:
+
+        .. code-block:: python
+
             {
                 'val_loss': 'min',
                 'accuracy': 'max'
             }
+
         or:
+
+        .. code-block:: bash
+
             ['val_loss', 'accuracy']
         """
         pass
