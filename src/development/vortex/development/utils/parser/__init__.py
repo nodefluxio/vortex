@@ -1,1 +1,0 @@
-from vortex.development.utils.parser.parser import *
