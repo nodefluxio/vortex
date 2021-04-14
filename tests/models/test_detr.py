@@ -58,27 +58,6 @@ num_queries = 10
 num_classes = 4
 
 
-def test_detr_model():
-    img = torch.rand(num_batch, 3, 800, 1333)
-
-    model = DETR('resnet50', num_classes, num_queries=num_queries, train_backbone=True, 
-        aux_loss=True, hidden_dim=hidden_dim, position_embedding='sine', nhead=8)
-
-    output = model(img)
-    assert all(m in output for m in ("logits", "bbox", "aux"))
-    assert all("logits" in out and "bbox" in out for out in output["aux"])
-    assert output["logits"].shape == (num_batch, num_queries, num_classes+1)
-    assert output["bbox"].shape == (num_batch, num_queries, 4)
-
-    model = DETR('resnet50', num_classes, num_queries=num_queries, train_backbone=True, 
-        aux_loss=False, hidden_dim=hidden_dim, position_embedding='sine', nhead=8)
-
-    output = model(img)
-    assert all(m in output for m in ("logits", "bbox"))
-    assert output["logits"].shape == (num_batch, num_queries, num_classes+1)
-    assert output["bbox"].shape == (num_batch, num_queries, 4)
-
-
 def test_hungarian_matcher():
     expected = [
         torch.tensor([[3, 9], [0, 1]]),

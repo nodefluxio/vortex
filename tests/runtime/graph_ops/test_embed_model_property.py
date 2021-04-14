@@ -46,5 +46,14 @@ def test_embed_model_property():
     assert other_prop.value == '1234'
 
     assert check_metadata(model)
+
+    parser = graph_ops.get('EmbedModelProperty').parse
+    metadata = parser(model)
+    assert all(key in metadata.keys() for key in ['output_format', 'class_names', 'other_prop'])
+    other_prop = metadata['other_prop']
+    assert other_prop == 1234
+    assert metadata['output_format'] == out_fmt
+    assert metadata['class_names'] == {0: 'cat', 1: 'dog'}
+
     model = dummy_model()
     assert not check_metadata(model)
