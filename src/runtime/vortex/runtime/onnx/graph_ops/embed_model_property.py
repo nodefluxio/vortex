@@ -1,11 +1,11 @@
 import logging
 import onnx
-import parse
+import json
 from typing import Dict, Any
 from .base_ops import GraphOpsBase
-from .embed_metadata import EmbedMetadata
-from .embed_class_names_metadata import EmbedClassNamesMetadata
-from .embed_output_format_metadata import EmbedOutputFormatMetadata
+from .embed_metadata import embed_metadata, parse_metadata
+from .embed_class_names_metadata import embed_class_names_metadata, parse_class_names_metadata
+from .embed_output_format_metadata import embed_output_format_metadata, parse_output_format_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +26,11 @@ class EmbedModelProperty(GraphOpsBase):
         """
         for key, value in props.items():
             if key == 'output_format':
-                model = EmbedOutputFormatMetadata.apply(model,value)
+                model = embed_output_format_metadata(model,value)
             elif key == 'class_names':
-                model = EmbedClassNamesMetadata.apply(model,value)
+                model = embed_class_names_metadata(model,value)
             else:
-                formatter = lambda x: str(x)
-                model = EmbedMetadata.apply(model,key,value,formatter)
+                model = embed_metadata(model,key,value)
         return model
     
     @classmethod
@@ -44,9 +43,18 @@ class EmbedModelProperty(GraphOpsBase):
         Returns:
             Dict[str,Any]: dictionary contains 'output_format' and 'class_names'
         """
-        output_format = EmbedOutputFormatMetadata.parse(model)
-        class_names = EmbedClassNamesMetadata.parse(model)
-        return dict(output_format=output_format,class_names=class_names)
+        output_format = parse_output_format_metadata(model)
+        class_names = parse_class_names_metadata(model)
+        properties = dict(output_format=output_format,class_names=class_names)
+        props = model.metadata_props
+        for prop in model.metadata_props:
+            key = prop.key
+            if 'output_format' in key:
+                continue
+            if 'class_labels' in key:
+                continue
+            properties[key] = json.loads(str(prop.value))
+        return properties
     
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:
         """Run transformation
@@ -61,3 +69,6 @@ class EmbedModelProperty(GraphOpsBase):
 
 # alias
 embed_model_property = EmbedModelProperty.apply
+
+# alias
+parse_model_property = EmbedModelProperty.parse
