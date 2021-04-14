@@ -285,3 +285,7 @@ experiments/outputs/**/reports
 lightning_logs
 checkpoints
 logs
+
+*.xml
+*.tar
+*.txt

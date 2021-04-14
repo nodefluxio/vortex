@@ -1,0 +1,57 @@
+# model and training parameter
+lr: 0.0001
+lr_backbone: 0.00001
+batch_size: &bs 12
+weight_decay: 0.0001
+epochs: 300
+lr_drop: 200
+clip_max_norm: 0.1
+frozen_weights: null
+backbone: resnet50
+dilation: False
+position_embedding: sine
+enc_layers: 6
+dec_layers: 6
+dim_feedforward: 2048
+hidden_dim: 256
+dropout: 0.1
+nheads: 8
+num_queries: 100
+pre_norm: False
+masks: False
+aux_loss: True
+set_cost_class: 1
+set_cost_bbox: 5
+set_cost_giou: 2
+mask_loss_coef: 1
+dice_loss_coef: 1
+bbox_loss_coef: 5
+giou_loss_coef: 2
+eos_coef: 0.1
+
+# dataset parameter
+dataset: {
+  module: VOCDetection,
+  args: {
+    root: voc_datasets,
+    year: '2007',
+  },
+  # module: COCODetection,
+  # args: {
+  #   img_folder: /home/nodeflux/data/COCO/train2014,
+  #   ann_file: /home/nodeflux/data/COCO/annotations_trainval2014/annotations/instances_train2014.json,
+  #   return_masks: False,
+  # },
+}
+dataloader: {
+  shuffle: True,
+  num_workers: 8,
+  batch_size: *bs
+}
+
+# trainer parameter
+trainer: {
+  max_epochs: 100,
+  gpus: 1,
+  check_val_every_n_epoch: 2,
+}

@@ -27,9 +27,9 @@ class ModelBase(pl.LightningModule):
         """Predict function, called in inference
         includes preprocess, and postprocess.
         Expected:
-        - input -> image in tensor/numpy with dim (NHWC) [N: batch, H: height, W: width, C: channel]
-        - ouput -> list of tensors each member of the list corresponds
-            to prediction of the image, or a tensor of dim (NxP) [N:batch, P: prediction]
+            - input -> image in tensor/numpy with dim (NHWC) [N: batch, H: height, W: width, C: channel]
+            - output -> list of tensors each member of the list corresponds to prediction of the image,
+              or a tensor of dim (NxP) [N:batch, P: prediction]
         """
         pass
 
@@ -81,6 +81,9 @@ class ModelBase(pl.LightningModule):
     @property
     @abstractmethod
     def output_format(self):
+        """Define the format ('indices' and 'axis' for each output) to
+        extract the output for single batch.
+        """
         pass
 
     @property
@@ -94,17 +97,36 @@ class ModelBase(pl.LightningModule):
         else use 'max'.
 
         example:
+
+        .. code-block:: python
+
             {
                 'val_loss': 'min',
                 'accuracy': 'max'
             }
+
         or:
+
+        .. code-block:: bash
+
             ['val_loss', 'accuracy']
         """
         pass
 
     def on_export_start(self, exporter):
+        """This method will be called at the start of export
+        session.
+
+        Args:
+            exporter: exporter that is exporting this model
+        """
         pass
 
     def on_export_end(self, exporter, exported_model):
+        """This method will be called after the model is exported
+
+        Args:
+            exporter: exporter that is exporting this model
+            exported_model: exported model by the exporter
+        """
         pass

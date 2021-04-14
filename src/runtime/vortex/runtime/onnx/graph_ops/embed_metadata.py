@@ -49,3 +49,6 @@ class EmbedMetadata(GraphOpsBase):
             onnx.ModelProto: model with embedded metadata
         """
         return self.apply(model, **vars(self))
+
+# alias
+embed_metadata = EmbedMetadata.apply

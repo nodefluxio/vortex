@@ -5,6 +5,6 @@ References
     :maxdepth: 2
 
     models
-    factory
-    pipelines
+    exporter
+    graph_ops
     runtime

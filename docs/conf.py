@@ -105,9 +105,17 @@ from sphinx_gallery.sorting import FileNameSortKey
 
 sphinx_gallery_conf = {
     # path to your example scripts
-    'examples_dirs': os.path.abspath('../examples/custom_models/alexnet'),
+    'examples_dirs': [
+        os.path.abspath('../examples/export'),
+        os.path.abspath('../examples/mnasnet'),
+        os.path.abspath('../examples/detr'),
+    ],
     # path to where to save gallery generated output
-    'gallery_dirs': '_build/example',
+    'gallery_dirs': [
+        '_build/examples/export',
+        '_build/examples/classification',
+        '_build/examples/detection',
+    ],
     # specify that examples should be ordered according to filename
     'within_subsection_order': FileNameSortKey,
     # directory where function granular galleries are stored
