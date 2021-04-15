@@ -6,7 +6,7 @@ from vortex.development.networks.models.detection.detr import (
     DETRLoss, DETRPostProcess,
     NestedTensor, cxcywh_to_xyxy
 )
-from vortex.development.utils.data.collater.detr import DETRCollate
+from vortex.development.networks.models.detection.detr import DETRCollate
 
 
 pred_bbox = torch.tensor([
