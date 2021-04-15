@@ -2,7 +2,7 @@ import onnx
 import torch
 import sys
 
-from .utils.onnx.graph_ops import GRAPH_OPS as GRAPH_OPS
+from .utils.onnx import GRAPH_OPS as GRAPH_OPS
 
 from typing import Union, List, Tuple, Any
 from pathlib import Path
