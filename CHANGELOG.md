@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - deprecating 'config.seed', and move to 'config.trainer.seed'
 - deprecating `stage` argument in `create_model`
 - all defined backbones use backbone base class
+- removed various old features affected by API redesign: `cli`, `predictor`, `pipelines`
 
 ### Fixed
 

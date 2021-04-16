@@ -43,7 +43,7 @@ class_names = dict(
 
 def op_test(op, model):
     # actually transform model
-    model = op(model)
+    model = op._deprecated_run(model)
 
     constant_ops, constant_ids = get_Ops(model, 'Constant')
     assert len(constant_ops) == 2
@@ -73,11 +73,11 @@ def test_embed_class_names():
     """
     model = dummy_model()
 
-    op = get_op('EmbedClassNames', class_names=class_names)
+    op = get_op('EmbedClassNamesMetadata', class_names=class_names)
     op_test(op, model)
 
 def test_registry():
-    assert "EmbedClassNames" in graph_ops
+    assert "EmbedClassNamesMetadata" in graph_ops
     model = dummy_model()
-    op = graph_ops.create_from_args('EmbedClassNames', class_names=class_names)
+    op = graph_ops.create_from_args('EmbedClassNamesMetadata', class_names=class_names)
     op_test(op, model)

@@ -62,7 +62,3 @@ def test_iou_threshold_as_input():
     inputs = list(map(f,get_inputs(model)))
     iou_inputs = list(filter(lambda x: x=='iou_threshold', inputs))
     assert len(iou_inputs) == 1
-
-if __name__=='__main__':
-    model = dummy_model()
-    onnx.save(model, 'testing.onnx')

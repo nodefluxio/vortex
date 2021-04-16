@@ -1,6 +1,7 @@
 import logging
 import onnx
 import parse
+import json
 from typing import Any, List, Union
 from .helper import get_metadata_prop
 from .base_ops import GraphOpsBase
@@ -34,7 +35,6 @@ class EmbedMetrics(GraphOpsBase):
         args = dict(
             key=cls.prefix,
             value=value,
-            formatter=lambda x: ','.join(x),
         )
         model = EmbedMetadata.apply(model, **args)
         return model
@@ -52,7 +52,8 @@ class EmbedMetrics(GraphOpsBase):
         metrics = get_metadata_prop(model, cls.prefix)
         if metrics is not None:
             # should be list of str
-            metrics = str(metrics.value).replace('[','').replace(']','').split(',')
+            metrics = str(metrics.value)
+            metrics = json.loads(metrics)
         return metrics
     
     def run(self, model: onnx.ModelProto) -> onnx.ModelProto:

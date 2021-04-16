@@ -48,7 +48,7 @@ out_fmt = dict(
 )
 
 def op_test(op, model, out_fmt):
-    model = op(model)
+    model = op._deprecated_run(model)
     # for visualization
     # onnx.save(model, 'testing.onnx')
     constant_ops, constant_ids = get_Ops(model, 'Constant')
@@ -89,18 +89,14 @@ def test_embed_output_format():
 
     with pytest.raises(AssertionError):
         # this should fail
-        op = get_op('EmbedOutputFormat', output_format=out_fmt['class_label'])
-        model = op(model)
+        op = get_op('EmbedOutputFormatMetadata', output_format=out_fmt['class_label'])
+        model = op._deprecated_run(model)
 
-    op = get_op('EmbedOutputFormat', output_format=out_fmt)
+    op = get_op('EmbedOutputFormatMetadata', output_format=out_fmt)
     op_test(op, model, out_fmt)
 
 def test_registry():
-    assert "EmbedOutputFormat" in graph_ops
+    assert "EmbedOutputFormatMetadata" in graph_ops
     model = dummy_model()
-    op = graph_ops.create_from_args('EmbedOutputFormat', output_format=out_fmt)
+    op = graph_ops.create_from_args('EmbedOutputFormatMetadata', output_format=out_fmt)
     op_test(op, model, out_fmt)
-
-if __name__=='__main__':
-    model = dummy_model()
-    onnx.save(model, 'testing.onnx')

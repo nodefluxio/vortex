@@ -6,5 +6,4 @@ from vortex.development.networks.modules.backbones import (
     BackboneBase,
     BackboneConfig
 )
-from vortex.development.networks.modules.heads import *
 from .utils import *
