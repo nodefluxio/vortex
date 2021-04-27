@@ -1,0 +1,632 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>ONNX graph ops utility &mdash; Vortex 0.3 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-binder.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-dataframe.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-rendered-html.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/styles.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Runtime Helper" href="runtime.html" />
+    <link rel="prev" title="Exporter" href="exporter.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Vortex
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html#training-classifier-export-benchmark-using-vortex">Training Classifier, Export &amp; Benchmark using Vortex</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples/index.html">Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">References</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="models.html">Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="exporter.html">Exporter</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ONNX graph ops utility</a></li>
+<li class="toctree-l2"><a class="reference internal" href="runtime.html">Runtime Helper</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Vortex Metadata</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Vortex</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">References</a> &raquo;</li>
+        
+      <li>ONNX graph ops utility</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/api/graph_ops.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <span class="target" id="module-vortex.runtime.onnx.graph_ops"></span><div class="section" id="onnx-graph-ops-utility">
+<h1>ONNX graph ops utility<a class="headerlink" href="#onnx-graph-ops-utility" title="Permalink to this headline">¶</a></h1>
+<p>Collections of utilty to manipulate onnx graph.</p>
+<dl class="py function">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property">
+<code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_model_property.</span></code><code class="sig-name descname"><span class="pre">embed_model_property</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">props</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed information to model, including ‘output_format’ and ‘class_names’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>props</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>,</em><em>Any</em><em>]</em>) – information, must include ‘output_format’ and ‘class_names’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="vortex.runtime.onnx.graph_ops.embed_class_names_metadata.embed_class_names_metadata">
+<code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_class_names_metadata.</span></code><code class="sig-name descname"><span class="pre">embed_class_names_metadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_names</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_class_names_metadata.embed_class_names_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed class_names information to model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>class_names</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>]</em><em>,</em><em>Dict</em><em>]</em>) – class_names, either list of string or mapping from string to int</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – class_names is not dict nor list</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.embed_output_format_metadata">
+<code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_output_format_metadata.</span></code><code class="sig-name descname"><span class="pre">embed_output_format_metadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.embed_output_format_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Format each ‘output’ in ‘output_format’ and embed it to existing model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>output_format</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>,</em><em>Union</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>]</em><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>]</em><em>]</em>) – output_format, must contains ‘indices’ and ‘axis’ entry</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – value type of output_format is not dictionary</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.9)"><strong>ValueError</strong></a> – each entry in output_format doesnt contains ‘indices’ and/or ‘axis’</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model with output_format embedded</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.embed_metadata">
+<code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_metadata.</span></code><code class="sig-name descname"><span class="pre">embed_metadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.embed_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed information to existing model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a>) – a name representing the value</p></li>
+<li><p><strong>value</strong> (<em>Any</em>) – value to be embedded into model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – key is not string</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – return value from <cite>formatter(value)</cite></p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_metadata.</span></code><code class="sig-name descname"><span class="pre">EmbedMetadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.__call__">
+<code class="sig-name descname"><span class="pre">__call__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform model, call derived run function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be transformed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>transformed model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.apply">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">apply</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed information to existing model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a>) – a name representing the value</p></li>
+<li><p><strong>value</strong> (<em>Any</em>) – value to be embedded into model</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – key is not string</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – return value from <cite>formatter(value)</cite></p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.parse">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">parse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">key</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse metadata stored at model using json</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be extracted</p></li>
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a>) – metadata key</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>json.loads result or None if key not exists</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_metadata.EmbedMetadata.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run transformation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>model with embedded metadata</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_model_property.</span></code><code class="sig-name descname"><span class="pre">EmbedModelProperty</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">props</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.__call__">
+<code class="sig-name descname"><span class="pre">__call__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform model, call derived run function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be transformed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>transformed model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.apply">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">apply</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">props</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed information to model, including ‘output_format’ and ‘class_names’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>props</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>,</em><em>Any</em><em>]</em>) – information, must include ‘output_format’ and ‘class_names’</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.parse">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">parse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract output_format and class_names from model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary contains ‘output_format’ and ‘class_names’</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a>,Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_model_property.EmbedModelProperty.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run transformation</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_class_names_metadata.</span></code><code class="sig-name descname"><span class="pre">EmbedClassNamesMetadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">class_names</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.__call__">
+<code class="sig-name descname"><span class="pre">__call__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform model, call derived run function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be transformed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>transformed model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.apply">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">apply</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">class_names</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><span class="pre">Dict</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Embed class_names information to model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>class_names</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>]</em><em>,</em><em>Dict</em><em>]</em>) – class_names, either list of string or mapping from string to int</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – class_names is not dict nor list</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.parse">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">parse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_class_names_metadata.EmbedClassNamesMetadata.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract <cite>class_names</cite> information from model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.9)"><strong>ValueError</strong></a> – if model doesn’t contains <cite>class_labels</cite></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>a mapping from class label (int) to class name</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a>,<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata">
+<em class="property"><span class="pre">class</span> </em><code class="sig-prename descclassname"><span class="pre">vortex.runtime.onnx.graph_ops.embed_output_format_metadata.</span></code><code class="sig-name descname"><span class="pre">EmbedOutputFormatMetadata</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.__call__">
+<code class="sig-name descname"><span class="pre">__call__</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform model, call derived run function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be transformed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>transformed model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.apply">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">apply</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_format</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.apply" title="Permalink to this definition">¶</a></dt>
+<dd><p>Format each ‘output’ in ‘output_format’ and embed it to existing model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p></li>
+<li><p><strong>output_format</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><em>str</em></a><em>,</em><em>Union</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>]</em><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><em>int</em></a><em>]</em><em>]</em>) – output_format, must contains ‘indices’ and ‘axis’ entry</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#TypeError" title="(in Python v3.9)"><strong>TypeError</strong></a> – value type of output_format is not dictionary</p></li>
+<li><p><a class="reference external" href="https://docs.python.org/3/library/exceptions.html#ValueError" title="(in Python v3.9)"><strong>ValueError</strong></a> – each entry in output_format doesnt contains ‘indices’ and/or ‘axis’</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>model with output_format embedded</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.parse">
+<em class="property"><span class="pre">classmethod</span> </em><code class="sig-name descname"><span class="pre">parse</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span> </span><span class="pre">Union</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract and parse output_format information from model</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>output_format</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.9)">str</a>,Union[List[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a>],<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.9)">int</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.run">
+<code class="sig-name descname"><span class="pre">run</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">onnx.onnx_ONNX_REL_1_6_ml_pb2.ModelProto</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#vortex.runtime.onnx.graph_ops.embed_output_format_metadata.EmbedOutputFormatMetadata.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>run fn, as required by base class</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>model</strong> (<em>onnx.ModelProto</em>) – model to be transformed</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>transformed model</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>onnx.ModelProto</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="runtime.html" class="btn btn-neutral float-right" title="Runtime Helper" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="exporter.html" class="btn btn-neutral float-left" title="Exporter" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Nodeflux.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,327 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Vortex Metadata &mdash; Vortex 0.3 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/gallery.css" type="text/css" />
+  <link rel="stylesheet" href="_static/gallery-binder.css" type="text/css" />
+  <link rel="stylesheet" href="_static/gallery-dataframe.css" type="text/css" />
+  <link rel="stylesheet" href="_static/gallery-rendered-html.css" type="text/css" />
+  <link rel="stylesheet" href="_static/styles.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Runtime Helper" href="api/runtime.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Vortex
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html#training-classifier-export-benchmark-using-vortex">Training Classifier, Export &amp; Benchmark using Vortex</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples/index.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">References</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Vortex Metadata</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#output-format">1. Output Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-names">2. Class Names</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#embedding-model-metadata">3. Embedding Model Metadata</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Vortex</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Vortex Metadata</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/metadata.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="vortex-metadata">
+<h1>Vortex Metadata<a class="headerlink" href="#vortex-metadata" title="Permalink to this headline">¶</a></h1>
+<p>Here we describe metadata format used by vortex.</p>
+<div class="section" id="output-format">
+<h2>1. Output Format<a class="headerlink" href="#output-format" title="Permalink to this headline">¶</a></h2>
+<p>Output format <strong>defines the slices</strong> for each output for <strong>single batch</strong>.
+Our interface relies on numpy’s <a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.take.html">take</a> operation to extract the output
+from possibly-batched prediction tensor. Numpy take is utilized to
+take elements from an array along an axis. Arguments to numpy take
+that we use for extracting the output can be summarized in the
+following table:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 78%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><cite>indices</cite></p></td>
+<td><p>The indices of values to extract</p></td>
+</tr>
+<tr class="row-odd"><td><p><cite>axis</cite></p></td>
+<td><p>The axis over which values to extract</p></td>
+</tr>
+</tbody>
+</table>
+<p>We also assume that the output tensor is batched, hence if the model
+is defined for single batch, one may need to unsqueeze or expand the dimension
+at the first axis.</p>
+<p>The number of output that can be defined from the output tensor is not limited.
+The output format is expected to be nested dictionary, with outer dictionary
+defines what the output is and the inner dictionary defines the arguments to
+numpy take.</p>
+<p>For example, assume we have classification model with the prediction tensor consists
+of class labels and class confidences, as follow:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">array</span><span class="p">([[</span><span class="mi">3</span> <span class="p">,</span> <span class="mf">0.71518937</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mf">0.54488318</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.64589411</span><span class="p">],</span>
+    <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mf">0.891773</span>  <span class="p">]])</span>
+</pre></div>
+</div>
+<p>where the array is 2-dimensional array, with shape of <code class="code docutils literal notranslate"><span class="pre">(4,2)</span></code>, with first axis is the batch index,
+and the second axis represents class labels and class confidences for the corresponding batch index.
+For instance, the prediction of the first batch is <code class="code docutils literal notranslate"><span class="pre">[3</span> <span class="pre">,</span> <span class="pre">0.71518937]</span></code>, where the predicted class
+is <code class="code docutils literal notranslate"><span class="pre">3</span></code> and the confidence is <code class="code docutils literal notranslate"><span class="pre">0.71518937</span></code>.</p>
+<p>Let’s <code class="code docutils literal notranslate"><span class="pre">'class_label'</span></code> and <code class="code docutils literal notranslate"><span class="pre">'class_confidence'</span></code> represent the predicted class labels and class_confidence,
+the output format should be:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">output_format</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">class_label</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">indices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">class_confidence</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">indices</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the output format is defined to extract output of single batch.</p>
+</div>
+<div class="section" id="class-names">
+<h2>2. Class Names<a class="headerlink" href="#class-names" title="Permalink to this headline">¶</a></h2>
+<p>Class Names is simply a mapping from integer to string representing a class name.
+This can be described using dictionary, for example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">class_names</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="mi">0</span><span class="o">=</span><span class="s1">&#39;cat&#39;</span><span class="p">,</span>
+    <span class="mi">1</span><span class="o">=</span><span class="s1">&#39;dog&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="embedding-model-metadata">
+<h2>3. Embedding Model Metadata<a class="headerlink" href="#embedding-model-metadata" title="Permalink to this headline">¶</a></h2>
+<p>To embed the described metadata above, one may use utility function
+<a class="reference internal" href="api/graph_ops.html#vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property" title="vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property"><code class="xref py py-mod docutils literal notranslate"><span class="pre">embed_model_property</span></code></a>
+which takes onnx model and model property defined as nested dictionary, for example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">output_format</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">class_label</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">indices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">class_confidence</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span>
+        <span class="n">indices</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="n">class_names</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="mi">0</span><span class="o">=</span><span class="s1">&#39;cat&#39;</span><span class="p">,</span>
+    <span class="mi">1</span><span class="o">=</span><span class="s1">&#39;dog&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">model_props</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+    <span class="n">class_names</span><span class="o">=</span><span class="n">class_names</span><span class="p">,</span>
+    <span class="n">output_format</span><span class="o">=</span><span class="n">output_format</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">model</span> <span class="p">:</span> <span class="n">onnx</span><span class="o">.</span><span class="n">ModelProto</span> <span class="o">=</span> <span class="n">embed_model_property</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="n">model_props</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that the model above is already an onnx model, and
+<a class="reference internal" href="api/graph_ops.html#vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property" title="vortex.runtime.onnx.graph_ops.embed_model_property.embed_model_property"><code class="xref py py-mod docutils literal notranslate"><span class="pre">embed_model_property</span></code></a> also
+expects onnx model. This may be useful when one wants to use model defined on other framework.
+since most deep learning also support exporting to onnx.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="api/runtime.html" class="btn btn-neutral float-left" title="Runtime Helper" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Nodeflux.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

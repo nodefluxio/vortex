@@ -1,0 +1,541 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Training Object Detection Example &mdash; Vortex 0.3 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-binder.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-dataframe.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/gallery-rendered-html.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/styles.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="References" href="../api/index.html" />
+    <link rel="prev" title="Training Classifier, Export &amp; Benchmark using Vortex" href="classification.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Vortex
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html#training-classifier-export-benchmark-using-vortex">Training Classifier, Export &amp; Benchmark using Vortex</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Examples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="export.html">Export and inference example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="classification.html">Training Classifier, Export &amp; Benchmark using Vortex</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Training Object Detection Example</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preparing-dataset">1. Preparing Dataset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-definition">2. Model Definition</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../metadata.html">Vortex Metadata</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Vortex</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="index.html">Examples</a> &raquo;</li>
+        
+      <li>Training Object Detection Example</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/examples/detection.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <a href="https://colab.research.google.com/drive/1XsiShhLTR6-rt-GmQsfOXLRnrt1lW1Sa?usp">
+    <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a><div class="sphx-glr-download-link-note admonition note">
+<p class="admonition-title">Note</p>
+<p>Click <a class="reference internal" href="#sphx-glr-download-build-examples-detection-detr-py"><span class="std std-ref">here</span></a>
+to download the full example code</p>
+</div>
+<div class="sphx-glr-example-title section" id="training-object-detection-example">
+<span id="sphx-glr-build-examples-detection-detr-py"></span><h1>Training Object Detection Example<a class="headerlink" href="#training-object-detection-example" title="Permalink to this headline">¶</a></h1>
+<p>This example will shows you how to train DETR model using pytorch lightning
+We will use DETR model from <a class="reference external" href="https://github.com/facebookresearch/detr">https://github.com/facebookresearch/detr</a>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
+<span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
+<span class="kn">import</span> <span class="nn">torchvision</span> <span class="k">as</span> <span class="nn">vision</span>
+
+<span class="kn">import</span> <span class="nn">pytorch_lightning</span> <span class="k">as</span> <span class="nn">pl</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">from</span> <span class="nn">vortex.development.utils.registry</span> <span class="kn">import</span> <span class="n">Registry</span>
+<span class="kn">from</span> <span class="nn">vortex.development.networks.models</span> <span class="kn">import</span> <span class="n">ModelBase</span>
+<span class="kn">from</span> <span class="nn">vortex.development.utils.profiler.lightning</span> <span class="kn">import</span> <span class="n">Profiler</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+
+<span class="kn">from</span> <span class="nn">easydict</span> <span class="kn">import</span> <span class="n">EasyDict</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span> <span class="nn">module.model</span> <span class="kn">import</span> <span class="n">build_model</span>
+<span class="kn">from</span> <span class="nn">module.dataset</span> <span class="kn">import</span> <span class="n">build_dataset</span><span class="p">,</span> <span class="n">BetterCOCO</span><span class="p">,</span> <span class="n">COCODetection</span><span class="p">,</span> <span class="n">VOCDetection</span><span class="p">,</span> <span class="n">CocoEvaluator</span>
+<span class="kn">from</span> <span class="nn">module.utils</span> <span class="kn">import</span> <span class="n">collate_fn</span>
+</pre></div>
+</div>
+<div class="section" id="preparing-dataset">
+<h2>1. Preparing Dataset<a class="headerlink" href="#preparing-dataset" title="Permalink to this headline">¶</a></h2>
+<p>We’ll use pytorch lightning’s DataModule interface to define our data module.
+Also we will use yaml to store hyperparameter and training config.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DataLoader</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningDataModule</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># assume args has the following structure</span>
+        <span class="c1"># module: &#39;...&#39;, args: {...}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;dataset&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">loader_args</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;dataloader&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_init_train_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># support VOC and COCO dataset</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span>
+        <span class="n">args</span><span class="p">[</span><span class="s1">&#39;args&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;image_set&#39;</span><span class="p">:</span> <span class="s1">&#39;train&#39;</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_dataset</span> <span class="o">=</span> <span class="n">build_dataset</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>
+        <span class="c1"># VOC has 20 class and COCO actually has 80 class,</span>
+        <span class="c1"># but from DETR model, it is defined as 91 class with some class defined as N/A.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_dataset</span><span class="p">,</span><span class="n">VOCDetection</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_classes</span> <span class="o">=</span> <span class="mi">20</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_dataset</span><span class="p">,</span><span class="n">COCODetection</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_classes</span> <span class="o">=</span> <span class="mi">91</span>
+
+    <span class="k">def</span> <span class="nf">_init_val_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span>
+        <span class="c1"># validate on train for now</span>
+        <span class="n">args</span><span class="p">[</span><span class="s1">&#39;args&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;image_set&#39;</span><span class="p">:</span> <span class="s1">&#39;train&#39;</span><span class="p">})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span> <span class="o">=</span> <span class="n">build_dataset</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span><span class="p">,</span> <span class="n">VOCDetection</span><span class="p">):</span>
+            <span class="c1"># we customize VOC dataset to be able to use COCO validator</span>
+            <span class="c1"># here we convert our dataset to COCO format for validation and</span>
+            <span class="c1"># load as coco dataset. Note that BetterCOCO dataset is derived from COCO</span>
+            <span class="c1"># with additional method to easily visualize image and label using mapping style</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s1">&#39;tmp/coco_fmt.json&#39;</span><span class="p">)</span>
+            <span class="n">filename</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span><span class="o">.</span><span class="n">to_coco</span><span class="p">(</span><span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">val_coco_fmt</span> <span class="o">=</span> <span class="n">BetterCOCO</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># assume COCO</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;args&#39;</span><span class="p">][</span><span class="s1">&#39;ann_file&#39;</span><span class="p">]</span>
+            <span class="n">root</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;args&#39;</span><span class="p">][</span><span class="s1">&#39;img_folder&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">val_coco_fmt</span> <span class="o">=</span> <span class="n">BetterCOCO</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="n">root</span><span class="o">=</span><span class="n">root</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;train_dataset&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init_train_set</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;val_dataset&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init_val_set</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">train_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">loader_args</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;collate_fn&#39;</span><span class="p">:</span> <span class="n">collate_fn</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">val_dataloader</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loader_args</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span>
+            <span class="n">collate_fn</span><span class="o">=</span><span class="n">collate_fn</span><span class="p">,</span>
+            <span class="n">shuffle</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">))</span>
+        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">DataLoader</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val_dataset</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
+
+<span class="c1"># Helper contex manager to suppress python print to std out.</span>
+<span class="c1"># This will be used to disable COCO evaluator print.</span>
+<span class="k">class</span> <span class="nc">SuppressedPrints</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_original_stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">devnull</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_val</span><span class="p">,</span> <span class="n">exc_tb</span><span class="p">):</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_original_stdout</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="model-definition">
+<h2>2. Model Definition<a class="headerlink" href="#model-definition" title="Permalink to this headline">¶</a></h2>
+<p>Here we define our model, training and validation step, as well as what value to be logged.
+We use vortex <code class="docutils literal notranslate"><span class="pre">ModelBase</span></code> which is derived from pytorch lightning module, with additional
+functionality such as available_metrics, output_format, predict, those extensions
+are mostly used for exporting, but we’ll skip for now.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DETR</span><span class="p">(</span><span class="n">ModelBase</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;device&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;num_classes&#39;</span><span class="p">,</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">EasyDict</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">args</span>
+        <span class="n">model</span><span class="p">,</span> <span class="n">criterion</span><span class="p">,</span> <span class="n">postprocessors</span> <span class="o">=</span> <span class="n">build_model</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">=</span> <span class="n">criterion</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">postprocessors</span> <span class="o">=</span> <span class="n">postprocessors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_evaluator</span><span class="p">(</span><span class="n">gt</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">init_evaluator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># gt can be COCO object from pycocotools or None (can be specified later)</span>
+        <span class="c1"># here we use CocoEvaluator from pycocotools to validate the model.</span>
+        <span class="c1"># This method may need to be recalled again after validation to reset the state</span>
+        <span class="c1"># of the validator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gt</span> <span class="o">=</span> <span class="n">gt</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coco_evaluator</span> <span class="o">=</span> <span class="n">CocoEvaluator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gt</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">])</span> \
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gt</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">available_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># skip for now</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">output_format</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># skip for now</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># simply do forward for now</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">training_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">batch</span>
+        <span class="n">y_hat</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">loss_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">(</span><span class="n">y_hat</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="c1"># weight for each loss</span>
+        <span class="n">weight_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">weight_dict</span>
+        <span class="c1"># total loss</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">loss_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">weight_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">loss_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">weight_dict</span><span class="p">)</span>
+        <span class="c1"># log totall loss</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s1">&#39;train_loss&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss</span>
+
+    <span class="k">def</span> <span class="nf">validation_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">,</span> <span class="n">batch_idx</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">targets</span> <span class="o">=</span> <span class="n">batch</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="c1"># output is dictionary with &#39;pred_logits&#39;, &#39;pred_boxes&#39;, &#39;aux_outputs&#39; fields</span>
+        <span class="c1"># with:</span>
+        <span class="c1"># - pred_logits&#39; shape: NxDx(C+1) where C is number of classes</span>
+        <span class="c1"># - pred_boxes&#39; shape: NxDx4</span>
+        <span class="n">loss_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="n">targets</span><span class="p">)</span>
+        <span class="n">weight_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="o">.</span><span class="n">weight_dict</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">loss_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">weight_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">loss_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">weight_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s1">&#39;val_loss&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">.</span><span class="n">detach</span><span class="p">(),</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">coco_evaluator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">orig_target_sizes</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">t</span><span class="p">[</span><span class="s2">&quot;orig_size&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">postprocessors</span><span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">](</span><span class="n">outputs</span><span class="p">,</span> <span class="n">orig_target_sizes</span><span class="p">)</span>
+        <span class="c1"># can&#39;t be empty for now, skip if empty</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="p">{</span><span class="nb">int</span><span class="p">(</span><span class="n">target</span><span class="p">[</span><span class="s1">&#39;image_id&#39;</span><span class="p">]):</span> <span class="n">output</span> <span class="k">for</span> <span class="n">target</span><span class="p">,</span> <span class="n">output</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">targets</span><span class="p">,</span> <span class="n">results</span><span class="p">)}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">coco_evaluator</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validation_epoch_end</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">validation_step_outputs</span><span class="p">):</span>
+        <span class="n">coco_evaluator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">coco_evaluator</span>
+        <span class="k">if</span> <span class="n">coco_evaluator</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># cant compute on empty results</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">coco_evaluator</span><span class="o">.</span><span class="n">eval_imgs</span><span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">]):</span>
+                <span class="k">with</span> <span class="n">SuppressedPrints</span><span class="p">():</span>
+                    <span class="n">coco_evaluator</span><span class="o">.</span><span class="n">synchronize_between_processes</span><span class="p">()</span>
+                    <span class="n">coco_evaluator</span><span class="o">.</span><span class="n">accumulate</span><span class="p">()</span>
+                    <span class="n">coco_evaluator</span><span class="o">.</span><span class="n">summarize</span><span class="p">()</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">coco_evaluator</span><span class="o">.</span><span class="n">coco_eval</span><span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">params</span> <span class="o">=</span> <span class="n">coco_evaluator</span><span class="o">.</span><span class="n">coco_eval</span><span class="p">[</span><span class="s1">&#39;bbox&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">params</span>
+                <span class="n">iou_low</span><span class="p">,</span> <span class="n">iou_high</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">iouThrs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">params</span><span class="o">.</span><span class="n">iouThrs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">max_det_l</span><span class="p">,</span> <span class="n">max_det_m</span><span class="p">,</span> <span class="n">max_det_h</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">maxDets</span>
+                <span class="n">legends</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area=   all | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=0.50      | area=   all | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=0.75      | area=   all | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area= small | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area=medium | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AP) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area= large | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AR) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area=   all | maxDets=</span><span class="si">{</span><span class="n">max_det_l</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AR) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area=   all | maxDets=</span><span class="si">{</span><span class="n">max_det_m</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AR) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area= small | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AR) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area=medium | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                    <span class="sa">f</span><span class="s1">&#39;(AR) @[ IoU=</span><span class="si">{</span><span class="n">iou_low</span><span class="si">}</span><span class="s1">:</span><span class="si">{</span><span class="n">iou_high</span><span class="si">}</span><span class="s1"> | area= large | maxDets=</span><span class="si">{</span><span class="n">max_det_h</span><span class="si">}</span><span class="s1"> ]&#39;</span><span class="p">,</span>
+                <span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">log_dict</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">legends</span><span class="p">,</span><span class="n">res</span><span class="p">)),</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">mAP</span><span class="p">,</span> <span class="n">mAP50</span><span class="p">,</span> <span class="n">mAP75</span> <span class="o">=</span> <span class="n">res</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+            <span class="c1"># for empty results, just report zero for now</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mAP</span><span class="p">,</span> <span class="n">mAP50</span><span class="p">,</span> <span class="n">mAP75</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s1">&#39;mean AP&#39;</span><span class="p">,</span> <span class="n">mAP</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s1">&#39;mean AP (50)&#39;</span><span class="p">,</span> <span class="n">mAP50</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s1">&#39;mean AP (75)&#39;</span><span class="p">,</span> <span class="n">mAP75</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_evaluator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gt</span><span class="p">)</span> <span class="c1"># restart evaluator for next epoch</span>
+
+    <span class="k">def</span> <span class="nf">configure_optimizers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span>
+        <span class="n">model_without_ddp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">param_dicts</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="p">{</span><span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model_without_ddp</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;backbone&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">n</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">]},</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">p</span> <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">model_without_ddp</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;backbone&quot;</span> <span class="ow">in</span> <span class="n">n</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">],</span>
+                <span class="s2">&quot;lr&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">lr_backbone</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">]</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">AdamW</span><span class="p">(</span><span class="n">param_dicts</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">lr</span><span class="p">,</span>
+                                    <span class="n">weight_decay</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">weight_decay</span><span class="p">)</span>
+        <span class="n">lr_scheduler</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">lr_scheduler</span><span class="o">.</span><span class="n">StepLR</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">lr_drop</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+            <span class="n">lr_scheduler</span><span class="o">=</span><span class="n">lr_scheduler</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<span class="c1"># Helper function to create pytorch lighnting&#39;s trainer.</span>
+<span class="c1"># Accepts dictionary containing trainer configuration and return Trainer instance.</span>
+<span class="k">def</span> <span class="nf">build_trainer</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">EasyDict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;trainer&#39;</span><span class="p">])</span>
+    <span class="n">loggers</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">pl</span><span class="o">.</span><span class="n">loggers</span><span class="o">.</span><span class="n">TensorBoardLogger</span><span class="p">(</span><span class="s1">&#39;logs/&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Trainer</span><span class="p">(</span>
+        <span class="n">max_epochs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">max_epochs</span><span class="p">,</span> <span class="n">gpus</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">gpus</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="n">loggers</span><span class="p">,</span>
+        <span class="n">check_val_every_n_epoch</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">check_val_every_n_epoch</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">trainer</span>
+
+<span class="k">def</span> <span class="nf">load_state_dict</span><span class="p">(</span><span class="n">backbone</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">backbone</span><span class="o">==</span><span class="s1">&#39;resnet50&#39;</span><span class="p">:</span>
+        <span class="n">state_dict</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">hub</span><span class="o">.</span><span class="n">load_state_dict_from_url</span><span class="p">(</span>
+            <span class="n">url</span><span class="o">=</span><span class="s1">&#39;https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth&#39;</span><span class="p">,</span>
+            <span class="n">map_location</span><span class="o">=</span><span class="s1">&#39;cpu&#39;</span><span class="p">,</span> <span class="n">check_hash</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">state_dict</span>
+
+<span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;num_classes&#39;</span><span class="p">:</span> <span class="n">dataset</span><span class="o">.</span><span class="n">num_classes</span><span class="p">})</span>
+    <span class="n">model</span>      <span class="o">=</span> <span class="n">DETR</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="c1"># let&#39;s start from pretrained to save time</span>
+    <span class="c1"># here we will start from fully pretrained model if we are training on COCO,</span>
+    <span class="c1"># for VOC, we&#39;ll take the pretrained coco but class embedding layers.</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="n">load_state_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;backbone&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">state_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dataset</span><span class="o">.</span><span class="n">num_classes</span><span class="o">==</span><span class="mi">91</span><span class="p">:</span>
+            <span class="c1"># we have coco here, can safely load all from state dict</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span><span class="n">strict</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># reject trained class embedding, return to random</span>
+            <span class="n">filtered</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;class_embed&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">x</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+            <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">filtered</span><span class="p">}</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">,</span><span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">trainer</span> <span class="o">=</span> <span class="n">build_trainer</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="c1"># pass gt from dataset to model&#39;s evaluator</span>
+    <span class="n">val_gt</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">val_coco_fmt</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">init_evaluator</span><span class="p">(</span><span class="n">val_gt</span><span class="p">)</span>
+    <span class="c1"># do some training</span>
+    <span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">dataset</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">argparse</span>
+    <span class="kn">import</span> <span class="nn">yaml</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">__builtins__</span><span class="p">,</span><span class="s1">&#39;__IPYTHON__&#39;</span><span class="p">):</span>
+        <span class="c1"># running on notebook, for demonstration purpose</span>
+        <span class="n">config_file</span> <span class="o">=</span> <span class="s1">&#39;config.yml&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">()</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--config&#39;</span><span class="p">,</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;config.yml&#39;</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+        <span class="n">config_file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">config</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+</pre></div>
+</div>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> ( 0 minutes  0.000 seconds)</p>
+<div class="sphx-glr-footer class sphx-glr-footer-example docutils container" id="sphx-glr-download-build-examples-detection-detr-py">
+<div class="sphx-glr-download sphx-glr-download-python docutils container">
+<p><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">detr.py</span></code></p>
+</div>
+<div class="sphx-glr-download sphx-glr-download-jupyter docutils container">
+<p><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">detr.ipynb</span></code></p>
+</div>
+</div>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../api/index.html" class="btn btn-neutral float-right" title="References" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="classification.html" class="btn btn-neutral float-left" title="Training Classifier, Export &amp; Benchmark using Vortex" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Nodeflux.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
