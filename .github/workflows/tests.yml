@@ -2,10 +2,10 @@ name: Test
 
 on:
   push:
-      branches: [master]
-    pull_request:
-    release:
-      types: [published, edited]
+    branches: [master]
+  pull_request:
+  release:
+    types: [published, edited]
 
 jobs:
   tests:
