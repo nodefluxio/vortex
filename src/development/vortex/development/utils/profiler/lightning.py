@@ -2,7 +2,6 @@ import pytorch_lightning as pl
 from .speed import TimeData
 from .resource import GPUMonitor, CPUMonitor
 from ..metrics import MetricBase
-from ..reporting.report import generate_reports
 from typing import List
 from pathlib import Path
 from .resource import get_uname, get_cpu_info, get_cpu_scaling, get_gpu_info
