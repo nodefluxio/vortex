@@ -7,19 +7,19 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
+import collections.abc
 
 from .padding import pad_same, get_padding_value
 
 from typing import Tuple, Optional
 from functools import partial
 from itertools import repeat
-from torch._six import container_abcs
 
 
 # From PyTorch internals
 def _ntuple(n):
     def parse(x):
-        if isinstance(x, container_abcs.Iterable):
+        if isinstance(x, collections.abc.Iterable):
             return x
         return tuple(repeat(x, n))
     return parse
