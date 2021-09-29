@@ -6,7 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-if float(torchvision.__version__[:3]) < 0.7:
+
+_tv_ver = torchvision.__version__.split('+')[0].split('.')
+_tv_ver = sum([int(a)*(10**((2-n)*2)) for n,a in enumerate(_tv_ver)])
+if _tv_ver < 700:
     from torchvision.ops import _new_empty_tensor
     from torchvision.ops.misc import _output_size
 
@@ -868,7 +871,7 @@ def interpolate(input, size=None, scale_factor=None, mode="nearest", align_corne
     This will eventually be supported natively by PyTorch, and this
     class can go away.
     """
-    if float(torchvision.__version__[:3]) < 0.7:
+    if _tv_ver < 0.7:
         if input.numel() > 0:
             return torch.nn.functional.interpolate(
                 input, size, scale_factor, mode, align_corners

@@ -11,9 +11,9 @@ import re
 import math
 import torch.nn as nn
 import numpy as np
+import collections.abc
 
 from torch.hub import load_state_dict_from_url
-from torch._six import container_abcs
 
 from ..utils.layers import (
     DepthwiseSeparableConv, InvertedResidualBlock, 
@@ -144,7 +144,7 @@ class EfficientNetBuilder(nn.Module):
         block_def = self.block_def
         blocks_args = []
         for idx, stage_strings in enumerate(block_def):
-            assert isinstance(stage_strings, container_abcs.Sequence)
+            assert isinstance(stage_strings, collections.abc.Sequence)
             stage_args = [self._decode_str_def(stage_str) for stage_str in stage_strings]
             repeats = [arg.pop('repeat') for arg in stage_args]
             if not (self.fix_first_last_block and (idx == 0 or idx == len(block_def)-1)):
@@ -433,12 +433,12 @@ def effnet_init_weights(model, fix_group_fanout=True):
 
 def _create_model(variant, block_def, global_params, arch_params, num_classes,
         override_params, pretrained, progress, **kwargs):
-    assert isinstance(arch_params, container_abcs.Sequence), \
+    assert isinstance(arch_params, collections.abc.Sequence), \
         "'arch_params' should be a sequence (e.g. list or tuple)"
 
     global_params.update({'drop_path_rate': 0.0})
     if override_params is not None:
-        assert isinstance(override_params, container_abcs.Mapping), \
+        assert isinstance(override_params, collections.abc.Mapping), \
             "'override_params' should be a mapping (e.g. dict)"
         global_params.update(dict(override_params))
 

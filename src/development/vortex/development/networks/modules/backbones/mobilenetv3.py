@@ -9,9 +9,9 @@ Edited by Vortex Team
 
 import numpy as np
 import torch.nn as nn
+import collections.abc
 
 from torch.hub import load_state_dict_from_url
-from torch._six import container_abcs
 
 from .efficientnet import EfficientNetBuilder, effnet_init_weights
 from ..utils.layers import resolve_act_layer, resolve_norm_args, resolve_norm_layer
@@ -192,7 +192,7 @@ def _create_model(variant, block_def, global_params, num_classes, channel_multip
         override_params, pretrained, progress, **kwargs):
 
     if override_params is not None:
-        assert isinstance(override_params, container_abcs.Mapping), \
+        assert isinstance(override_params, collections.abc.Mapping), \
             "'override_params' should be a mapping (e.g. dict)"
         global_params.update(dict(override_params))
 
