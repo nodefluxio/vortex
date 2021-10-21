@@ -694,6 +694,7 @@ class SymbolicShapeInference:
         subgraphs = [get_attribute(node, 'then_branch'), get_attribute(node, 'else_branch')]
         cond = self._try_get_value(node, 0)
         if cond is not None:
+            cond = cond[0] if isinstance(cond, list) else cond
             if cond > 0:
                 subgraphs[1].CopyFrom(subgraphs[0])
             else:
