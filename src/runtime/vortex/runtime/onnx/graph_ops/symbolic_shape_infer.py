@@ -889,7 +889,7 @@ class SymbolicShapeInference:
                 else:
                     roi_start = [0]*rank
                     roi_end = [1]*rank
-                scales = list(scales)
+                scales = [int(s) if (s - int(s) == 0) else s for s in list(scales)]
                 new_sympy_shape = [sympy.simplify(sympy.floor(d * (end - start) * scale)) for d, start, end, scale in zip(input_sympy_shape, roi_start, roi_end, scales)]
                 self._update_computed_dims(new_sympy_shape)
             else:
