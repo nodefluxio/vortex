@@ -6,7 +6,7 @@ matplotlib
 enlighten
 future
 Pillow
-onnx==1.6.0
+onnx==1.13.0
 mypy
 pyyaml
 easydict
